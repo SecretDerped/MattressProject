@@ -8,64 +8,201 @@
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <!-- Подключение стилей для подсказок Dadata -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/suggestions-jquery@22.6.0/dist/css/suggestions.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <!-- Подключение jQuery -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <!-- Подключение jQuery UI для Autocomplete -->
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <style>
+
+        :root {
+            --placeholder-color: #adb5bd;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        #positionsTable {
+            border-collapse: collapse;
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+
+        #positionsTable:not(:empty) {
+            display: table;
+        }
+
+        #positionsTable th, #positionsTable td {
+            border: 1px solid #ced4da;
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px;
+            font-size: 0.85em;
+        }
+
+        #positionsTable th {
+            background-color: #007bff;
+            color: white;
+            font-size: 0.85em;
+            font-weight: normal;
+            height: 40px;
+        }
+
+        #positionsTable th:nth-child(1) {
+            text-align: center;
+        }
+
+        #positionsTable th:nth-child(1), #positionsTable td:nth-child(1) {
+            width: auto;
+        }
+
+        #positionsTable th:nth-child(2), #positionsTable td:nth-child(2) {
+            width: 150px;
+        }
+
+        @media (max-width: 576px) {
+            #positionsTable th, #positionsTable td {
+                font-size: 0.7em;
+            }
+        }
+
+        #positionsTable td {
+            background-color: #f8f9fa;
+        }
+
+        #positionsTable td.quantity-col {
+            white-space: nowrap;
+        }
+
+        #positionsTable td.quantity-col .quantity {
+            display: inline-block;
+            width: 50px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            border: none;
+            background-color: transparent;
+        }
+
+        #newArticle::placeholder, .form-label {
+            color: var(--placeholder-color);
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            border-radius: 0.2rem;
+            width: 25px;
+            height: 25px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button[type="submit"] {
+            display: block;
+            margin: 0 auto;
+            width: 75%;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            position: absolute;
+            top: -1rem;
+            left: 0.1rem;
+            font-size: 0.7em;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .form-group.positions-separator {
+            margin-bottom: 2.5rem;
+        }
+
+        .form-group.positions-separator::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -1rem;
+            width: 100%;
+            border-bottom: 2px solid #6c757d;
+            border-radius: 5px;
+        }
+
+        .form-group.positions-separator ~ .form-group {
+            margin-top: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 1rem;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container mt-5">
+    <div class="container mt-3">
         <h1 class="mb-4">Форма заказа</h1>
-        <form method="POST">
+        <form method="POST" action="/create_order">
             <div class="form-group">
-                <label for="party">Название магазина:</label>
+                <table class="table" id="positionsTable">
+                    <thead>
+                        <tr>
+                            <th>Выбранные позиции</th>
+                            <th>Количество</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Строки с позициями будут добавляться здесь -->
+                    </tbody>
+                </table>
+                <div class="form-group positions-separator">
+                    <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
+                </div>
+                <input type="hidden" id="positionsData" name="positions" value="">
+            </div>
+
+            <div class="form-group">
+                <label for="party" class="form-label">Название магазина</label>
                 <input type="text" id="party" name="party" class="form-control" required>
                 <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
             </div>
 
             <div class="form-group">
-                <label for="article">Артикул:</label>
-                <input type="text" id="article" name="article" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label for="quantity">Количество:</label>
-                <input type="number" id="quantity" name="quantity" class="form-control" required min="1" value="1">
-            </div>
-
-            <div class="form-group">
-                <label for="delivery_date">Дата доставки:</label>
+                <label for="delivery_date" class="form-label">Дата доставки</label>
                 <input type="date" id="delivery_date" name="delivery_date" class="form-control" required>
             </div>
 
             <div class="form-group">
-                <label for="delivery_address">Адрес доставки:</label>
+                <label for="delivery_address" class="form-label">Адрес доставки</label>
                 <input type="text" id="delivery_address" name="delivery_address" class="form-control" required>
                 <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
             </div>
 
             <div class="form-group">
-                <label for="contact">Контакты:</label>
+                <label for="contact" class="form-label">Контакты</label>
                 <input type="text" id="contact" name="contact" class="form-control" required>
             </div>
 
             <div class="form-group">
-                <label for="price">Цена:</label>
-                <input type="number" id="price" name="price" class="form-control" required>
+                <label for="price" class="form-label">Цена</label>
+                <input type="number" id="price" name="price" class="form-control" step="0.01" required>
             </div>
 
             <div class="form-group">
-                <label for="prepayment">Предоплата:</label>
-                <input type="number" id="prepayment" name="prepayment" class="form-control" required>
+                <label for="prepayment" class="form-label">Предоплата</label>
+                <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01" required>
             </div>
-
-<!--
-            <div class="form-group">
-                <label for="amount_to_receive">Сколько нужно получить:</label>
-                <input type="number" id="amount_to_receive" name="amount_to_receive" class="form-control" required><br>
-            </div>
--->
 
             <button type="submit" class="btn btn-primary">Создать реализацию</button>
         </form>
@@ -85,31 +222,104 @@
         });
     </script>
     <script>
-            $("#delivery_address").suggestions({
-                token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
-                type: "ADDRESS",
-                /* Вызывается, когда пользователь выбирает одну из подсказок */
-                onSelect: function(suggestion) {
-                    console.log(suggestion);
-                    $('#address_data').val(JSON.stringify(suggestion));
-                }
-            });
+        $("#delivery_address").suggestions({
+            token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
+            type: "ADDRESS",
+            /* Вызывается, когда пользователь выбирает одну из подсказок */
+            onSelect: function(suggestion) {
+                console.log(suggestion);
+                $('#address_data').val(JSON.stringify(suggestion));
+            }
+        });
     </script>
     <!-- Подсказки для артикулов -->
-    <script>
-    $(document).ready(function() {
-        $.getJSON('/api/articles', function(data) {
-            $("#article").autocomplete({
+          <script>
+        $(document).ready(function() {
+            var positions = [];
+
+            // Скрыть таблицу при загрузке страницы
+            $('#positionsTable').hide();
+
+            function updatePositionsInput() {
+                $('#positionsData').val(JSON.stringify(positions));
+            }
+
+            function addPosition(article, quantity) {
+                var existingPosition = positions.find(position => position.article === article);
+                if (existingPosition) {
+                    existingPosition.quantity += quantity;
+                } else {
+                    positions.push({article: article, quantity: quantity});
+                }
+                updatePositionsTable();
+                updatePositionsInput();
+            }
+
+            function updatePositionsTable() {
+                var tableBody = $('#positionsTable tbody');
+                tableBody.empty();
+                positions.forEach(function(position, index) {
+                    var row = $('<tr></tr>');
+                    row.append($('<td></td>').text(position.article));
+
+                    var quantityCell = $('<td class="quantity-col"></td>');
+                    var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function() {
+                        var quantity = parseInt(quantityInput.text(), 10);
+                        if (quantity > 1) {
+                            quantityInput.text(quantity - 1);
+                            positions[index].quantity = quantity - 1;
+                            updatePositionsInput();
+                        } else {
+                            positions.splice(index, 1);
+                            updatePositionsTable();
+                            updatePositionsInput();
+                        }
+                    });
+                    var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function() {
+                        var value = parseInt($(this).text(), 10);
+                        if (value >= 1 && value <= 999) {
+                            positions[index].quantity = value;
+                            updatePositionsInput();
+                        }
+                    });
+                    var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function() {
+                        var quantity = parseInt(quantityInput.text(), 10);
+                        if (quantity < 999) {
+                            quantityInput.text(quantity + 1);
+                            positions[index].quantity = quantity + 1;
+                            updatePositionsInput();
+                        }
+                    });
+                    quantityCell.append(minusButton, quantityInput, plusButton);
+                    row.append(quantityCell);
+
+                    tableBody.append(row);
+                });
+
+                if (positions.length > 0) {
+                    $('#positionsTable').show();
+                } else {
+                    $('#positionsTable').hide();
+                }
+            }
+
+            $('#newArticle').autocomplete({
                 source: function(request, response) {
-                    var results = $.ui.autocomplete.filter(data, request.term);
-                    response(results.slice(0, 5));
+                    $.getJSON('/api/articles', function(data) {
+                        var results = $.ui.autocomplete.filter(data, request.term);
+                        response(results.slice(0, 5));
+                    });
                 },
                 minLength: 0,
+                select: function(event, ui) {
+                    addPosition(ui.item.value, 1);
+                    $('#newArticle').val('');
+                    return false;
+                }
             }).focus(function() {
                 $(this).autocomplete("search", "");
             });
         });
-    });
     </script>
 </body>
 </html>

@@ -9,7 +9,8 @@ load_dotenv()
 console_out = logging.StreamHandler()
 file_log = logging.FileHandler(f"application.log", mode="w")
 logging.basicConfig(handlers=(file_log, console_out), level=logging.DEBUG,
-                    format='[%(asctime)s | %(levelname)s]: %(message)s')
+                    format='[%(asctime)s | %(levelname)s]: %(message)s',
+                    encoding='utf-8')
 
 reglament_id_list = {'implementation': "ab1e34b3-6ce0-4235-838a-26680ed0b74d",
                      'order_delivery': "2c36b133-7a8a-4f69-82a6-89409c38a373",
@@ -129,6 +130,8 @@ class SBISWebApp(SBISApiManager):
                                        'description': description,
                                        'attributes': attributes}
         return articles_list
+
+
 
 '''    def write_implementation(self):
         base64_file = ''

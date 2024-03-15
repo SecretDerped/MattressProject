@@ -9,8 +9,65 @@ from flask import Flask, render_template, request, jsonify
 from sbis_manager import SBISWebApp
 load_dotenv()
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8')
 logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+sbis = SBISWebApp(getenv('sbis.login'), getenv('sbis.password'))
+articles = sbis.get_articles()
+
+
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html', articles=articles)
+
+
+@app.route('/api/articles', methods=['GET'])
+def get_articles():
+    return jsonify(list(articles))
+
+
+@app.route('/create_order', methods=['POST'])
+def create_order():
+    chat_id = request.args.get('chat_id')
+    order_data = dict({
+        'party': request.form['party'],
+        'party_data': request.form['party_data'],
+        'articles': request.form['positionsData'],
+        'delivery_date': request.form['delivery_date'],
+        'delivery_address': request.form['delivery_address'],
+        'address_data': request.form['address_data'],
+        'contact': request.form['contact'],
+        'price': request.form['price'],
+        'prepayment': request.form['prepayment']
+    })
+    order_data['amount_to_receive'] = float(order_data.get('price', 0)) - float(order_data.get('prepayment', 0))
+
+    order_message = (f"""Новая заявка:\n
+Артикул: {order_data['articles']}
+Дата доставки: {order_data['delivery_date']}
+Адрес: {order_data['delivery_address']}
+Магазин: {order_data['party']}
+Цена: {order_data['price']}
+Предоплата: {order_data['prepayment']}
+Нужно получить: {order_data['amount_to_receive']}""")
+    send_telegram_message(order_message, chat_id)
+
+    return create_sbis_order(order_data)
+
+
+def create_sbis_order(order_data):
+    print('\nЗаказ готооов')
+    return "Заказ отправлен"
+
+
+def send_telegram_message(text, chat_id):
+    bot_token = getenv('TG_TOKEN')
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    data = {"chat_id": chat_id, "text": text}
+    response = httpx.post(url, data=data)
+    print(response.text)
+    return response.json()
 
 
 def start_ngrok():
@@ -28,73 +85,12 @@ def start_ngrok():
     return process, url
 
 
-class FlaskApp:
-    def __init__(self):
-        self.app = Flask(__name__)
-        self.sbis = SBISWebApp(getenv('sbis.login'), getenv('sbis.password'))
-        self.bot_token = getenv('TG_TOKEN')
-
-        @self.app.route('/api/articles', methods=['GET'])
-        def get_articles():
-            articles = self.get_articles() # Пример, здесь может быть код для получения актуального списка
-            return jsonify(articles)
-
-        @self.app.route('/', methods=['GET', 'POST'])
-        def index():
-            chat_id = request.args.get('chat_id')
-            articles = self.sbis.get_articles()  # Получение списка артикулов
-
-            if request.method == 'POST':
-                order_data = dict({
-                    'party': request.form['party'],
-                    'party_data': request.form['party_data'],
-                    'article': request.form['article'],
-                    'quantity': request.form['quantity'],
-                    'delivery_date': request.form['delivery_date'],
-                    'delivery_address': request.form['delivery_address'],
-                    'address_data': request.form['address_data'],
-                    'contact': request.form['contact'],
-                    'price': request.form['price'],
-                    'prepayment': request.form['prepayment']
-                })
-                order_data['amount_to_receive'] = float(order_data.get('price', 0)) - float(order_data.get('prepayment', 0))
-
-                order_message = (f"""Новая заявка:\n
- Артикул: {order_data['article']}
- Количество: {order_data['quantity']}
- Дата доставки: {order_data['delivery_date']}
- Адрес: {order_data['delivery_address']}
- Магазин: {order_data['party']}
- Цена: {order_data['price']}
- Предоплата: {order_data['prepayment']}
- Нужно получить: {order_data['amount_to_receive']}""")
-                self.send_telegram_message(order_message, chat_id, self.bot_token)
-
-                return self.create_sbis_order(order_data)
-            return render_template('index.html', articles=articles)
-
-    def run_flask(self):
-        self.app.run()
-
-    def get_articles(self):
-        articles = self.sbis.get_articles()
-        return articles
-
-    def create_sbis_order(self, order_data):
-        print('\nЗаказ готооов')
-        return "Заказ отправлен"
-
-    def send_telegram_message(self, text, chat_id, bot_token):
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        data = {"chat_id": chat_id, "text": text}
-        response = httpx.post(url, data=data)
-        print(response.text)
-        return response.json()
+def run_flask():
+    app.run()
 
 
 if __name__ == '__main__':
-    site = FlaskApp()
     ngrok_process, ngrok_url = start_ngrok()
-    site.run_flask()
+    run_flask()
 
     ngrok_process.wait()
