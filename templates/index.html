@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Новая заявка</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Подключение стилей jQuery UI для Autocomplete -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <!-- Подключение стилей для подсказок Dadata -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/suggestions-jquery@22.6.0/dist/css/suggestions.min.css">
+    <!-- Подключение jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <!-- Подключение jQuery UI для Autocomplete -->
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Форма заказа</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label for="party">Название магазина:</label>
+                <input type="text" id="party" name="party" class="form-control" required>
+                <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
+            </div>
+
+            <div class="form-group">
+                <label for="article">Артикул:</label>
+                <input type="text" id="article" name="article" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="quantity">Количество:</label>
+                <input type="number" id="quantity" name="quantity" class="form-control" required min="1" value="1">
+            </div>
+
+            <div class="form-group">
+                <label for="delivery_date">Дата доставки:</label>
+                <input type="date" id="delivery_date" name="delivery_date" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="delivery_address">Адрес доставки:</label>
+                <input type="text" id="delivery_address" name="delivery_address" class="form-control" required>
+                <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
+            </div>
+
+            <div class="form-group">
+                <label for="contact">Контакты:</label>
+                <input type="text" id="contact" name="contact" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="price">Цена:</label>
+                <input type="number" id="price" name="price" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="prepayment">Предоплата:</label>
+                <input type="number" id="prepayment" name="prepayment" class="form-control" required>
+            </div>
+
+<!--
+            <div class="form-group">
+                <label for="amount_to_receive">Сколько нужно получить:</label>
+                <input type="number" id="amount_to_receive" name="amount_to_receive" class="form-control" required><br>
+            </div>
+-->
+
+            <button type="submit" class="btn btn-primary">Создать реализацию</button>
+        </form>
+    </div>
+
+    <!-- Скрипты для подсказок Dadata -->
+    <script src="https://cdn.jsdelivr.net/npm/suggestions-jquery@22.6.0/dist/js/jquery.suggestions.min.js"></script>
+    <script>
+        $("#party").suggestions({
+            token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
+            type: "PARTY",
+            /* Вызывается, когда пользователь выбирает одну из подсказок */
+            onSelect: function(suggestion) {
+                console.log(suggestion);
+                $('#party_data').val(JSON.stringify(suggestion));
+            }
+        });
+    </script>
+    <script>
+            $("#delivery_address").suggestions({
+                token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
+                type: "ADDRESS",
+                /* Вызывается, когда пользователь выбирает одну из подсказок */
+                onSelect: function(suggestion) {
+                    console.log(suggestion);
+                    $('#address_data').val(JSON.stringify(suggestion));
+                }
+            });
+    </script>
+    <!-- Подсказки для артикулов -->
+    <script>
+    $(document).ready(function() {
+        $.getJSON('/api/articles', function(data) {
+            $("#article").autocomplete({
+                source: function(request, response) {
+                    var results = $.ui.autocomplete.filter(data, request.term);
+                    response(results.slice(0, 5));
+                },
+                minLength: 0,
+            }).focus(function() {
+                $(this).autocomplete("search", "");
+            });
+        });
+    });
+    </script>
+</body>
+</html>
