@@ -19,11 +19,9 @@ if __name__ == '__main__':
     # Запуск Flask-приложения в отдельном потоке
     flask_thread = threading.Thread(target=run_flask_app, args=())
     flask_thread.start()
-    print('SITE IS RUNNING')
 
     bot = Tg(ngrok_url)
     asyncio.run(bot.main())
-    print('BOT IS ONLINE')
 
     flask_thread.join()  # Дожидаемся завершения потока Flask-приложения
     ngrok_process.wait()
