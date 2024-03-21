@@ -26,6 +26,74 @@ class SABYAccessDenied(Exception):
     pass
 
 
+class SBISManager:
+    def __init__(self, login: str = '', password: str = ''):
+        self.login = login
+        self.password = password
+        self.base_url = 'https://online.sbis.ru'
+        self.headers = {
+            'Host': 'online.sbis.ru',
+            'Content-Type': 'application/json-rpc; charset=utf-8',
+            'Accept': 'application/json-rpc'
+        }
+
+    def auth(self):
+        payload = {
+            "jsonrpc": "2.0",
+            "method": 'СБИС.Аутентифицировать',
+            "params": {"Логин": self.login, "Пароль": self.password},
+            "protocol": 2,
+            "id": 0
+        }
+        res = requests.post(f'{self.base_url}/auth/service/', headers=self.headers, data=json.dumps(payload))
+        sid = json.loads(res.text)['result']
+
+        with open(f"{self.login}_sbis_token.txt", "w+") as file:
+            file.write(sid)
+
+        return sid
+
+    def get_sid(self):
+        try:
+            with open(f"{self.login}_sbis_token.txt", "r") as file:
+                sid = file.read()
+                return sid
+        except FileNotFoundError:
+            try:
+                return self.auth()
+            except Exception:
+                logging.critical(f"Не удалось авторизоваться в СБИС.", exc_info=True)
+
+    def main_query(self, method: str, params: dict or str):
+        self.headers['X-SBISSessionID'] = self.get_sid()
+        payload = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "protocol": 2,
+            "id": 0
+        }
+
+        res = requests.post(f'{self.base_url}/service/', headers=self.headers, data=json.dumps(payload))
+
+        logging.info(f'Method: {method} | Code: {res.status_code}')
+        logging.debug(f'URL: {self.base_url}/service/ \n'
+                      f'Headers: {self.headers}\n'
+                      f'Parameters: {params}\n'
+                      f'Result: {json.loads(res.text)}')
+
+        match res.status_code:
+            case 200:
+                return json.loads(res.text)['result']
+            case 401:
+                logging.info('Требуется обновление токена.')
+                self.headers['X-SBISSessionID'] = self.auth()
+                res = requests.post(f'{self.base_url}/service/', headers=self.headers, data=json.dumps(payload))
+                return json.loads(res.text)['result']
+            case 500:
+                raise AttributeError(f'{method}: Check debug logs.')
+
+
 class SBISApiManager:
     def __init__(self, login: str = '', password: str = ''):
         self.login = login
@@ -93,6 +161,7 @@ class SBISApiManager:
 class SBISWebApp(SBISApiManager):
     def __init__(self, login: str, password: str, sale_point_name: str, price_list_name: str):
         super().__init__(login, password)
+        self.doc_manager = SBISManager(self.login, self.password)
         self.reg_id = reglament_id_list
         self.sale_point_name = sale_point_name
         self.price_list_name = price_list_name
@@ -138,7 +207,6 @@ class SBISWebApp(SBISApiManager):
         return articles_list
 
     def write_implementation(self, order_data: dict):
-        base64_file = ''
         with (open(XML_FILEPATH, 'w') as file):
             today = datetime.today().strftime('%d.%m.%Y')
             delivery_date_str = order_data.get('delivery_date', None)
@@ -147,8 +215,8 @@ class SBISWebApp(SBISApiManager):
             customer_inn = customer_info.get('data', {}).get('inn', None)
             customer_kpp = customer_info.get('data', {}).get('kpp', None)
             order_address = customer_info.get('address_data', {}).get('value', None)
-            customer_name = order_data.get('party', None)
-            comment = order_data.get('comment', None)
+            customer_name = order_data.get('party', None).replace('"', '&quot;')
+            comment = order_data.get('comment', None).replace('"', '&quot;')
             order_contact = order_data.get('contact', None)
             full_price = round(float(order_data.get('price', None)), 2)
             prepayment = round(float(order_data.get('prepayment', None)), 2)
@@ -184,7 +252,7 @@ class SBISWebApp(SBISApiManager):
                   <ГрузПолуч ОКПО="20524053">
                     <ИдСв>
                       <СвОрг>
-                        <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}", НаимОрг="{customer_name}"/>
+                        <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
                       </СвОрг>
                     </ИдСв>
                     <Адрес>
@@ -208,7 +276,7 @@ class SBISWebApp(SBISApiManager):
                   <Покупатель ОКПО="20524053">
                     <ИдСв>
                       <СвОрг>
-                        <СвЮЛ ИННЮЛ="2311230064" КПП="231001001" НаимОрг="{customer_name}"/>
+                        <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
                       </СвОрг>
                     </ИдСв>
                     <Адрес>
@@ -234,32 +302,33 @@ class SBISWebApp(SBISApiManager):
               <СодФХЖ2>''')
             item_num = 1
             total_quantity = 0
-            items = order_data.get('positionsData')
-            if type(items) is dict:
-                items = [items]
-            for item_name in items:
-                info = self.articles_list[item_name]
-                code = info.get("code")
-                attributes = info.get('attributes')
-                quantity = int(item_name.get('quantity', '1'))
+            items = json.loads(order_data.get('positionsData', '[]'))
+            for item in items:
+                item_name = item['article'].replace('"', '&quot;')
+                quantity = int(item.get('quantity', '1'))
                 total_quantity += quantity
+                info = self.articles_list[item['article']]
+                code = info.get("code")
+                price = info.get('price')
+                # attributes = info.get('attributes').replace('"', '&quot;')
                 file.write(f'''
-                    <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{full_price}" СтУчНДС="{full_price}" Цена="{full_price}">
+                    <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
                       <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
                       <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
-                      <ИнфПолФХЖ2 Значен="{attributes}" Идентиф="ХарактНоменклатуры"/>
+                      <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
                       <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
                     </СвТов>''')
                 item_num += 1
 
             file.write(f'''
-                    <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
-                  </СодФХЖ2>
-                </СвДокПТПрКроме>
-                <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
-                </Документ>
-                
-                </Файл>''')
+        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
+      </СодФХЖ2>
+    </СвДокПТПрКроме>
+    <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
+    <Подписант ОблПолн="2"/>
+  </Документ>
+
+</Файл>''')
 
         with open(XML_FILEPATH, "rb") as file:
             encoded_string = base64.b64encode(file.read())
@@ -269,12 +338,16 @@ class SBISWebApp(SBISApiManager):
             "Тип": "ДокОтгрИсх",
             "Вложение": [{'Файл': {'Имя': XML_FILEPATH, 'ДвоичныеДанные': base64_file}}],
             "Регламент": {"Идентификатор": self.reg_id['implementation']},
-            "Примечание": f'Нужно получить: {amount_to_receive} у {order_contact}',
-            "Ответственный": 'Харьковский Александр Максимович'}}
+            "Примечание": f'{comment}  |  Нужно получить: {amount_to_receive} р. Контакт: {order_contact}',
+            "Ответственный": {"Фамилия": "Харьковский",
+                              "Имя": "Александр",
+                              "Отчество": "Максимович"}}}
 
-        return self.main_query('СБИС.ЗаписатьДокумент', params)
+        print(params)
+        self.write_order(comment)
+        res = self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
-    def write_order(self):
+    def write_order(self, comment):
         with open(DOCX_FILEPATH, "rb") as file:
             encoded_string = base64.b64encode(file.read())
             base64_file = encoded_string.decode('ascii')
@@ -283,10 +356,12 @@ class SBISWebApp(SBISApiManager):
             "Тип": "Наряд",
             "Вложение": [{'Файл': {'Имя': DOCX_FILEPATH, 'ДвоичныеДанные': base64_file}}],
             "Регламент": {"Идентификатор": self.reg_id['order_craft']},
-            "Примечание": 'ТЕСТ НАРЯДА НА МАТРАЦ',
-            "Ответственный": 'Харьковский Александр Максимович'}}
+            "Примечание": f'ТЕСТ НАРЯДА НА МАТРАЦ {comment}',
+            "Ответственный": {"Фамилия": "Харьковский",
+                              "Имя": "Александр",
+                              "Отчество": "Максимович"}}}
 
-        return self.main_query('СБИС.ЗаписатьДокумент', params)
+        return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
 
 if __name__ == '__main__':
@@ -295,3 +370,4 @@ if __name__ == '__main__':
     SALE_POINT_NAME = 'Кесиян Давид Арсенович, ИП'
     PRICE_LIST_NAME = 'Тестовые матрацы'
     sbis = SBISWebApp(LOGIN, PASSWORD, PRICE_LIST_NAME, SALE_POINT_NAME)
+

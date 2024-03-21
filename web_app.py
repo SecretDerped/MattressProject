@@ -29,7 +29,7 @@ def index():
         logger.debug(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
-            order_data = dict({
+            order_data = {
                 'party': request.form['party'],
                 'party_data_json': request.form['party_data'],
                 'positionsData': request.form['positionsData'],
@@ -40,12 +40,12 @@ def index():
                 'price': request.form['price'],
                 'prepayment': request.form['prepayment'],
                 'comment': request.form.get('comment', '')
-            })
+            }
             order_data['amount_to_receive'] = float(order_data.get('price', 0)) - float(order_data.get('prepayment', 0))
 
             positions_data = json.loads(order_data['positionsData'])
             positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
-            order_message = (f"""🟡 НОВАЯ ЗАЯВКА
+            order_message = (f"""НОВАЯ ЗАЯВКА
 
 Позиции:
 {positions_str}
@@ -74,7 +74,7 @@ def index():
             return "Заказ принят"
 
         except KeyError as e:
-            logger.error(f"Ошибка: отсутствует обязательное поле {str(e)}")
+            logger.error(f"Отсутствует обязательное поле {str(e)}, ")
             abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
 
         except ValueError as e:
