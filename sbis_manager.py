@@ -319,6 +319,7 @@ class SBISWebApp(SBISApiManager):
                       <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
                     </СвТов>''')
                 item_num += 1
+                self.write_order(code)  # Создаёт наряд на каждый матрац
 
             file.write(f'''
         <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
@@ -344,7 +345,6 @@ class SBISWebApp(SBISApiManager):
                               "Отчество": "Максимович"}}}
 
         print(params)
-        self.write_order(comment)
         res = self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
     def write_order(self, comment):
