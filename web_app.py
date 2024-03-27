@@ -46,32 +46,31 @@ def index():
             positions_data = json.loads(order_data['positionsData'])
             positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
             order_message = (f"""НОВАЯ ЗАЯВКА
-
+------------
 Позиции:
 {positions_str}
-
+------------
 Дата доставки:
 {order_data['delivery_date']}
-
+------------
 Адрес:
 {order_data['delivery_address']}
-
+------------
 Магазин:
 {order_data['party']}
-
+------------
 Цена: {order_data['price']}
-
 Предоплата: {order_data['prepayment']}
-
 Нужно получить: {order_data['amount_to_receive']}""")
+            if order_data['comment'] != '':
+                order_message += f"\n------------\nКомментарий: {order_data['comment']}"
 
             logger.info(f"Сформировано сообщение для заказа: {order_message}")
 
             send_telegram_message(order_message, chat_id)
             logger.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
-            sbis.write_implementation(order_data)
-
-            return "Заказ принят"
+            res = sbis.write_implementation(order_data)
+            return "   Заказ принят. Реализация записана. Задания созданы."
 
         except KeyError as e:
             logger.error(f"Отсутствует обязательное поле {str(e)}, ")

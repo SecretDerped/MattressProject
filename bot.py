@@ -29,7 +29,7 @@ class Tg:
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[webapp_button]])
 
             await message.answer(
-                text="Используйте этого бота...",
+                text="Создайте заявку кнопкой ниже:",
                 reply_markup=keyboard
             )
 
