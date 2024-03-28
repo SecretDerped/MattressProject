@@ -196,6 +196,7 @@ class SBISWebApp(SBISApiManager):
         product_list = self.get_nomenclature_list(point_id, price_list_id)
         for product in product_list['nomenclatures']:
             if product['nomNumber']:
+                # print(product)
                 name = product['name']
                 code = product['nomNumber']
                 description = product['description_simple']
@@ -313,7 +314,6 @@ class SBISWebApp(SBISApiManager):
                 info = self.articles_list[item['article']]
                 code = info.get("code")
                 price = info.get('price')
-                # attributes = info.get('attributes').replace('"', '&quot;')
                 file.write(f'''
                     <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
                       <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
@@ -324,13 +324,14 @@ class SBISWebApp(SBISApiManager):
                 item_num += 1
                 for i in range(quantity):
                     task_data = {"code": code,
-                                 "item_name": item_name,
-                                 "comment": comment,
-                                 "order_contact": order_contact,
-                                 "customer_name": customer_name,
+                                 "item_name": item['article'],
+                                 "customer_name": order_data.get('party', None),
                                  "customer_inn": customer_inn,
                                  "customer_kpp": customer_kpp,
-                                 "delivery_date": delivery_date}
+                                 "order_contact": order_contact,
+                                 "delivery_date": delivery_date,
+                                 "comment": comment,
+                                 "info": info}
 
                     self.create_task(task_data)  # Создаёт наряд на каждый матрац
 
@@ -361,19 +362,20 @@ class SBISWebApp(SBISApiManager):
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
     def create_task(self, data):
+        attributes = data.get('info', None).get('attributes')
+        materials = '\n'.join(f'{key}: {value}' for key, value in attributes.items())
         params = {"Документ": {
             "Тип": "СлужЗап",
             "Регламент": {"Идентификатор": self.reg_id['task']},
             "Срок": data.get("delivery_date"),
-            "Примечание": f"{data.get('item_name')} ({data.get('code')}),<br />{data.get('comment')}<br />"
-                          f" Заказчик: {data.get('customer_name')}.",
+            "Примечание": f"{data.get('item_name')}. {data.get('comment')}",
             "Автор": {"Имя": "Александр",
                       "Отчество": "Максимович",
                       "Фамилия": "Харьковский"},
-            "ДопПоля": {"Заказчик": "",
-                        "Материалы": "",
-                        "Комментарий": "",
-                        "Позиция": ""}}}
+            "ДополнительныеПоля": {"Заказчик": data.get('customer_name'),
+                                   "Позиция": f"{data.get('item_name')} ({data.get('code')})",
+                                   "Материалы": materials,
+                                   "Комментарий": data.get('comment')}}}
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
