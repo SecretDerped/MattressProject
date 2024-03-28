@@ -353,11 +353,14 @@ class SBISWebApp(SBISApiManager):
             "Тип": "ДокОтгрИсх",
             "Вложение": [{'Файл': {'Имя': IMP_FILEPATH, 'ДвоичныеДанные': base64_file}}],
             "Регламент": {"Идентификатор": self.reg_id['implementation']},
-            "Контакт": f"{order_contact}",
-            "Примечание": f'{comment}  |  Нужно получить: {amount_to_receive} р.  |  Контакт: {order_contact}',
+            "Контакт": order_contact,
+            "Примечание": comment,
             "Ответственный": {"Фамилия": "Харьковский",
                               "Имя": "Александр",
-                              "Отчество": "Максимович"}}}
+                              "Отчество": "Максимович"},
+            "ДополнительныеПоля": {"Предоплата": prepayment,
+                                   "НужноПолучить": amount_to_receive,
+                                   "Контакт": order_contact}}}
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
