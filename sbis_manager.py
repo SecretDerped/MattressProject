@@ -330,6 +330,7 @@ class SBISWebApp(SBISApiManager):
                                  "customer_kpp": customer_kpp,
                                  "order_contact": order_contact,
                                  "delivery_date": delivery_date,
+                                 "order_address": order_address,
                                  "comment": comment,
                                  "info": info}
 
@@ -378,6 +379,7 @@ class SBISWebApp(SBISApiManager):
             "ДополнительныеПоля": {"Заказчик": data.get('customer_name'),
                                    "Позиция": f"{data.get('item_name')} ({data.get('code')})",
                                    "Материалы": materials,
+                                   "Адрес": data.get("order_address"),
                                    "Комментарий": data.get('comment')}}}
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
