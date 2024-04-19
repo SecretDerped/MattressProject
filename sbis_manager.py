@@ -366,7 +366,7 @@ class SBISWebApp(SBISApiManager):
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
     def create_task(self, data):
-        attributes = data.get('info', None).get('attributes')
+        attributes = data.get('info', {'attributes': None}).get('attributes')
         materials = '\n'.join(f'{key}: {value}' for key, value in attributes.items())
         params = {"Документ": {
             "Тип": "СлужЗап",

@@ -1,0 +1,19 @@
+[2024-04-19 16:49:05,905 | DEBUG]: Starting new HTTPS connection (1): online.sbis.ru:443
+[2024-04-19 16:49:06,388 | DEBUG]: https://online.sbis.ru:443 "POST /oauth/service/ HTTP/1.1" 200 314
+[2024-04-19 16:49:06,392 | DEBUG]: Starting new HTTPS connection (1): api.sbis.ru:443
+[2024-04-19 16:49:07,286 | DEBUG]: https://api.sbis.ru:443 "GET /retail/point/list?withPrices=true HTTP/1.1" 200 1538
+[2024-04-19 16:49:07,286 | INFO]: Method: /point/list? | Code: 200
+[2024-04-19 16:49:07,286 | DEBUG]: URL: https://api.sbis.ru/retail/point/list?
+Headers: {'X-SBISAccessToken': 'VGJfUVMmLGlLKmIsWUk6L2IoLlZ3MXNiQjswKWpGREdjciYoTEcxUyMyc2YyRjtJWpFYVlpNltkPnlxYndIzIwMjQtMDQtMTkgMTY6NDk6MDYuNzU0NjUx'}
+Parameters: {'withPrices': 'true'}
+Result: {'salesPoints': [{'address': 'г. Краснодар, ул. Клиническая, д. 27', 'defaultPriceList': None, 'defaultPriceLists': None, 'halls': [], 'id': 6566, 'image': None, 'latitude': '45.05278', 'locality': 'Краснодар', 'longitude': '38.99957', 'name': 'Кесиян Давид Арсенович, ИП', 'phone': None, 'phones': None, 'prices': [20, 36], 'product': ['retail'], 'worktime': {'schedule': {}, 'start': '10:00:00', 'stop': '18:00:00', 'workdays': [1, 1, 1, 1, 1, 0, 0]}}, {'address': 'г. Краснодар, ул. им. 40-летия Победы, д. 20, Строение 1, ПОМЕЩЕНИЕ 308', 'defaultPriceList': None, 'defaultPriceLists': None, 'halls': [], 'id': 5738, 'image': None, 'latitude': '45.05484', 'locality': 'Краснодар', 'longitude': '39.00142', 'name': 'ЛЕАР ГРУПП', 'phone': '8 (861) 204-05-06', 'phones': None, 'prices': [20, 36], 'product': ['retail'], 'worktime': {'schedule': {}, 'start': '09:00:00', 'stop': '18:00:00', 'workdays': [1, 1, 1, 1, 1, 0, 0]}}], 'outcome': {'hasMore': False}}
+[2024-04-19 16:49:07,289 | DEBUG]: Starting new HTTPS connection (1): online.sbis.ru:443
+[2024-04-19 16:49:07,689 | DEBUG]: https://online.sbis.ru:443 "POST /oauth/service/ HTTP/1.1" 200 314
+[2024-04-19 16:49:07,692 | DEBUG]: Starting new HTTPS connection (1): api.sbis.ru:443
+[2024-04-19 16:49:08,172 | DEBUG]: https://api.sbis.ru:443 "GET /retail/nomenclature/price-list?pointId=6566&actualDate=2024-03-18 HTTP/1.1" 200 261
+[2024-04-19 16:49:08,173 | INFO]: Method: /nomenclature/price-list? | Code: 200
+[2024-04-19 16:49:08,173 | DEBUG]: URL: https://api.sbis.ru/retail/nomenclature/price-list?
+Headers: {'X-SBISAccessToken': 'WCV6Lj1laHAZGNlSUdEP0pTNi1IZWt8WnZfcm8qND9PJkRpcGwlSHVDQEpsR21hc0Nmb0RWI2wbDthbVZBaTIwMjQtMDQtMTkgMTY6NDk6MDguMDYxMDM1'}
+Parameters: {'pointId': 6566, 'actualDate': '2024-03-18'}
+Result: {'priceLists': [{'id': 20, 'name': 'Прайс для Сайт2'}, {'id': 36, 'name': 'Тестовые матрацы'}], 'outcome': {'hasMore': False}}
+[2024-04-19 16:49:08,175 | DEBUG]: Starting new HTTPS connection (1): online.sbis.ru:443
