@@ -1,6 +1,5 @@
 import streamlit as st
-import sbis_manager
-from production_screen.utils import icon
+from utils import icon
 import sys
 sys.path.append('sbis_manager.py')
 
@@ -19,10 +18,33 @@ tab1.button('да')
 
 tab2.write("Линия НАААрЕЕЕЗкИИИ")
 
-LOGIN = 'ХарьковскийАМ'
-PASSWORD = 'Retread-Undusted9-Catalyst-Unseated'
-SALE_POINT_NAME = 'Кесиян Давид Арсенович, ИП'
-PRICE_LIST_NAME = 'Тестовые матрацы'
-sbis = sbis_manager.SBISWebApp(LOGIN, PASSWORD, SALE_POINT_NAME, PRICE_LIST_NAME)
+import pandas as pd
+import streamlit as st
 
-print(sbis.get_articles())
+df = pd.DataFrame(
+    [
+        {"command": "st.selectbox", "rating": 4, "is_widget": True},
+        {"command": "st.balloons", "rating": 5, "is_widget": False},
+        {"command": "st.time_input", "rating": 3, "is_widget": True},
+    ]
+)
+edited_df = st.data_editor(
+    df,
+    column_config={
+        "command": "Streamlit Command",
+        "rating": st.column_config.NumberColumn(
+            "Your rating",
+            help="How much do you like this command (1-5)?",
+            min_value=1,
+            max_value=5,
+            step=1,
+            format="%d ⭐",
+        ),
+        "is_widget": "Widget ?",
+    },
+    disabled=["command"],
+    hide_index=True,
+)
+
+favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
+st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
