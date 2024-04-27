@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import icon
+import pandas as pd
 import sys
 sys.path.append('sbis_manager.py')
 
@@ -18,33 +19,30 @@ tab1.button('да')
 
 tab2.write("Линия НАААрЕЕЕЗкИИИ")
 
-import pandas as pd
-import streamlit as st
 
 df = pd.DataFrame(
     [
-        {"command": "st.selectbox", "rating": 4, "is_widget": True},
-        {"command": "st.balloons", "rating": 5, "is_widget": False},
-        {"command": "st.time_input", "rating": 3, "is_widget": True},
+        {"materials": "st.selectbox", "quantity": 4, "is_unique": True},
+        {"materials": "st.balloons", "quantity": 5, "is_unique": False},
+        {"materials": "st.time_input", "quantity": 3, "time_input": True},
     ]
 )
+
 edited_df = st.data_editor(
     df,
     column_config={
-        "command": "Streamlit Command",
-        "rating": st.column_config.NumberColumn(
-            "Your rating",
-            help="How much do you like this command (1-5)?",
+        "materials": "Позиция",
+        "quantity": st.column_config.NumberColumn(
+            "Кол-во",
             min_value=1,
-            max_value=5,
+            max_value=999,
             step=1,
-            format="%d ⭐",
+            format="%d",
         ),
-        "is_widget": "Widget ?",
+        "is_unique": "Уникальный?",
     },
+    num_rows="dynamic",
     disabled=["command"],
     hide_index=True,
 )
-
-favorite_command = edited_df.loc[edited_df["rating"].idxmax()]["command"]
-st.markdown(f"Your favorite command is **{favorite_command}** 🎈")
+print(edited_df)
