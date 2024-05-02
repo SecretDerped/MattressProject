@@ -1,48 +1,38 @@
-import streamlit as st
-from utils import icon
-import pandas as pd
-import sys
-sys.path.append('sbis_manager.py')
+import os
 
+import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="Производственный терминал",
                    page_icon="🛠️",
                    layout="wide")
+cash_file = 'cash.csv'
+st.title("🏭 Производственный терминал")
+if not os.path.exists(cash_file):
+    with open(cash_file, 'w') as file:
+        file.write('article,size,fabric,address,client,high_priority')
 
-icon.show_icon("🏭")
-st.title("Производственный терминал")
-st.sidebar.write('Экраны')
-tab1, tab2 = st.sidebar.tabs(["Все заявки", "Экран нарезки"])
-
-tab1.write("Заявки на производство")
-tab1.button('да')
-
-tab2.write("Линия НАААрЕЕЕЗкИИИ")
-
-
-df = pd.DataFrame(
-    [
-        {"materials": "st.selectbox", "quantity": 4, "is_unique": True},
-        {"materials": "st.balloons", "quantity": 5, "is_unique": False},
-        {"materials": "st.time_input", "quantity": 3, "time_input": True},
-    ]
-)
-
-edited_df = st.data_editor(
-    df,
+table = st.data_editor(
+    pd.read_csv(cash_file, encoding='utf-8'),
     column_config={
-        "materials": "Позиция",
-        "quantity": st.column_config.NumberColumn(
-            "Кол-во",
-            min_value=1,
-            max_value=999,
-            step=1,
-            format="%d",
-        ),
-        "is_unique": "Уникальный?",
+        "index": '',
+        "article": st.column_config.SelectboxColumn(
+            "Позиция",
+            options=["801", "802"]),
+        "size": "Размер",
+        "fabric": "Ткань",
+        "address": "Адрес",
+        "client": "Клиент",
+        "high_priority": st.column_config.CheckboxColumn("Высокий приоритет", default=False)
     },
     num_rows="dynamic",
-    disabled=["command"],
     hide_index=True,
+    key='table'
 )
-print(edited_df)
+
+st.write(st.session_state["table"])
+
+
+st.sidebar.button("Сохранить", on_click=table.to_csv(cash_file, index=False))
+st.sidebar.write(f"Заявки в работе: {len(table)}")
+st.sidebar.write("Заявки нарезчика: Нан")

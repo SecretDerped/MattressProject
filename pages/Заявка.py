@@ -1,42 +1,48 @@
 import streamlit as st
 from utils import icon
 
-
-data = [{"position": 'Выбрать...', "quantity": 0, "commentary": None}]
+data = [{"position": None, "size": None, "fabric": None, "quantity": 1, "commentary": None, }]
 
 # TODO: Внедрить постгрес. Данные будут дотягиваться из SBISWebApp.get_articles каждые 5 мин.
-position_items = ['Кокос',
-                  'Трикотаж',
-                  'Уникальный матрас']
+article_items = ["905", "Беспружинный матрас", 'Уникальный матрас']
+article_config = st.column_config.SelectboxColumn(
+    "Артикул",
+    options=article_items,
+    width="medium"
+)
 
-position_config = st.column_config.SelectboxColumn(
-                "Позиция",
-                options=position_items,
-                width="medium"
-            )
+size_params = st.column_config.TextColumn(
+    "Размер"
+)
+
+fabric_items = ["Жаккард", "Трикотаж"]
+fabric_params = st.column_config.SelectboxColumn(
+    "Ткань",
+    options=fabric_items,
+    default=fabric_items[0]
+)
 
 quantity_params = st.column_config.NumberColumn(
-                "",
-                min_value=1,
-                max_value=999,
-                step=1,
-                default=1,
-            )
-
+    "Кол-во",
+    min_value=1,
+    max_value=999,
+    step=1,
+    default=1,
+)
 
 icon.show_icon("📜")
 st.title("Новая заявка")
 
-col1, col2, col3 = st.columns(3)
-
-
-with col1:
+half_screen_1, half_screen_2 = st.columns(2)
+with half_screen_1:
     new_task = st.data_editor(
         data=data,
         column_config={
-            "position": position_config,
+            "position": article_config,
+            "size": size_params,
+            "fabric": fabric_params,
             "quantity": quantity_params,
-            "commentary": "Комментарий"
+            "commentary": "Комментарий",
         },
         num_rows="dynamic",
         disabled=["command"],
@@ -44,32 +50,28 @@ with col1:
     )
     print(new_task)
 
-with col2:
-
-    st.text_area('Комментарий ко всем')
+    st.text_area('Комментарий ко всему заказу')
 
     st.file_uploader(label='Прикрепить фото', type=('png', 'jpeg'))
 
+with half_screen_2:
+    quarter_screen_1, quarter_screen_2 = st.columns(2)
 
-with col3:
-
-    col4, col5 = st.columns(2)
-
-    with col4:
+    with quarter_screen_1:
         st.date_input('Срок')
-    with col5:
+    with quarter_screen_2:
         st.number_input('Предоплата')
 
-    delivery_type = st.radio('Тип доставки', ['📍 Самовывоз', '🏡 Город', '🗺️ Край', '🌎 Регионы'])
+    delivery_type = st.radio('Тип доставки', ['📍 Самовывоз', '🏡 Город', '🗺️ Краснодарский край', '🌎 Другие регионы'])
 
     match delivery_type:
 
-        case '🏡 Город' | '🗺️ Край':
+        case '🏡 Город' | '🗺️ Краснодарский край':
             st.text_input('Введите адрес')
 
-        case '🌎 Регионы':
-            st.selectbox('Выберите', ['Ставропольский край',
-                                      'Ростовская область',
-                                      'Северный Кавказ',
-                                      "Хребты безумия"])
+        case '🌎 Другие регионы':
+            st.selectbox('Выберите регион', ['Ставропольский край',
+                                             'Ростовская область',
+                                             'Северный Кавказ',
+                                             "Хребты безумия"])
             st.text_input('Введите адрес')

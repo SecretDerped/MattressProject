@@ -15,7 +15,7 @@ backgroundColor = "white"
 
 [browser]
 # Растягивает страничку по ширине экрана
-wideMode = true
+#layout = "wide"
 
 [logger]
 # Уровни: 'error', 'warning', 'info', 'debug'.
