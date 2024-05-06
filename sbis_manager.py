@@ -3,26 +3,18 @@ from datetime import datetime
 import json
 import requests
 import logging
-from os import getenv
-from dotenv import load_dotenv
 
-load_dotenv()
+from utils.tools import load_conf
+
+config = load_conf()
+imp_filepath = config.get('sbis').get('implementation_filepath')
 
 console_out = logging.StreamHandler()
 file_log = logging.FileHandler(f"application.log", mode="w")
-logging.basicConfig(handlers=(file_log, console_out),
-
-                    level=logging.INFO,
+logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s | %(levelname)s]: %(message)s',
-
+                    handlers=(file_log, console_out),
                     encoding='utf-8')
-
-reglament_id_list = {'implementation': "ab1e34b3-6ce0-4235-838a-26680ed0b74d",
-                     'order_delivery': "2c36b133-7a8a-4f69-82a6-89409c38a373",
-                     'task': "05999956-3a78-4f91-bb80-a08b7eceb954"}
-
-IMP_FILEPATH = 'implementation.xml'
-TASK_FILEPATH = 'task.html'
 
 
 class SBISManager:
@@ -105,9 +97,9 @@ class SBISApiManager:
         self.headers = {'X-SBISAccessToken': ''}
 
     def service_auth(self):
-        payload = {"app_client_id": getenv('sbis.app_client_id'),
-                   "app_secret": getenv('sbis.app_secret'),
-                   "secret_key": getenv('sbis.secret_key')}
+        payload = {"app_client_id": config.get('sbis').get('app_client_id'),
+                   "app_secret": config.get('sbis').get('app_secret'),
+                   "secret_key": config.get('sbis').get('secret_key')}
         response = requests.post(f'https://online.sbis.ru/oauth/service/', json=payload)
         response.encoding = 'utf-8'
         result = json.loads(response.text)
@@ -165,7 +157,7 @@ class SBISWebApp(SBISApiManager):
     def __init__(self, login: str, password: str, sale_point_name: str, price_list_name: str):
         super().__init__(login, password)
         self.doc_manager = SBISManager(self.login, self.password)
-        self.reg_id = reglament_id_list
+        self.reg_id = config.get('sbis').get('reglament_id_list')
         self.sale_point_name = sale_point_name
         self.price_list_name = price_list_name
         self.articles_list = self.get_articles()
@@ -211,7 +203,7 @@ class SBISWebApp(SBISApiManager):
         return articles_list
 
     def write_implementation(self, order_data: dict):
-        with (open(IMP_FILEPATH, 'w') as file):
+        with (open(imp_filepath, 'w') as file):
             today = datetime.today().strftime('%d.%m.%Y')
             delivery_date_str = order_data.get('delivery_date', None)
             delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
@@ -334,7 +326,7 @@ class SBISWebApp(SBISApiManager):
                                  "comment": comment,
                                  "info": info}
 
-                    self.create_task(task_data)  # Создаёт наряд на каждый матрац
+                    # self.create_task(task_data)  # Создаёт наряд на каждый матрац
 
             file.write(f'''
         <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
@@ -346,13 +338,13 @@ class SBISWebApp(SBISApiManager):
 
 </Файл>''')
 
-        with open(IMP_FILEPATH, "rb") as file:
+        with open(imp_filepath, "rb") as file:
             encoded_string = base64.b64encode(file.read())
             base64_file = encoded_string.decode('ascii')
 
         params = {"Документ": {
             "Тип": "ДокОтгрИсх",
-            "Вложение": [{'Файл': {'Имя': IMP_FILEPATH, 'ДвоичныеДанные': base64_file}}],
+            "Вложение": [{'Файл': {'Имя': imp_filepath, 'ДвоичныеДанные': base64_file}}],
             "Регламент": {"Идентификатор": self.reg_id['implementation']},
             "Контакт": order_contact,
             "Примечание": comment,

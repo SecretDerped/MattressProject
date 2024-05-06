@@ -1,0 +1,23 @@
+[fabric_corrections]
+"Жаккард" = -5
+"Трикотаж" = -10
+
+[sbis]
+app_client_id = "1431941504152192"
+app_secret = "TTLJISTWTTJKIMTITQMTM2TP"
+secret_key = "qwTLov0WOF8mgL3h8zRpcbITQxGBdY763n2tTrPYhRLviLy12agCCbyxPuuBak3IDfScRd1yX4IJJphJy1eO56L0vmCz5MIVQEMQEJXpS1QlpqlMI15Gbx"
+login = "leartest"
+password = "Leartest2007!"
+implementation_filepath = "cash/implementation.xml"
+task_filepath = "cash/task.html"
+
+[sbis.reglament_id_list]
+implementation = "ab1e34b3-6ce0-4235-838a-26680ed0b74d"
+order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
+task = "05999956-3a78-4f91-bb80-a08b7eceb954"
+
+[site]
+cash_filepath = "cash/cash.csv"
+
+[telegram]
+token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"

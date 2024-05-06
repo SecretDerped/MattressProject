@@ -103,7 +103,7 @@ def send_telegram_message(text, chat_id):
 
 
 def start_ngrok():
-    process = subprocess.Popen(['ngrok.exe', 'http', '5000'])
+    process = subprocess.Popen(['utils/ngrok.exe', 'http', '5000'])
     url = None
 
     while url is None:

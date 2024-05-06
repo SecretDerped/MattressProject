@@ -3,7 +3,6 @@ from utils import icon
 
 data = [{"position": None, "size": None, "fabric": None, "quantity": 1, "commentary": None, }]
 
-# TODO: Внедрить постгрес. Данные будут дотягиваться из SBISWebApp.get_articles каждые 5 мин.
 article_items = ["905", "Беспружинный матрас", 'Уникальный матрас']
 article_config = st.column_config.SelectboxColumn(
     "Артикул",

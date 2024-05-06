@@ -1,13 +1,10 @@
 import asyncio
 import logging
-
+from utils.tools import config
 from aiogram import Bot, Dispatcher, Router
 from aiogram.types import Message, BotCommand, MenuButtonWebApp, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.filters.command import Command
-from os import getenv
-from dotenv import load_dotenv
 
-load_dotenv()
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8')
 logger = logging.getLogger(__name__)
@@ -16,7 +13,7 @@ logger = logging.getLogger(__name__)
 class Tg:
     def __init__(self, webapp_url):
         self.app_url = webapp_url
-        self.bot_token = getenv('TG_TOKEN')
+        self.bot_token = config.get('telegram').get('token')
         self.bot = Bot(token=self.bot_token)
         self.router = Router()
 

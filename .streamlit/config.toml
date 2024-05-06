@@ -13,10 +13,6 @@ showSidebarNavigation = true
 primaryColor = "#4B58FF"  # Синий
 backgroundColor = "white"
 
-[browser]
-# Растягивает страничку по ширине экрана
-#layout = "wide"
-
 [logger]
 # Уровни: 'error', 'warning', 'info', 'debug'.
 level = "info"
