@@ -1,0 +1,10 @@
+high_priority,deadline,article,size,fabric,fabric_is_done,gluing_is_done,sewing_is_done,packing_is_done,address,client,history
+True,2024-05-06,Уникальная,200[100,Жаккард,True,False,False,False,nan,nan,
+True,2024-05-23,Уникальная,200[100,Жаккард,True,False,False,False,nan,nan,
+True,2024-05-10,Уникальная,200[100,Жаккард,True,False,False,False,nan,nan,
+True,2024-05-04,801,200[100,Жаккард,False,False,False,False,nan,nan,
+False,2024-05-22,801,200[100,Трикотаж,False,False,False,False,nan,nan,
+True,2024-06-06,801,200[100,Трикотаж,False,False,False,False,nan,nan,
+True,2024-05-22,802,200[100,Трикотаж,False,False,False,False,nan,nan,
+True,2024-05-17,802,200[100,Трикотаж,False,False,False,False,nan,nan,
+True,2024-05-13,802,200[100,Трикотаж,True,False,False,False,nan,nan,

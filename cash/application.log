@@ -1,0 +1,15 @@
+[2024-05-03 16:12:55,954 | INFO]: Method: /point/list? | Code: 200
+[2024-05-03 16:12:56,861 | INFO]: Method: /nomenclature/price-list? | Code: 200
+[2024-05-03 16:12:58,008 | INFO]: Method: /nomenclature/list? | Code: 200
+[2024-05-03 16:12:59,136 | INFO]: Method: /point/list? | Code: 200
+[2024-05-03 16:13:00,041 | INFO]: Method: /nomenclature/price-list? | Code: 200
+[2024-05-03 16:13:00,979 | INFO]: Method: /nomenclature/list? | Code: 200
+[2024-05-03 16:13:04,576 | INFO]: Сайт доступен через ngrok: https://04e9-46-29-13-252.ngrok-free.app
+[2024-05-03 16:13:04,577 | INFO]: Запуск Flask-приложения
+[2024-05-03 16:13:04,592 | INFO]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+[2024-05-03 16:13:04,592 | INFO]: [33mPress CTRL+C to quit[0m
+[2024-05-03 16:13:04,826 | INFO]: Start polling
+[2024-05-03 16:13:05,151 | INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
+[2024-05-03 16:13:14,832 | INFO]: Polling stopped
+[2024-05-03 16:13:15,083 | INFO]: Polling stopped for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
