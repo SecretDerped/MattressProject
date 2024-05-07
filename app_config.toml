@@ -17,7 +17,7 @@ order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
 task = "05999956-3a78-4f91-bb80-a08b7eceb954"
 
 [site]
-cash_filepath = "cash/cash.csv"
+cash_filepath = "cash/cash.pkl"
 
 [telegram]
 token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"

@@ -1,4 +1,6 @@
 import re
+
+import pandas
 import tomli
 
 
@@ -8,6 +10,14 @@ def load_conf(path: str = "app_config.toml"):
 
 
 config = load_conf()
+
+
+def save_to_file(data: pandas.DataFrame, filepath: str):
+    data.to_pickle(filepath)
+
+
+def read_file(filepath: str) -> pandas.DataFrame:
+    return pandas.read_pickle(filepath)
 
 
 def get_size_int(string):
