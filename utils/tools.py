@@ -21,27 +21,35 @@ def read_file(filepath: str) -> pandas.DataFrame:
 
 
 def get_size_int(string):
-    # Шаблон регулярного выражения для поиска двух или трех чисел, разделенных любым символом
+    """Принимает строку с размером матраса типа "180х200".
+    Ищет первые два или три числа, разделенных любым символом.
+    Если не находит число, ставит 0.
+    Возвращает словарь с размерами:
+    {'length': 180,
+    'width': 200,
+    'height': 0}"""
+
     pattern = r'(\d+)(?:\D+(\d+))?(?:\D+(\d+))?'
 
-    # Поиск соответствий в строке
     match = re.search(pattern, string)
-
     if not match:
-        return None
+        return {'length': 0, 'width': 0, 'height': 0}
 
-    # Извлечение чисел из соответствия
     length = int(match.group(1))
-    width = int(match.group(2)) if match.group(2) else None
-    height = int(match.group(3)) if match.group(3) else None
+    width = int(match.group(2)) if match.group(2) else 0
+    height = int(match.group(3)) if match.group(3) else 0
     return {'length': length, 'width': width, 'height': height}
 
 
 def side_eval(size, fabric_type: str = None) -> str:
+    """Вычисляет сколько нужно отрезать боковины, используя размер из функции get_size_int.
+       Формула для вычисления размера боковины: (Длина * 2 + Ширина * 2) + корректировка
+       Корректировка в зависимости от типа ткани прописывается в app_config.toml,
+       в разделе [fabric_corrections]"""
+
     try:
         result = (size.get('length', 0) * 2 + size.get('width', 0) * 2)
-        corrections = config.get('fabric_corrections', {'Жаккард': -10, 'Трикотаж': -5})
-        # TODO: поменять значения
+        corrections = config.get('fabric_corrections', {'Текстиль': 0})
 
         match corrections.get(fabric_type, 0):
             case value:
@@ -50,7 +58,18 @@ def side_eval(size, fabric_type: str = None) -> str:
         return str(result)
 
     except Exception:
-        return "Ошибка в размере"
+        return "Ошибка в вычислении размера"
+
+
+def get_date_str(dataframe_row: pandas.Series) -> str:
+    """
+    Принимает дату из датафрейма и преобразует в строку: 08 мая, среда
+    """
+    date = pandas.to_datetime(dataframe_row).strftime('%d.%m.%A')
+    months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+              'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+    day, month, weekday = date.split('.')
+    return f'{day} {months[int(month) - 1]}, {weekday}'
 
 
 if __name__ == "__main__":

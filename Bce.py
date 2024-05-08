@@ -123,8 +123,6 @@ def redact_tasks():
         on_change=cashing, args=(edited_df,),
         height=550
     )
-    print(editor)
-    print(edited_df)
     save_to_file(editor, cash_file)
 
 
