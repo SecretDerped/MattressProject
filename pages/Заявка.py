@@ -1,6 +1,11 @@
 import streamlit as st
 from utils import icon
 
+st.set_page_config(page_title="Заявка",
+                   page_icon="📜",
+                   layout="wide")
+
+
 data = [{"position": None, "size": None, "fabric": None, "quantity": 1, "commentary": None, }]
 
 article_items = ["905", "Беспружинный матрас", 'Уникальный матрас']

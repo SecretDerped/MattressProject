@@ -4,7 +4,11 @@ from utils.tools import get_size_int, side_eval, config, read_file, save_to_file
 
 cash_file = config.get('site').get('cash_filepath')
 
+st.set_page_config(page_title="Нарезка ткани",
+                   page_icon="✂️",
+                   layout="wide")
 
+# TODO:
 @st.experimental_fragment(run_every="5s")
 def show_cutting_tasks():
     # Загрузка данных
@@ -14,10 +18,9 @@ def show_cutting_tasks():
     sorted_df = tasks_todo.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
     columns_to_display = ['fabric', 'size', 'article', 'deadline']
 
-    # Вывод таблицы в Streamlit
-    st.write("Таблица с сортировкой и группировкой")
-    st.table(sorted_df[columns_to_display])
+    #st.table(sorted_df[columns_to_display])
 
+    tasks_quantity = len(sorted_df)
     # Отображение каждой задачи и кнопки для изменения статуса
     for idx, row in tasks_todo.iterrows():
         size = get_size_int(row['size'])
@@ -35,25 +38,25 @@ def show_cutting_tasks():
                 save_to_file(data, cash_file)
                 st.rerun()
 
+    num_columns = 4
+
+    # Группировка данных по 4 записи в строке
+    for i in range(0, len(sorted_df), num_columns):
+        row_data = sorted_df.iloc[i:i + num_columns]
+        row_container = st.columns(num_columns)
+
+        for j in range(num_columns):
+            if j >= len(row_data):
+                break
+            with row_container[j]:
+                st.write(str(j))
+                st.write(f"Fabric: {row_data.iloc[j]['fabric']}")
+                st.write(f"Deadline: {row_data.iloc[j]['deadline']}")
+                st.write(f"High Priority: {row_data.iloc[j]['high_priority']}")
+                
+                """if st.button("Mark as Done", key=j):
+                    sorted_df.at[row_data.index[j], 'fabric_is_done'] = True"""
+
 
 st.title('✂️ Нарезка ткани')
 show_cutting_tasks()
-
-#TODO: наладить экран нарезчика
-
-num_columns = 5
-num_rows = len(data) // num_columns + (len(data) % num_columns > 0)  # Вычисляем количество строк
-
-columns = st.columns(num_columns)
-
-for row in range(num_rows):
-    for col in range(num_columns):
-        index = row * num_columns + col
-        if index >= len(data):
-            break
-        tile = columns[col].container(height=120)
-        size = get_size_int(row['size'])
-        side = side_eval(size, row['fabric'])
-        left, right = st.columns(2)
-        tile.title(str(data[index]))
-

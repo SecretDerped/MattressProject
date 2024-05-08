@@ -40,7 +40,8 @@ def get_size_int(string):
 def side_eval(size, fabric_type: str = None) -> str:
     try:
         result = (size.get('length', 0) * 2 + size.get('width', 0) * 2)
-        corrections = config.get('fabric_corrections', {'Жаккард': -5, 'Трикотаж': -10})
+        corrections = config.get('fabric_corrections', {'Жаккард': -10, 'Трикотаж': -5})
+        # TODO: поменять значения
 
         match corrections.get(fabric_type, 0):
             case value:
