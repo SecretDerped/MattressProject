@@ -17,20 +17,19 @@ num_columns = 5
 
 @st.experimental_fragment(run_every="5s")
 def show_cutting_tasks():
-    # Загрузка данных
     data = read_file(cash_file)
-    tasks_todo = data[data['fabric_is_done'] == False]
+    tasks = data[data['fabric_is_done'] == False]
+    sorted_tasks = tasks.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
 
-    sorted_df = tasks_todo.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
     row_container = st.columns(num_columns)
-    n = 0
-    for index, row in sorted_df.iterrows():
+    count = 0
+    for index, row in sorted_tasks.iterrows():
         size = get_size_int(row['size'])
         side = side_eval(size, row['fabric'])
         deadline = get_date_str(row['deadline'])
-        if n % num_columns == 0:
+        if count % num_columns == 0:
             row_container = st.columns(num_columns)
-        box = row_container[n % num_columns].container(height=190, border=True)
+        box = row_container[count % num_columns].container(height=190, border=True)
 
         text_color = 'red' if row['high_priority'] else 'gray'
 
@@ -44,8 +43,27 @@ def show_cutting_tasks():
                 data.at[index, 'fabric_is_done'] = True
                 save_to_file(data, cash_file)
                 st.rerun()
-        n += 1
+        count += 1
 
 
-st.title('✂️ Нарезка ткани')
-show_cutting_tasks()
+tab1, tab2 = st.tabs(['Плитки', 'Таблица'])
+
+with tab1:
+    st.title('✂️ Нарезка ткани')
+    show_cutting_tasks()
+
+with tab2:
+    data = read_file(cash_file)
+    tasks = data[data['fabric_is_done'] == False]
+    sorted_tasks = tasks.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
+
+    col_1, col_2 = st.columns(2)
+
+    with col_1:
+        st.dataframe(sorted_tasks[columns_to_display],# width=600, height=600,
+                     column_config={'fabric': st.column_config.TextColumn("Ткань"),
+                                    'size': st.column_config.TextColumn("Размер"),
+                                    'article': st.column_config.TextColumn("Артикул"),
+                                    'deadline': st.column_config.DateColumn("Дата", format="DD.MM"),})
+    with col_2:
+        st.subheader('Табличное отображение данных')
