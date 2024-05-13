@@ -3,30 +3,37 @@ import time
 import httpx
 import logging
 import subprocess
-from os import getenv
-from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, abort
 from sbis_manager import SBISWebApp
+from utils.tools import load_conf
 
-load_dotenv()
+config = load_conf()
+
+sbis_config = config.get('sbis')
+login = sbis_config.get('login')
+password = sbis_config.get('password')
+sale_point_name = sbis_config.get('sale_point_name')
+price_list_name = sbis_config.get('price_list_name')
+
+tg_token = config.get('telegram').get('token')
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8')
-logger = logging.getLogger(__name__)
-
-SALE_POINT_NAME = 'Кесиян Давид Арсенович, ИП'
-PRICE_LIST_NAME = 'Тестовые матрацы'
 
 app = Flask(__name__)
-sbis = SBISWebApp(getenv('sbis.login'), getenv('sbis.password'), SALE_POINT_NAME, PRICE_LIST_NAME)
+sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 articles = sbis.get_articles()
+
+# TODO: если это матрас, добавляем в задачи работягам, компоненты не добавляем.
+#  Внедрить фотки и состав матраса.
+#  добавить все позиции в поиск
 
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     chat_id = request.args.get('chat_id')
     if request.method == 'POST':
-        logger.debug(f"Получен POST-запрос. Данные формы: {request.form}")
+        logging.debug(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
             order_data = {
@@ -65,40 +72,39 @@ def index():
             if order_data['comment'] != '':
                 order_message += f"\n------------\nКомментарий: {order_data['comment']}"
 
-            logger.info(f"Сформировано сообщение для заказа: {order_message}")
+            logging.info(f"Сформировано сообщение для заказа: {order_message}")
 
             send_telegram_message(order_message, chat_id)
-            logger.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
+            logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
             res = sbis.write_implementation(order_data)
             return "   Заказ принят. Реализация записана. Задания созданы."
 
         except KeyError as e:
-            logger.error(f"Отсутствует обязательное поле {str(e)}, ")
+            logging.error(f"Отсутствует обязательное поле {str(e)}, ")
             abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
 
         except ValueError as e:
-            logger.error(f"Ошибка: неверный формат данных {str(e)}")
+            logging.error(f"Ошибка: неверный формат данных {str(e)}")
             abort(400, description=f"Неверный формат данных: {str(e)}")
 
-    logger.debug("Рендеринг шаблона index.html")
+    logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', articles=articles)
 
 
 @app.route('/api/articles', methods=['GET'])
 def get_articles():
-    logger.debug("Получен GET-запрос к /api/articles")
+    logging.debug("Получен GET-запрос к /api/articles")
     return jsonify(list(articles))
 
 
 def send_telegram_message(text, chat_id):
-    bot_token = getenv('TG_TOKEN')
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
 
     data = {"chat_id": chat_id, "text": text}
-    logger.info(f"Отправка сообщения в Telegram. URL: {url}, данные: {data}")
+    logging.info(f"Отправка сообщения в Telegram. URL: {url}, данные: {data}")
 
     response = httpx.post(url, data=data)
-    logger.debug(f"Получен ответ от Telegram API: {response.json()}")
+    logging.debug(f"Получен ответ от Telegram API: {response.json()}")
     return response.json()
 
 
@@ -114,17 +120,17 @@ def start_ngrok():
         except:
             time.sleep(1)
 
-    logger.info(f'Сайт доступен через ngrok: {url}')
+    logging.info(f'Сайт доступен через ngrok: {url}')
     return process, url
 
 
 def run_flask():
-    logger.info("Запуск Flask-приложения")
+    logging.info("Запуск Flask-приложения")
     app.run()
 
 
 if __name__ == '__main__':
-    logger.info("Запуск приложения")
+    logging.info("Запуск приложения")
     ngrok_process, ngrok_url = start_ngrok()
     run_flask()
 

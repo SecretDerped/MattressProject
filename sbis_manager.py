@@ -11,8 +11,8 @@ imp_filepath = config.get('sbis').get('implementation_filepath')
 
 console_out = logging.StreamHandler()
 file_log = logging.FileHandler(f"application.log", mode="w")
-logging.basicConfig(level=logging.INFO,
-                    format='[%(asctime)s | %(levelname)s]: %(message)s',
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(asctime)s | %(name)s - %(levelname)s]: %(message)s',
                     handlers=(file_log, console_out),
                     encoding='utf-8')
 
@@ -160,12 +160,12 @@ class SBISWebApp(SBISApiManager):
         self.reg_id = config.get('sbis').get('reglament_id_list')
         self.sale_point_name = sale_point_name
         self.price_list_name = price_list_name
-        self.articles_list = self.get_articles()
+        self.articles_list = {}
 
     def get_sale_point_id(self):
         res = self.main_query('/point/list?', {'withPrices': 'true'})
         for point in res['salesPoints']:
-            if point['name'] == self.sale_point_name:  # 'Гаспарян Роман Славикович, ИП':
+            if point['name'] == self.sale_point_name:  # 'Гаспарян Роман Славикович, ИП'
                 return point['id']
 
     def get_price_list_id(self, point_id: str):
@@ -173,6 +173,8 @@ class SBISWebApp(SBISApiManager):
                   'actualDate': '2024-03-18'}
         res = self.main_query('/nomenclature/price-list?', params)
         for list in res['priceLists']:
+            print(self.price_list_name)
+            print(list['name'])
             if list['name'] == self.price_list_name:
                 return list['id']
 
@@ -378,9 +380,10 @@ class SBISWebApp(SBISApiManager):
 
 
 if __name__ == '__main__':
-    LOGIN = 'ХарьковскийАМ'
-    PASSWORD = 'Retread-Undusted9-Catalyst-Unseated'
-    SALE_POINT_NAME = 'Кесиян Давид Арсенович, ИП'
-    PRICE_LIST_NAME = 'Тестовые матрацы'
-    sbis = SBISWebApp(LOGIN, PASSWORD, SALE_POINT_NAME, PRICE_LIST_NAME)
-    sbis.create_task({})
+    LOGIN = 'Харьковский_Гас_РС'
+    PASSWORD = 'Харьковский_Гас_РС4342'
+    SALE_POINT_NAME = 'Гаспарян Роман Славикович, ИП'
+    PRICE_LIST_NAME = 'Позиции для Telegram-бота'
+    # sbis = SBISWebApp(LOGIN, PASSWORD, SALE_POINT_NAME, PRICE_LIST_NAME)
+    # sbis = SBISManager(LOGIN, PASSWORD)
+    # sbis.main_query('СБИС.')

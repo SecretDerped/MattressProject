@@ -1,20 +1,27 @@
 [fabric_corrections]
-"Жаккард" = -5
-"Трикотаж" = -10
+"Жаккард" = -10
+"Трикотаж" = -5
 
 [sbis]
-app_client_id = "1431941504152192"
-app_secret = "TTLJISTWTTJKIMTITQMTM2TP"
-secret_key = "qwTLov0WOF8mgL3h8zRpcbITQxGBdY763n2tTrPYhRLviLy12agCCbyxPuuBak3IDfScRd1yX4IJJphJy1eO56L0vmCz5MIVQEMQEJXpS1QlpqlMI15Gbx"
-login = "leartest"
-password = "Leartest2007!"
+#app_client_id = "1431941504152192"
+app_client_id = "6545046667107472"
+#app_secret = "TTLJISTWTTJKIMTITQMTM2TP"
+app_secret = "JYXNGTMT8QU5SQTJDEMLXGGX"
+#secret_key = "qwTLov0WOF8mgL3h8zRpcbITQxGBdY763n2tTrPYhRLviLy12agCCbyxPuuBak3IDfScRd1yX4IJJphJy1eO56L0vmCz5MIVQEMQEJXpS1QlpqlMI15Gbx"
+secret_key = "VcRzvQs9JRWTXCHzeP8jFRquZqeOVL4y6o0L9zvNZJqn8ptQwuRot3skjUmItb8uSkglbWBDln0e7tJvRIze3vLo6I0bxk62T6RTdYKWA4MHatsLMaKMZm"
+#login = "leartest"
+login = "Харьковский_Гас_РС"
+#password = "Leartest2007!"
+password = "Харьковский_Гас_РС4342"
+sale_point_name = "Гаспарян Роман Славикович, ИП"
+price_list_name = "Позиции для Telegram-бота"
 implementation_filepath = "cash/implementation.xml"
 task_filepath = "cash/task.html"
 
 [sbis.reglament_id_list]
-implementation = "ab1e34b3-6ce0-4235-838a-26680ed0b74d"
-order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
-task = "05999956-3a78-4f91-bb80-a08b7eceb954"
+implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"
+#order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
+#task = "05999956-3a78-4f91-bb80-a08b7eceb954"
 
 [site]
 cash_filepath = "cash/cash.pkl"
