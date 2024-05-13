@@ -1,3 +1,4 @@
+import json
 import re
 
 import pandas
@@ -70,6 +71,31 @@ def get_date_str(dataframe_row: pandas.Series) -> str:
               'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
     day, month, weekday = date.split('.')
     return f'{day} {months[int(month) - 1]}, {weekday}'
+
+
+def create_message_str(order_data):
+    positions_data = json.loads(order_data['positionsData'])
+    positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
+    order_message = (f"""НОВАЯ ЗАЯВКА
+
+    Позиции:
+    {positions_str}
+
+    Дата доставки:
+    {order_data['delivery_date']}
+
+    Адрес:
+    {order_data['delivery_address']}
+
+    Магазин:
+    {order_data['party']}
+
+    Цена: {order_data['price']}
+    Предоплата: {order_data['prepayment']}
+    Нужно получить: {order_data['amount_to_receive']}""")
+    if order_data['comment'] != '':
+        order_message += f"\n\nКомментарий: {order_data['comment']}"
+        return order_message
 
 
 if __name__ == "__main__":

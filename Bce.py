@@ -52,6 +52,7 @@ def get_editors_columns_params():
                                                    options=fabrics,
                                                    default=fabrics[0],
                                                    required=True),
+        "attributes": "Состав начинки",
 
         "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
 

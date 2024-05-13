@@ -3,9 +3,9 @@ import time
 import httpx
 import logging
 import subprocess
-from flask import Flask, render_template, request, jsonify, abort
+from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf
+from utils.tools import load_conf, create_message_str
 
 config = load_conf()
 
@@ -22,11 +22,10 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
-articles = sbis.get_articles()
+nomenclatures = sbis.get_nomenclatures()
 
 # TODO: если это матрас, добавляем в задачи работягам, компоненты не добавляем.
 #  Внедрить фотки и состав матраса.
-#  добавить все позиции в поиск
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -48,35 +47,21 @@ def index():
                 'prepayment': request.form['prepayment'],
                 'comment': request.form.get('comment', '')
             }
+            print(order_data)
+            # Считается отдельно на случай, если поля "Цена" и "Предоплата" будут пусты. Метод .get вернёт "0"
             order_data['amount_to_receive'] = float(order_data.get('price', 0)) - float(order_data.get('prepayment', 0))
 
-            positions_data = json.loads(order_data['positionsData'])
-            positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
-            order_message = (f"""НОВАЯ ЗАЯВКА
-------------
-Позиции:
-{positions_str}
-------------
-Дата доставки:
-{order_data['delivery_date']}
-------------
-Адрес:
-{order_data['delivery_address']}
-------------
-Магазин:
-{order_data['party']}
-------------
-Цена: {order_data['price']}
-Предоплата: {order_data['prepayment']}
-Нужно получить: {order_data['amount_to_receive']}""")
-            if order_data['comment'] != '':
-                order_message += f"\n------------\nКомментарий: {order_data['comment']}"
+            tg_message = create_message_str(order_data)
+            logging.info(f"Сформировано сообщение для заказа: {tg_message}")
 
-            logging.info(f"Сформировано сообщение для заказа: {order_message}")
-
-            send_telegram_message(order_message, chat_id)
+            send_telegram_message(tg_message, chat_id)
             logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
-            res = sbis.write_implementation(order_data)
+            # TODO: создавать задачи работягам на каждый матрас
+            for positions in order_data['positionsData']:
+                for i in range(int(positions['quantity'])):
+                    print(nomenclatures[positions['article']])
+
+            sbis.write_implementation(order_data)
             return "   Заказ принят. Реализация записана. Задания созданы."
 
         except KeyError as e:
@@ -88,13 +73,13 @@ def index():
             abort(400, description=f"Неверный формат данных: {str(e)}")
 
     logging.debug("Рендеринг шаблона index.html")
-    return render_template('index.html', articles=articles)
+    return render_template('index.html', nomenclatures=nomenclatures)
 
 
 @app.route('/api/articles', methods=['GET'])
 def get_articles():
     logging.debug("Получен GET-запрос к /api/articles")
-    return jsonify(list(articles))
+    return jsonify(list(nomenclatures))
 
 
 def send_telegram_message(text, chat_id):

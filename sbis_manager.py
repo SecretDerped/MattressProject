@@ -160,7 +160,7 @@ class SBISWebApp(SBISApiManager):
         self.reg_id = config.get('sbis').get('reglament_id_list')
         self.sale_point_name = sale_point_name
         self.price_list_name = price_list_name
-        self.articles_list = {}
+        self.nomenclatures_list = {}
 
     def get_sale_point_id(self):
         res = self.main_query('/point/list?', {'withPrices': 'true'})
@@ -173,36 +173,48 @@ class SBISWebApp(SBISApiManager):
                   'actualDate': '2024-03-18'}
         res = self.main_query('/nomenclature/price-list?', params)
         for list in res['priceLists']:
-            print(self.price_list_name)
-            print(list['name'])
             if list['name'] == self.price_list_name:
                 return list['id']
 
-    def get_nomenclature_list(self, point_id: str, price_list_id: str):
+    def get_nomenclature_list(self, point_id: str, price_list_id: str, page: int):
         params = {'pointId': point_id,
-                  'priceListId': price_list_id}
+                  'priceListId': price_list_id,
+                  'pageSize': 300,
+                  'page': page}
         return self.main_query('/nomenclature/list?', params)
 
-    def get_articles(self):
-        articles_list = dict()
+    def get_nomenclatures(self):
+
+        mattress_list_id = 2
+        page = 0
+        nomenclatures_list = dict()
         point_id = self.get_sale_point_id()
         price_list_id = self.get_price_list_id(point_id)
-        product_list = self.get_nomenclature_list(point_id, price_list_id)
-        for product in product_list['nomenclatures']:
-            if product['nomNumber']:
-                # print(product)
-                name = product['name']
-                code = product['nomNumber']
-                description = product['description_simple']
-                attributes = product['attributes']
-                price = product['cost']
 
-                articles_list[name] = {'code': code,
-                                       'price': price,
-                                       'description': description,
-                                       'attributes': attributes}
-        self.articles_list = articles_list
-        return articles_list
+        while True:
+            product_list = self.get_nomenclature_list(point_id, price_list_id, page)
+            page += 1
+
+            for product in product_list['nomenclatures']:
+                if product['nomNumber']:
+                    name = product['name']
+                    code = product['nomNumber']
+                    description = product['description_simple']
+                    attributes = product['attributes']
+                    price = product['cost']
+                    is_mattress = True if product['hierarchicalParent'] == mattress_list_id else False
+
+                    nomenclatures_list[name] = {'code': code,
+                                                'price': price,
+                                                'description': description,
+                                                'attributes': attributes,
+                                                'is_mattress': is_mattress}
+
+            if not product_list['outcome']['hasMore']:
+                break
+
+        self.nomenclatures_list = nomenclatures_list
+        return nomenclatures_list
 
     def write_implementation(self, order_data: dict):
         with (open(imp_filepath, 'w') as file):
@@ -305,7 +317,7 @@ class SBISWebApp(SBISApiManager):
                 item_name = item['article'].replace('"', '&quot;')
                 quantity = int(item.get('quantity', '1'))
                 total_quantity += quantity
-                info = self.articles_list[item['article']]
+                info = self.nomenclatures_list[item['article']]
                 code = info.get("code")
                 price = info.get('price')
                 file.write(f'''
@@ -355,7 +367,8 @@ class SBISWebApp(SBISApiManager):
                               "Отчество": "Максимович"},
             "ДополнительныеПоля": {"Предоплата": prepayment,
                                    "НужноПолучить": amount_to_receive,
-                                   "Контакт": order_contact}}}
+                                   "Контакт": order_contact,
+                                   "Адрес": order_address}}}
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
