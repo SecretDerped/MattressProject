@@ -4,7 +4,7 @@ import json
 import requests
 import logging
 
-from utils.tools import load_conf
+from utils.tools import load_conf, create_implementation_xml
 
 config = load_conf()
 imp_filepath = config.get('sbis').get('implementation_filepath')
@@ -177,6 +177,39 @@ class SBISWebApp(SBISApiManager):
                 return list['id']
 
     def get_nomenclature_list(self, point_id: str, price_list_id: str, page: int):
+        """
+        get_nomenclature_list возвращает список из словарей:
+        {
+            article: str  # Артикул наименования
+            attributes: [{...}]  # Массив с характеристиками товара
+            balance: str  # Остаток товара с учетом открытых смен. Остаток передается по складу точки продаж
+            barcodes: [{...}]  # Массив штрихкодов
+                code: str  # Штрихкод
+                codetype: str  # Тип штрихкода (EAN-13, EAN-8)
+            cost: integer  # Цена товара из прайса
+            description: str  # Поле «Описание» из карточки товара
+            externalId: str  # Идентификатор товара в формате UUID
+            hierarchicalId: integer  # Идентификатор раздела
+            hierarchicalParent: integer  # Идентификатор родительского раздела
+            id: integer  # Идентификатор товара
+            images: list[str]  # Массив ссылок на изображение товара
+            indexNumber: integer  # Порядковый номер в каталоге
+            modifiers: list[{...}]  # Массив списков модификаторов
+                id: integer  # Идентификатор товарной позиции
+                externalId: str  # Идентификатор товара в формате UUID
+                nomNumber: str  # Код товара, указанный в карточке товара
+                name: str  # Название товара
+                cost: int/float  # Цена модификатора
+                unit: str  # Название единицы измерения
+            name: str  # Название товара
+            nomNumber: str  # Код товара, указанный в карточке товара
+            published: boolean  # Признак публикации товарной позиции
+            masters: str  # Список сотрудников, которые могут применять этот товар/услугу
+            short_code: integer  # Короткий код
+            unit: str  # Единица измерения
+            outcome: boolean  # Признак наличия записей на следующих страницах
+        }
+            """
         params = {'pointId': point_id,
                   'priceListId': price_list_id,
                   'pageSize': 300,
@@ -184,31 +217,44 @@ class SBISWebApp(SBISApiManager):
         return self.main_query('/nomenclature/list?', params)
 
     def get_nomenclatures(self):
-
-        mattress_list_id = 2
-        page = 0
-        nomenclatures_list = dict()
         point_id = self.get_sale_point_id()
         price_list_id = self.get_price_list_id(point_id)
 
+        # ID товарной группы матрасов. Далее стоит проверка товара на
+        # принадлежность этой группе. Товары из этой группы попадают
+        # в датафрейм в качестве задания на производство
+        mattress_group_id = config.get('sbis').get('mattress_group_id')
+
+        # Это для обработки порционных данных
+        page = 0
+        nomenclatures_list = dict()
+
         while True:
             product_list = self.get_nomenclature_list(point_id, price_list_id, page)
+
             page += 1
 
             for product in product_list['nomenclatures']:
-                if product['nomNumber']:
-                    name = product['name']
-                    code = product['nomNumber']
-                    description = product['description_simple']
-                    attributes = product['attributes']
-                    price = product['cost']
-                    is_mattress = True if product['hierarchicalParent'] == mattress_list_id else False
+                # Позиции без номера это каталоги. Пропускаем
+                if not product['nomNumber']:
+                    continue
 
-                    nomenclatures_list[name] = {'code': code,
-                                                'price': price,
-                                                'description': description,
-                                                'attributes': attributes,
-                                                'is_mattress': is_mattress}
+                key = product['name']
+                nomenclatures_list[key] = {'code': product.get('nomNumber', 0),
+                                           'article': product.get('article', 'Неизвестен'),
+                                           'price': product.get('cost', 0),
+                                           'description': product.get('description_simple', ''),
+                                           'attributes': product.get('attributes', {'': ''}),
+                                           'images': product.get('images', None),
+                                           'is_mattress': False}
+                if product['hierarchicalParent'] == mattress_group_id:
+
+                    nomenclatures_list[key]['is_mattress'] = True
+
+                    # Если товар принадлежит к группе матрасов, пишем размер в отдельное поле
+                    attributes = nomenclatures_list[key]['attributes']
+                    nomenclatures_list[key]['size'] = attributes.get('Размер', '0')
+                    nomenclatures_list[key]['structure'] = attributes.get('Состав', '')
 
             if not product_list['outcome']['hasMore']:
                 break
@@ -217,140 +263,22 @@ class SBISWebApp(SBISApiManager):
         return nomenclatures_list
 
     def write_implementation(self, order_data: dict):
-        with (open(imp_filepath, 'w') as file):
-            today = datetime.today().strftime('%d.%m.%Y')
-            delivery_date_str = order_data.get('delivery_date', None)
-            delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
-            customer_info = json.loads(order_data.get('party_data_json', '{}'))
-            customer_inn = customer_info.get('data', {}).get('inn', None)
-            customer_kpp = customer_info.get('data', {}).get('kpp', None)
-            order_address = customer_info.get('address_data', {}).get('value', None)
-            customer_name = order_data.get('party', None).replace('"', '&quot;')
-            comment = order_data.get('comment', None).replace('"', '&quot;')
-            order_contact = order_data.get('contact', None)
-            full_price = round(float(order_data.get('price', None)), 2)
-            prepayment = round(float(order_data.get('prepayment', None)), 2)
-            amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
+        # TODO: доделать реализацию
+        today = datetime.today().strftime('%d.%m.%Y')
+        delivery_date_str = order_data.get('delivery_date', None)
+        delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
+        customer_info = json.loads(order_data.get('party_data_json', '{}'))
+        customer_inn = customer_info.get('data', {}).get('inn', None)
+        customer_kpp = customer_info.get('data', {}).get('kpp', None)
+        order_address = customer_info.get('address_data', {}).get('value', None)
+        customer_name = order_data.get('party', None).replace('"', '&quot;')
+        comment = order_data.get('comment', None).replace('"', '&quot;')
+        order_contact = order_data.get('contact', None)
+        full_price = round(float(order_data.get('price', None)), 2)
+        prepayment = round(float(order_data.get('prepayment', None)), 2)
+        amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
 
-            file.write(f'''<?xml version="1.0" encoding="WINDOWS-1251" ?>
-                <Файл ВерсФорм="5.02">
-        
-                <СвУчДокОбор>
-                <СвОЭДОтпр/>
-                </СвУчДокОбор>
-        
-                <Документ ВремИнфПр="9.00.00" ДатаИнфПр="{today}" КНД="1175010" НаимЭконСубСост="ИП Кесиян Давид Арсенович">
-                <СвДокПТПрКроме>
-                <СвДокПТПр>
-                <НаимДок НаимДокОпр="Товарная накладная" ПоФактХЖ="Документ о передаче товара при торговых операциях"/>
-                <ИдентДок ДатаДокПТ="{today}"/>
-                <СодФХЖ1>
-                  <ГрузОтпр ОКПО="0120807602">
-                    <ИдСв>
-                      <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
-                        <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
-                      </СвИП>
-                    </ИдСв>
-                    <Адрес>
-                      <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
-                    </Адрес>
-                    <Контакт ЭлПочта="it@le-ar.ru"/>
-                    <БанкРекв НомерСчета="40802810270010040929">
-                      <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
-                    </БанкРекв>
-                  </ГрузОтпр>
-                  <ГрузПолуч ОКПО="20524053">
-                    <ИдСв>
-                      <СвОрг>
-                        <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
-                      </СвОрг>
-                    </ИдСв>
-                    <Адрес>
-                      <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
-                    </Адрес>
-                    </ГрузПолуч>
-                  <Продавец ОКПО="0120807602">
-                    <ИдСв>
-                      <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
-                        <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
-                      </СвИП>
-                    </ИдСв>
-                    <Адрес>
-                      <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
-                    </Адрес>
-                    <Контакт ЭлПочта="it@le-ar.ru"/>
-                    <БанкРекв НомерСчета="40802810270010040929">
-                      <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
-                    </БанкРекв>
-                  </Продавец>
-                  <Покупатель ОКПО="20524053">
-                    <ИдСв>
-                      <СвОрг>
-                        <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
-                      </СвОрг>
-                    </ИдСв>
-                    <Адрес>
-                      <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
-                    </Адрес>
-                    <Контакт Тлф="8 (861) 204-05-06" ЭлПочта="dir@le-ar.ru"/>
-                    <БанкРекв НомерСчета="40702810512550035771">
-                      <СвБанк БИК="044525360" КорСчет="30101810445250000360" НаимБанк="Филиал &quot;Корпоративный&quot; ПАО &quot;Совкомбанк&quot; МОСКВА"/>
-                    </БанкРекв>
-                  </Покупатель>
-                  <Основание НаимОсн="-"/>
-                  <ИнфПолФХЖ1>
-                    <ТекстИнф Значен="{comment}" Идентиф="Примечание"/>
-                    <ТекстИнф Значен="{comment}" Идентиф="ИнфПередТабл"/>
-                    <ТекстИнф Значен="{delivery_date}" Идентиф="Срок"/>
-                    <ТекстИнф Значен="23:59:59" Идентиф="СрокВремя"/>
-                    <ТекстИнф Значен="Основной склад" Идентиф="СкладНаименование"/>
-                    <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимПост"/>
-                    <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимГрузОтпр"/>
-                  </ИнфПолФХЖ1>
-                </СодФХЖ1>
-              </СвДокПТПр>
-              <СодФХЖ2>''')
-            item_num = 1
-            total_quantity = 0
-            items = json.loads(order_data.get('positionsData', '[]'))
-            for item in items:
-                item_name = item['article'].replace('"', '&quot;')
-                quantity = int(item.get('quantity', '1'))
-                total_quantity += quantity
-                info = self.nomenclatures_list[item['article']]
-                code = info.get("code")
-                price = info.get('price')
-                file.write(f'''
-                    <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
-                      <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
-                      <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
-                      <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
-                      <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
-                    </СвТов>''')
-                item_num += 1
-                for i in range(quantity):
-                    task_data = {"code": code,
-                                 "item_name": item['article'],
-                                 "customer_name": order_data.get('party', None),
-                                 "customer_inn": customer_inn,
-                                 "customer_kpp": customer_kpp,
-                                 "order_contact": order_contact,
-                                 "delivery_date": delivery_date,
-                                 "order_address": order_address,
-                                 "comment": comment,
-                                 "info": info}
-
-                    # self.create_task(task_data)  # Создаёт наряд на каждый матрац
-
-            file.write(f'''
-        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
-      </СодФХЖ2>
-    </СвДокПТПрКроме>
-    <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
-    <Подписант ОблПолн="2"/>
-  </Документ>
-
-</Файл>''')
+        create_implementation_xml(self.nomenclatures_list, order_data, imp_filepath)
 
         with open(imp_filepath, "rb") as file:
             encoded_string = base64.b64encode(file.read())
@@ -372,7 +300,8 @@ class SBISWebApp(SBISApiManager):
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
-    def create_task(self, data):
+    # Не актуален
+    def _create_task(self, data):
         attributes = data.get('info', {'attributes': None}).get('attributes')
         materials = '\n'.join(f'{key}: {value}' for key, value in attributes.items())
         params = {"Документ": {

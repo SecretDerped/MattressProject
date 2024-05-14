@@ -9,6 +9,7 @@ from utils.tools import config, read_file, save_to_file
 cash_file = config.get('site').get('cash_filepath')
 fabrics = list(config.get('fabric_corrections'))
 articles = ["801", "802", "Уникальная"]
+region = ['Краснодарский край', 'Ростовская область', 'Уральский автономный округ']
 delivery_type = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
 st.set_page_config(page_title="Производственный терминал",
                    page_icon="🛠️",
@@ -67,10 +68,15 @@ def get_editors_columns_params():
 
         "address": "Адрес",
 
-        "Тип доставки": st.column_config.SelectboxColumn("Тип доставки",
-                                                         options=delivery_type,
-                                                         default=delivery_type[0],
-                                                         required=True),
+        "region": st.column_config.SelectboxColumn("Регион",
+                                                   options=region,
+                                                   default=region[0],
+                                                   required=True),
+
+        "delivery_type": st.column_config.SelectboxColumn("Тип доставки",
+                                                          options=delivery_type,
+                                                          default=delivery_type[0],
+                                                          required=True),
 
         "client": "Клиент",
 
@@ -78,10 +84,10 @@ def get_editors_columns_params():
                                                width='large',
                                                disabled=True),
 
-        "created": st.column_config.DateColumn("Создано",
-                                               format="DD.MM.YYYY",
-                                               default=datetime.date.today(),
-                                               disabled=True),
+        "created": st.column_config.DatetimeColumn("Создано",
+                                                   format="DD.MM.YYYY",
+                                                   default=datetime.datetime.today(),
+                                                   disabled=True),
     }
 
 

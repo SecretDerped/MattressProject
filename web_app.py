@@ -1,3 +1,4 @@
+import datetime
 import json
 import time
 import httpx
@@ -5,7 +6,7 @@ import logging
 import subprocess
 from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf, create_message_str
+from utils.tools import load_conf, create_message_str, append_to_dataframe
 
 config = load_conf()
 
@@ -14,6 +15,12 @@ login = sbis_config.get('login')
 password = sbis_config.get('password')
 sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
+cash_file = config.get('site').get('cash_filepath')
+
+high_priority = False
+fabric = "Жаккард"
+region = "Краснодарский край"
+delivery_type = "Самовывоз"
 
 tg_token = config.get('telegram').get('token')
 
@@ -24,9 +31,11 @@ app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 nomenclatures = sbis.get_nomenclatures()
 
+
 # TODO: если это матрас, добавляем в задачи работягам, компоненты не добавляем.
 #  Внедрить фотки и состав матраса.
-
+#  создавать заявки самовывоза
+#  Сделать форму перезагружающейся после создания заявки
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -35,21 +44,18 @@ def index():
         logging.debug(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
-            order_data = {
-                'party': request.form['party'],
-                'party_data_json': request.form['party_data'],
-                'positionsData': request.form['positionsData'],
-                'delivery_date': request.form['delivery_date'],
-                'delivery_address': request.form['delivery_address'],
-                'address_data': request.form['address_data'],
-                'contact': request.form['contact'],
-                'price': request.form['price'],
-                'prepayment': request.form['prepayment'],
-                'comment': request.form.get('comment', '')
-            }
-            print(order_data)
-            # Считается отдельно на случай, если поля "Цена" и "Предоплата" будут пусты. Метод .get вернёт "0"
-            order_data['amount_to_receive'] = float(order_data.get('price', 0)) - float(order_data.get('prepayment', 0))
+
+            order_data = request.form.to_dict()
+            for k, v in order_data.items():
+                print(f'{k} :: {v}\n')
+
+            order_data['positionsData'] = json.loads(order_data['positionsData'])
+
+            price = float(order_data['price']) if order_data['price'] else 0
+            prepayment = float(order_data['prepayment']) if order_data['prepayment'] else 0
+            order_data['amount_to_receive'] = price - prepayment
+
+            print(order_data['amount_to_receive'])
 
             tg_message = create_message_str(order_data)
             logging.info(f"Сформировано сообщение для заказа: {tg_message}")
@@ -57,9 +63,43 @@ def index():
             send_telegram_message(tg_message, chat_id)
             logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
             # TODO: создавать задачи работягам на каждый матрас
-            for positions in order_data['positionsData']:
-                for i in range(int(positions['quantity'])):
-                    print(nomenclatures[positions['article']])
+            #  Переопределить тип ткани
+            #  Печать гарантийного талона
+            #  Спросить Давида как проводить в СБИС товары так, чтобы списывались комплектующие
+            #  Подсчёт ткани
+            #  Раздельное меню на матрасы со своими тканями, и на комплектующие, и на кровати
+            #  Система уведомлений
+
+            # В positionsData находится только название позиции и количество.
+            # По названию будут подтягиваться данные из словаря номенклатуры.
+            for position in order_data['positionsData']:
+
+                item = nomenclatures[position['article']]
+                # Позиции не в группе "Матрасы" пропускаются
+                if not position['is_mattress']:
+                    continue
+
+                task_data = {
+                    "high_priority": high_priority,
+                    "deadline": order_data['delivery_date'],
+                    "article": item['article'],
+                    "size": item['size'],
+                    "fabric": fabric,  # Пока хардкод
+                    "attributes": item['structure'],
+                    "photo": 'Photo',
+                    "fabric_is_done": False,
+                    "gluing_is_done": False,
+                    "sewing_is_done": False,
+                    "packing_is_done": False,
+                    "address": order_data["delivery_address"],
+                    "region": region,
+                    "delivery_type": delivery_type,
+                    "client": order_data['party'],
+                    "history": "Работник -> Что-то (4:20, 11.09.01)",
+                    "created": datetime.datetime.now(),
+                }
+                for _ in range(int(position['quantity'])):
+                    append_to_dataframe(task_data, cash_file)
 
             sbis.write_implementation(order_data)
             return "   Заказ принят. Реализация записана. Задания созданы."

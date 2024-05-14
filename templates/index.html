@@ -170,12 +170,12 @@
                 <div class="form-group positions-separator">
                     <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
                 </div>
-                <input type="hidden" id="positionsData" name="positionsData" value="">
+                <input type="hidden" id="positionsData" name="positionsData" value="" required>
             </div>
 
             <div class="form-group">
-                <label for="party" class="form-label">Название магазина</label>
-                <input type="text" id="party" name="party" class="form-control" required>
+                <label for="party" class="form-label">Организация покупателя</label>
+                <input type="text" id="party" name="party" class="form-control">
                 <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
             </div>
 
@@ -186,23 +186,23 @@
 
             <div class="form-group">
                 <label for="delivery_address" class="form-label">Адрес доставки</label>
-                <input type="text" id="delivery_address" name="delivery_address" class="form-control" required>
+                <input type="text" id="delivery_address" name="delivery_address" class="form-control">
                 <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
             </div>
 
             <div class="form-group">
                 <label for="contact" class="form-label">Контакты</label>
-                <input type="text" id="contact" name="contact" class="form-control" required>
+                <input type="text" id="contact" name="contact" class="form-control">
             </div>
 
             <div class="form-group">
                 <label for="price" class="form-label">Цена</label>
-                <input type="number" id="price" name="price" class="form-control" step="0.01" required>
+                <input type="number" id="price" name="price" class="form-control" step="0.01">
             </div>
 
             <div class="form-group">
                 <label for="prepayment" class="form-label">Предоплата</label>
-                <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01" required>
+                <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
             </div>
 
             <div class="form-group">
