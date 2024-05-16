@@ -55,6 +55,8 @@ def get_editors_columns_params():
                                                    required=True),
         "attributes": "Состав начинки",
 
+        "comment": 'Комментарий',
+
         "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
 
         "fabric_is_done": st.column_config.CheckboxColumn("Нарезано",
@@ -98,15 +100,20 @@ def redact_tasks():
                                'article': str,
                                'size': str,
                                'fabric': str,
+                               'attributes': str,
+                               'comment': str,
+                               'photo': str,
                                'fabric_is_done': bool,
                                'gluing_is_done': bool,
                                'sewing_is_done': bool,
                                'packing_is_done': bool,
                                'address': str,
+                               'delivery_type': str,
+                               'region': str,
                                'client': str,
                                'history': str,
                                'created': "datetime64[ns]"}
-    # Если файл с кэшем отсутсвует, создаёт его, прописывая поля из словаря настройки колонн
+    # Если файл с кэшем отсутсвует, создаёт его, прописывая пустые колонки из словаря настройки колонн
     if not os.path.exists(cash_file):
         base_dict = {}
         for key in columns.keys():

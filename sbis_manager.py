@@ -1,4 +1,5 @@
 import base64
+import os
 from datetime import datetime
 import json
 import requests
@@ -42,7 +43,7 @@ class SBISManager:
         try:
             sid = json.loads(res.text)['result']
 
-            with open(f"{self.login}_sbis_token.txt", "w+") as file:
+            with open(f"cash/{self.login}_sbis_token.txt", "w+") as file:
                 file.write(sid)
             return sid
 
@@ -51,7 +52,7 @@ class SBISManager:
 
     def get_sid(self):
         try:
-            with open(f"{self.login}_sbis_token.txt", "r") as file:
+            with open(f"cash/{self.login}_sbis_token.txt", "r") as file:
                 sid = file.read()
                 return sid
         except FileNotFoundError:
@@ -105,20 +106,20 @@ class SBISApiManager:
         result = json.loads(response.text)
 
         sid = result['sid']
-        with open(f"{self.login}_sbis_service_sid.txt", "w+") as file:
+        with open(f"cash/{self.login}_sbis_service_sid.txt", "w+") as file:
             file.write(sid)
 
         token = result['token']
-        with open(f"{self.login}_sbis__service_token.txt", "w+") as file:
+        with open(f"cash/{self.login}_sbis__service_token.txt", "w+") as file:
             file.write(token)
 
         return sid, token
 
     def get_tokens(self):
         try:
-            with open(f"{self.login}_sbis_sid.txt", "r") as file:
+            with open(f"cash/{self.login}_sbis_sid.txt", "r") as file:
                 sid = file.read()
-            with open(f"{self.login}_sbis_token.txt", "r") as file:
+            with open(f"cash/{self.login}_sbis_token.txt", "r") as file:
                 token = file.read()
             return sid, token
         except FileNotFoundError:
@@ -262,18 +263,144 @@ class SBISWebApp(SBISApiManager):
         self.nomenclatures_list = nomenclatures_list
         return nomenclatures_list
 
-    def write_implementation(self, order_data: dict):
-        # TODO: доделать реализацию
+    def create_implementation_xml(self, data):
         today = datetime.today().strftime('%d.%m.%Y')
-        delivery_date_str = order_data.get('delivery_date', None)
+
+        delivery_date_str = data.get('delivery_date', None)
         delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
+
+        customer_info = json.loads(data.get('party_data_json', '{}'))
+        customer_inn = customer_info.get('data', {}).get('inn', None)
+        customer_kpp = customer_info.get('data', {}).get('kpp', None)
+        order_address = customer_info.get('address_data', {}).get('value', None)
+
+        customer_name = data.get('party', None).replace('"', '&quot;')
+        comment = data.get('comment', None).replace('"', '&quot;')
+        items = data.get('positionsData', '[]')
+
+        full_price = round(float(data.get('price', None)), 2)
+
+        xml_content = f'''<?xml version="1.0" encoding="WINDOWS-1251" ?>
+<Файл ВерсФорм="5.02">
+
+  <СвУчДокОбор>
+    <СвОЭДОтпр/>
+  </СвУчДокОбор>
+
+  <Документ ВремИнфПр="9.00.00" ДатаИнфПр="{today}" КНД="1175010" НаимЭконСубСост="ИП Гаспарян Роман Славикович">
+    <СвДокПТПрКроме>
+      <СвДокПТПр>
+        <НаимДок НаимДокОпр="Товарная накладная" ПоФактХЖ="Документ о передаче товара при торговых операциях"/>
+        <ИдентДок ДатаДокПТ="{today}"/>
+        <СодФХЖ1>
+          <ГрузОтпр ОКПО="0120807602">
+            <ИдСв>
+              <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
+                <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
+              </СвИП>
+            </ИдСв>
+            <Адрес>
+              <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
+            </Адрес>
+            <Контакт ЭлПочта="it@le-ar.ru"/>
+            <БанкРекв НомерСчета="40802810270010040929">
+              <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
+            </БанкРекв>
+          </ГрузОтпр>
+          <ГрузПолуч ОКПО="20524053">
+            <ИдСв>
+              <СвОрг>
+                <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
+              </СвОрг>
+            </ИдСв>
+            <Адрес>
+              <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
+            </Адрес>
+          </ГрузПолуч>
+          <Продавец ОКПО="0120807602">
+            <ИдСв>
+              <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
+                <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
+              </СвИП>
+            </ИдСв>
+            <Адрес>
+              <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
+            </Адрес>
+            <Контакт ЭлПочта="it@le-ar.ru"/>
+            <БанкРекв НомерСчета="40802810270010040929">
+              <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
+            </БанкРекв>
+          </Продавец>
+          <Покупатель ОКПО="20524053">
+            <ИдСв>
+              <СвОрг>
+                <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
+              </СвОрг>
+            </ИдСв>
+            <Адрес>
+              <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
+            </Адрес>
+            <Контакт Тлф="8 (861) 204-05-06" ЭлПочта="dir@le-ar.ru"/>
+            <БанкРекв НомерСчета="40702810512550035771">
+              <СвБанк БИК="044525360" КорСчет="30101810445250000360" НаимБанк="Филиал &quot;Корпоративный&quot; ПАО &quot;Совкомбанк&quot; МОСКВА"/>
+            </БанкРекв>
+          </Покупатель>
+          <Основание НаимОсн="-"/>
+          <ИнфПолФХЖ1>
+            <ТекстИнф Значен="{comment}" Идентиф="Примечание"/>
+            <ТекстИнф Значен="{comment}" Идентиф="ИнфПередТабл"/>
+            <ТекстИнф Значен="{delivery_date}" Идентиф="Срок"/>
+            <ТекстИнф Значен="23:59:59" Идентиф="СрокВремя"/>
+            <ТекстИнф Значен="Основной склад" Идентиф="СкладНаименование"/>
+            <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимПост"/>
+            <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимГрузОтпр"/>
+          </ИнфПолФХЖ1>
+        </СодФХЖ1>
+      </СвДокПТПр>
+      <СодФХЖ2>'''
+
+        item_num = 1
+        total_quantity = 0
+
+        for item in items:
+            item_name = item['article'].replace('"', '&quot;')
+            quantity = int(item.get('quantity', '1'))
+            total_quantity += quantity
+            info = self.nomenclatures_list[item['article']]
+            code = info.get("code")
+            price = info.get('price')
+            xml_content += f'''
+        <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
+          <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
+          <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
+          <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
+          <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
+        </СвТов>'''
+
+            item_num += 1
+
+            xml_content += f'''
+        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
+      </СодФХЖ2>
+    </СвДокПТПрКроме>
+    <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
+    <Подписант ОблПолн="2"/>
+  </Документ>
+</Файл>'''
+            with open(imp_filepath, 'w') as file:
+                return file.write(xml_content)
+
+    def write_implementation(self, order_data: dict):
+
         customer_info = json.loads(order_data.get('party_data_json', '{}'))
         customer_inn = customer_info.get('data', {}).get('inn', None)
         customer_kpp = customer_info.get('data', {}).get('kpp', None)
         order_address = customer_info.get('address_data', {}).get('value', None)
-        customer_name = order_data.get('party', None).replace('"', '&quot;')
+
+        #customer_name = order_data.get('party', None).replace('"', '&quot;')
         comment = order_data.get('comment', None).replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
+
         full_price = round(float(order_data.get('price', None)), 2)
         prepayment = round(float(order_data.get('prepayment', None)), 2)
         amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
