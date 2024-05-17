@@ -1,249 +1,330 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Новая заявка</title>
-    <!-- Подключение Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Подключение стилей jQuery UI для Autocomplete -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-    <!-- Подключение стилей для подсказок Dadata -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400&display=swap">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/suggestions-jquery@22.6.0/dist/css/suggestions.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <!-- Подключение jQuery -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <!-- Подключение jQuery UI для Autocomplete -->
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-
     <style>
-
         :root {
             --placeholder-color: #adb5bd;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Source Sans Pro', sans-serif;
         }
 
-        #positionsTable {
-            border-collapse: collapse;
-            width: 100%;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            overflow: hidden;
-        }
-
-        #positionsTable:not(:empty) {
-            display: table;
-        }
-
-        #positionsTable th, #positionsTable td {
-            border: 1px solid #ced4da;
-            text-align: center;
-            vertical-align: middle;
-            padding: 8px;
-            font-size: 0.85em;
-        }
-
-        #positionsTable th {
-            background-color: #007bff;
-            color: white;
-            font-size: 0.85em;
-            font-weight: normal;
-            height: 40px;
-        }
-
-        #positionsTable th:nth-child(1) {
-            text-align: center;
-        }
-
-        #positionsTable th:nth-child(1), #positionsTable td:nth-child(1) {
-            width: auto;
-        }
-
-        #positionsTable th:nth-child(2), #positionsTable td:nth-child(2) {
-            width: 150px;
-        }
-
-        @media (max-width: 576px) {
-            #positionsTable th, #positionsTable td {
-                font-size: 0.7em;
-            }
-        }
-
-        #positionsTable td {
-            background-color: #f8f9fa;
-        }
-
-        #positionsTable td.quantity-col {
-            white-space: nowrap;
-        }
-
-        #positionsTable td.quantity-col .quantity {
+        .form-column {
             display: inline-block;
-            width: 50px;
-            text-align: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            border: none;
-            background-color: transparent;
+            vertical-align: top;
+            width: 100%;
+            padding: 0 10px;
+            margin-bottom: 0.1rem;
         }
 
-        #newArticle::placeholder, .form-label {
-            color: var(--placeholder-color);
+        .form-control {
+            border-radius: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 0.1rem;
+        }
+
+        .form-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 0.1rem;
+        }
+
+        .positions-separator {
+            margin-bottom: 2.5rem;
+        }
+
+        .positions-separator::after {
+            content: '';
+            display: block;
+            margin-top: 1rem;
+            border-bottom: 2px solid #6c757d;
+            border-radius: 5px;
+        }
+
+        .form-group + .form-group {
+            margin-top: 10px;
+        }
+
+        .delivery-type-group {
+            margin-left: 10px;
+            margin-top: 10px;
         }
 
         .btn-sm {
+            width: 25px;
+            height: 25px;
             padding: 0.25rem 0.5rem;
             font-size: 0.875rem;
             line-height: 1.5;
-            border-radius: 0.2rem;
-            width: 25px;
-            height: 25px;
+            border-radius: 10px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .custom-file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            width: 100%;
+            height: 44px;
+            opacity: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            cursor: pointer;
+        }
+
+        .custom-file-input-button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: #ffffff;
+            background-color: #007bff;
+            border-radius: 10px;
+            cursor: pointer;
+            width: calc(100% - 20px);
+            text-align: center;
+            border: none;
+        }
+
+        .custom-file-input-button:hover {
+            background-color: #0056b3;
         }
 
         button[type="submit"] {
             display: block;
             margin: 0 auto;
             width: 75%;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            position: relative;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            position: absolute;
-            top: -1rem;
-            left: 0.1rem;
-            font-size: 0.7em;
-            color: #6c757d;
-            pointer-events: none;
-        }
-
-        .form-group.positions-separator {
-            margin-bottom: 2.5rem;
-        }
-
-        .form-group.positions-separator::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -1rem;
-            width: 100%;
-            border-bottom: 2px solid #6c757d;
-            border-radius: 5px;
-        }
-
-        .form-group.positions-separator ~ .form-group {
             margin-top: 20px;
+            border-radius: 10px;
         }
 
         h1 {
             text-align: center;
             margin-top: 1rem;
         }
+
+        @media (min-width: 768px) {
+            .form-column {
+                width: 49%;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <h1 class="mb-4 font-weight-bold">📜 Новая заявка</h1>
     <div class="container mt-3">
-        <h1 class="mb-4">Форма заказа</h1>
         <form method="POST">
-            <div class="form-group">
-                <table class="table" id="positionsTable">
-                    <thead>
-                        <tr>
-                            <th>Выбранные позиции</th>
-                            <th>Количество</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Строки с позициями будут добавляться здесь -->
-                    </tbody>
-                </table>
-                <div class="form-group positions-separator">
+            <!-- Первая колонка формы -->
+            <div class="form-column">
+                <!-- Позиции -->
+                <div class="form-group">
+                    <label for="positionsTable" class="form-label"> </label>
+                    <table class="table" id="positionsTable">
+                        <thead>
+                            <tr>
+                                <th>Выбранные позиции</th>
+                                <th>Количество</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Строки с позициями будут добавляться здесь -->
+                        </tbody>
+                    </table>
                     <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
+                    <input type="hidden" id="positionsData" name="positionsData" value="" required>
                 </div>
-                <input type="hidden" id="positionsData" name="positionsData" value="" required>
+                <!-- Комментарий -->
+                <div class="form-group">
+                    <label for="comment" class="form-label">Комментарий ко всему заказу</label>
+                    <textarea id="comment" name="comment" class="form-control" style="height: 152px;"></textarea>
+                </div>
+                <!-- Компания -->
+                <div class="form-group">
+                    <label for="party" class="form-label">Организация</label>
+                    <input type="text" id="party" name="party" class="form-control">
+                    <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
+                </div>
+                <!-- Фото -->
+                <div class="form-group">
+                    <label for="photo" class="form-label">Прикрепить фото (PNG, JPEG, JPG • Не больше 20 Мб)</label>
+                    <div class="custom-file-input-wrapper">
+                        <input type="file" id="photo" name="photo" class="file-input" accept=".jpg, .jpeg, .png">
+                        <button type="button" class="custom-file-input-button">📁 Выбрать файл | Перетащите файл сюда ☁️</button>
+                    </div>
+                    <div id="file-error" class="text-danger mt-2" style="display: none;">Файл должен быть изображением (JPEG, PNG) и весить не более 20 Мб.</div>
+                    <input type="hidden" id="photo_data" name="photo_data">
+                </div>
             </div>
 
+            <!-- Вторая колонка формы -->
+            <div class="form-column">
+                <!-- Первая внутренняя колонка формы -->
+                <div class="form-column">
+                    <!-- Срок -->
+                    <div class="form-group">
+                        <label for="delivery_date" class="form-label">Срок до:</label>
+                        <input type="date" id="delivery_date" name="delivery_date" class="form-control">
+                    </div>
+                    <!-- Контакт -->
+                    <div class="form-group">
+                        <label for="contact" class="form-label">Контакты</label>
+                        <input type="text" id="contact" name="contact" class="form-control">
+                    </div>
+                </div>
+                <!-- Вторая внутренняя колонка формы -->
+                <div class="form-column">
+                    <!-- Цена -->
+                    <div class="form-group">
+                        <label for="price" class="form-label">Цена</label>
+                        <input type="number" id="price" name="price" class="form-control" step="0.01">
+                    </div>
+                    <!-- Предоплата -->
+                    <div class="form-group">
+                        <label for="prepayment" class="form-label">Предоплата</label>
+                        <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
+                    </div>
+                </div>
+
+                <!-- Тип доставки и адрес -->
+                <div class="form-group delivery-type-group">
+                    <label class="form-label">Тип доставки</label>
+                    <div>
+                        <input type="radio" id="pickup" name="delivery_type" value="Самовывоз" checked>
+                        <label for="pickup"> 📍 Самовывоз</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="city" name="delivery_type" value="Город">
+                        <label for="city"> 🏡 Город</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="territory" name="delivery_type" value="Край">
+                        <label for="territory"> 🗺️ Край</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="region" name="delivery_type" value="Регион">
+                        <label for="region"> 🌎 Регионы</label>
+                    </div>
+                    <!-- Адрес доставки -->
+                    <div class="form-group" id="address-group" style="display:none;">
+                        <label for="delivery_address" class="form-label">Адрес доставки</label>
+                        <input type="text" id="delivery_address" name="delivery_address" class="form-control">
+                        <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
+                    </div>
+                    <!-- Выбор региона доставки -->
+                    <div class="form-group" id="region-group" style="display:none;">
+                    <label for="region_select" class="form-label">Выберите регион</label>
+                    <select id="region_select" name="region_select" class="form-control">
+                        <option value="Ростовская область">Ростовская область</option>
+                        <option value="Северный Кавказ">Северный Кавказ</option>
+                        <option value="Уральский автономный округ">Уральский автономный округ</option>
+                    </select>
+                </div>
+                </div>
+            </div>
+
+            <!-- Кнопка отправки формы -->
             <div class="form-group">
-                <label for="party" class="form-label">Организация покупателя</label>
-                <input type="text" id="party" name="party" class="form-control">
-                <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
+                <button type="submit" class="btn btn-primary">Создать реализацию</button>
             </div>
-
-            <div class="form-group">
-                <label for="delivery_date" class="form-label">Срок до:</label>
-                <input type="date" id="delivery_date" name="delivery_date" class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label for="delivery_address" class="form-label">Адрес доставки</label>
-                <input type="text" id="delivery_address" name="delivery_address" class="form-control">
-                <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
-            </div>
-
-            <div class="form-group">
-                <label for="contact" class="form-label">Контакты</label>
-                <input type="text" id="contact" name="contact" class="form-control">
-            </div>
-
-            <div class="form-group">
-                <label for="price" class="form-label">Цена</label>
-                <input type="number" id="price" name="price" class="form-control" step="0.01">
-            </div>
-
-            <div class="form-group">
-                <label for="prepayment" class="form-label">Предоплата</label>
-                <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
-            </div>
-
-            <div class="form-group">
-                <label for="comment" class="form-label">Комментарий (необязательно)</label>
-                <input type="text" id="comment" name="comment" class="form-control">
-            </div>
-
-            <button type="submit" class="btn btn-primary">Создать реализацию</button>
         </form>
     </div>
 
-    <!-- Скрипты для подсказок Dadata -->
     <script src="https://cdn.jsdelivr.net/npm/suggestions-jquery@22.6.0/dist/js/jquery.suggestions.min.js"></script>
     <script>
+        document.querySelector('.file-input').addEventListener('change', function(event) {
+            var file = event.target.files[0];
+            var fileName = file ? file.name : '📁 Выбрать файл | Перетащите файл сюда ☁️';
+            var fileError = document.getElementById('file-error');
+            fileError.style.display = 'none';
+
+            if (file && file.size <= 20 * 1024 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/png')) {
+                document.querySelector('.custom-file-input-button').textContent = fileName;
+                document.querySelector('.custom-file-input-button').classList.remove('btn-danger');
+                document.querySelector('.custom-file-input-button').classList.add('btn-primary');
+            } else {
+                document.querySelector('.custom-file-input-button').textContent = '📁 Выбрать файл | Перетащите файл сюда ☁️';
+                fileError.style.display = 'block';
+                document.querySelector('.custom-file-input-button').classList.add('btn-danger');
+                document.querySelector('.custom-file-input-button').classList.remove('btn-primary');
+                event.target.value = ''; // сбросить input
+            }
+        });
+
         $("#party").suggestions({
             token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
             type: "PARTY",
-            /* Вызывается, когда пользователь выбирает одну из подсказок */
-            onSelect: function(suggestion) {
+            onSelect: function (suggestion) {
                 console.log(suggestion);
                 $('#party_data').val(JSON.stringify(suggestion));
             }
         });
-    </script>
-    <script>
+
         $("#delivery_address").suggestions({
             token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
             type: "ADDRESS",
-            /* Вызывается, когда пользователь выбирает одну из подсказок */
-            onSelect: function(suggestion) {
+            onSelect: function (suggestion) {
                 console.log(suggestion);
                 $('#address_data').val(JSON.stringify(suggestion));
             }
         });
+
+        $('input[name="delivery_type"]').change(function () {
+            var selectedType = $('input[name="delivery_type"]:checked').val();
+            if (selectedType === 'Самовывоз') {
+                $('#address-group').hide();
+                $('#region-group').hide();
+            } else if (selectedType === 'Город' || selectedType === 'Край') {
+                $('#address-group').show();
+                $('#region-group').hide();
+            } else if (selectedType === 'Регион') {
+                $('#address-group').show();
+                $('#region-group').show();
+            }
+        });
+
+        $("#photo").change(function () {
+            var file = this.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    $('#photo_data').val(e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        $(document).ready(function () {
+            var today = new Date();
+            var dd = String(today.getDate()).padStart(2, '0');
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var yyyy = today.getFullYear();
+            var formattedDate = yyyy + '-' + mm + '-' + dd;
+            $('#delivery_date').val(formattedDate);
+        });
     </script>
-    <!-- Подсказки для артикулов -->
-          <script>
-        $(document).ready(function() {
+    <script>
+        $(document).ready(function () {
             var positions = [];
 
-            // Скрыть таблицу при загрузке страницы
             $('#positionsTable').hide();
 
             function updatePositionsInput() {
@@ -255,7 +336,7 @@
                 if (existingPosition) {
                     existingPosition.quantity += quantity;
                 } else {
-                    positions.push({article: article, quantity: quantity});
+                    positions.push({ article: article, quantity: quantity });
                 }
                 updatePositionsTable();
                 updatePositionsInput();
@@ -264,12 +345,12 @@
             function updatePositionsTable() {
                 var tableBody = $('#positionsTable tbody');
                 tableBody.empty();
-                positions.forEach(function(position, index) {
+                positions.forEach(function (position, index) {
                     var row = $('<tr></tr>');
                     row.append($('<td></td>').text(position.article));
 
                     var quantityCell = $('<td class="quantity-col"></td>');
-                    var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function() {
+                    var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
                         var quantity = parseInt(quantityInput.text(), 10);
                         if (quantity > 1) {
                             quantityInput.text(quantity - 1);
@@ -281,14 +362,14 @@
                             updatePositionsInput();
                         }
                     });
-                    var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function() {
+                    var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
                         var value = parseInt($(this).text(), 10);
                         if (value >= 1 && value <= 999) {
                             positions[index].quantity = value;
                             updatePositionsInput();
                         }
                     });
-                    var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function() {
+                    var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
                         var quantity = parseInt(quantityInput.text(), 10);
                         if (quantity < 999) {
                             quantityInput.text(quantity + 1);
@@ -310,32 +391,23 @@
             }
 
             $('#newArticle').autocomplete({
-                source: function(request, response) {
-                    $.getJSON('/api/articles', function(data) {
+                source: function (request, response) {
+                    $.getJSON('/api/articles', function (data) {
                         var results = $.ui.autocomplete.filter(data, request.term);
                         response(results.slice(0, 5));
                     });
                 },
                 minLength: 0,
-                select: function(event, ui) {
+                select: function (event, ui) {
                     addPosition(ui.item.value, 1);
                     $('#newArticle').val('');
                     return false;
                 }
-            }).focus(function() {
+            }).focus(function () {
                 $(this).autocomplete("search", "");
             });
         });
     </script>
-    <script>
-        $(document).ready(function() {
-            var today = new Date();
-            var dd = String(today.getDate()).padStart(2, '0');
-            var mm = String(today.getMonth() + 1).padStart(2, '0');
-            var yyyy = today.getFullYear();
-            var formattedDate = yyyy + '-' + mm + '-' + dd;
-            $('#delivery_date').val(formattedDate);
-        });
-    </script>
 </body>
+
 </html>

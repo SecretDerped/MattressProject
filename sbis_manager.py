@@ -1,11 +1,10 @@
 import base64
-import os
 from datetime import datetime
 import json
 import requests
 import logging
 
-from utils.tools import load_conf, create_implementation_xml
+from utils.tools import load_conf
 
 config = load_conf()
 imp_filepath = config.get('sbis').get('implementation_filepath')
@@ -310,7 +309,12 @@ class SBISWebApp(SBISApiManager):
           <ГрузПолуч ОКПО="20524053">
             <ИдСв>
               <СвОрг>
-                <СвЮЛ ИННЮЛ="{customer_inn}" КПП="{customer_kpp}" НаимОрг="{customer_name}"/>
+                <СвЮЛ ИННЮЛ="{customer_inn}" '''
+
+        if customer_kpp:
+            xml_content += f"КПП={customer_kpp} "
+
+            xml_content += f'''НаимОрг="{customer_name}"/>
               </СвОрг>
             </ИдСв>
             <Адрес>
@@ -393,19 +397,17 @@ class SBISWebApp(SBISApiManager):
     def write_implementation(self, order_data: dict):
 
         customer_info = json.loads(order_data.get('party_data_json', '{}'))
-        customer_inn = customer_info.get('data', {}).get('inn', None)
-        customer_kpp = customer_info.get('data', {}).get('kpp', None)
         order_address = customer_info.get('address_data', {}).get('value', None)
 
         #customer_name = order_data.get('party', None).replace('"', '&quot;')
         comment = order_data.get('comment', None).replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
 
-        full_price = round(float(order_data.get('price', None)), 2)
+        #full_price = round(float(order_data.get('price', None)), 2)
         prepayment = round(float(order_data.get('prepayment', None)), 2)
         amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
 
-        create_implementation_xml(self.nomenclatures_list, order_data, imp_filepath)
+        self.create_implementation_xml(order_data)
 
         with open(imp_filepath, "rb") as file:
             encoded_string = base64.b64encode(file.read())
@@ -428,7 +430,7 @@ class SBISWebApp(SBISApiManager):
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
 
     # Не актуален
-    def _create_task(self, data):
+    """def create_task(self, data):
         attributes = data.get('info', {'attributes': None}).get('attributes')
         materials = '\n'.join(f'{key}: {value}' for key, value in attributes.items())
         params = {"Документ": {
@@ -445,7 +447,7 @@ class SBISWebApp(SBISApiManager):
                                    "Адрес": data.get("order_address"),
                                    "Комментарий": data.get('comment')}}}
 
-        return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
+        return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)"""
 
 
 if __name__ == '__main__':
