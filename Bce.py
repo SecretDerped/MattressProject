@@ -7,10 +7,17 @@ import datetime
 from utils.tools import config, read_file, save_to_file
 
 cash_file = config.get('site').get('cash_filepath')
+
 fabrics = list(config.get('fabric_corrections'))
+
+# TODO: настроить выгрузку из СБИС и конфигов
+
 articles = ["801", "802", "Уникальная"]
+
 region = ['Краснодарский край', 'Ростовская область', 'Уральский автономный округ']
+
 delivery_type = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
+
 st.set_page_config(page_title="Производственный терминал",
                    page_icon="🛠️",
                    layout="wide")
@@ -43,9 +50,7 @@ def get_editors_columns_params():
                                                 default=datetime.date.today()),
 
         "article": st.column_config.SelectboxColumn("Артикул",
-                                                    options=articles,
-                                                    default=articles[0],
-                                                    required=True),
+                                                    options=articles),
 
         "size": "Размер",
 
@@ -55,7 +60,7 @@ def get_editors_columns_params():
                                                    required=True),
         "attributes": "Состав начинки",
 
-        "comment": 'Комментарий',
+        "comment":  st.column_config.TextColumn("Комментарий", default=''),
 
         "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
 
@@ -87,8 +92,8 @@ def get_editors_columns_params():
                                                disabled=True),
 
         "created": st.column_config.DatetimeColumn("Создано",
-                                                   format="DD.MM.YYYY",
-                                                   default=datetime.datetime.today(),
+                                                   format="D.MM.YYYY | HH:MM",
+                                                   #default=datetime.datetime.today(),
                                                    disabled=True),
     }
 
@@ -133,7 +138,7 @@ def redact_tasks():
         edited_df,
         column_config=columns,
         hide_index=True,
-        num_rows='fixed',
+        num_rows="fixed",
         on_change=cashing, args=(edited_df,),
         height=550
     )

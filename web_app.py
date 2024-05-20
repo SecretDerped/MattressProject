@@ -55,8 +55,6 @@ def index():
             prepayment = float(order_data['prepayment']) if order_data['prepayment'] else 0
             order_data['amount_to_receive'] = price - prepayment
 
-            print(order_data['amount_to_receive'])
-
             tg_message = create_message_str(order_data)
             logging.info(f"Сформировано сообщение для заказа: {tg_message}")
 
@@ -76,7 +74,7 @@ def index():
 
                 item = nomenclatures[position['article']]
                 # Позиции не в группе "Матрасы" пропускаются
-                if not position['is_mattress']:
+                if not item['is_mattress']:
                     continue
 
                 task_data = {
@@ -86,7 +84,8 @@ def index():
                     "size": item['size'],
                     "fabric": fabric,  # Пока хардкод
                     "attributes": item['structure'],
-                    "photo": 'Photo',
+                    "comment": order_data['comment'],
+                    "photo": order_data['photo_data'],
                     "fabric_is_done": False,
                     "gluing_is_done": False,
                     "sewing_is_done": False,

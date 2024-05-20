@@ -10,6 +10,7 @@ def load_conf(path: str = "app_config.toml"):
 
 
 config = load_conf()
+cash_filepath = config.get('site').get('cash_filepath')
 
 
 def save_to_file(data: pandas.DataFrame, filepath: str):
@@ -18,6 +19,17 @@ def save_to_file(data: pandas.DataFrame, filepath: str):
 
 def read_file(filepath: str) -> pandas.DataFrame:
     return pandas.read_pickle(filepath)
+
+
+def get_cash_rows_without(column_to_hide: str = '', ):
+    data = read_file(cash_filepath)
+    if column_to_hide != '':
+        tasks_todo = data[data[column_to_hide] == False]
+    else:
+        tasks_todo = data
+    sorted_tasks = tasks_todo.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
+                                          ascending=[False, True, True, False])
+    return sorted_tasks
 
 
 def append_to_dataframe(data: dict, filepath: str):
@@ -29,6 +41,7 @@ def append_to_dataframe(data: dict, filepath: str):
     row = []
     for k in data.values():
         row.append(k)
+    print(row)
     df.loc[len(df.index)] = row
     save_to_file(df, filepath)
 
@@ -95,21 +108,21 @@ def create_message_str(data):
     positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
     order_message = (f"""НОВАЯ ЗАЯВКА
 
-    Позиции:
-    {positions_str}
+Позиции:
+{positions_str}
 
-    Дата доставки:
-    {data['delivery_date']}
+Дата доставки:
+{data['delivery_date']}
 
-    Адрес:
-    {data['delivery_address']}
+Адрес:
+{data['delivery_address']}
 
-    Магазин:
-    {data['party']}
+Магазин:
+{data['party']}
 
-    Цена: {data['price']}
-    Предоплата: {data['prepayment']}
-    Нужно получить: {data['amount_to_receive']}""")
+Цена: {data['price']}
+Предоплата: {data['prepayment']}
+Нужно получить: {data['amount_to_receive']}""")
     if data['comment'] != '':
         order_message += f"\n\nКомментарий: {data['comment']}"
         return order_message
