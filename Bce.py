@@ -12,8 +12,6 @@ fabrics = list(config.get('fabric_corrections'))
 
 # TODO: настроить выгрузку из СБИС и конфигов
 
-articles = ["801", "802", "Уникальная"]
-
 region = ['Краснодарский край', 'Ростовская область', 'Уральский автономный округ']
 
 delivery_type = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
@@ -23,6 +21,7 @@ st.set_page_config(page_title="Производственный терминал
                    layout="wide")
 
 CASH_STATE = 'task_dataframe'
+SHOW_TABLE = 'show_table'
 
 
 def cashing(dataframe):
@@ -40,7 +39,7 @@ def clear_cash():
 
 def get_editors_columns_params():
     return {
-        "high_priority": st.column_config.CheckboxColumn("Высокий приоритет", default=False),
+        "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
 
         "deadline": st.column_config.DateColumn("Срок",
                                                 min_value=datetime.date(2020, 1, 1),
@@ -49,8 +48,7 @@ def get_editors_columns_params():
                                                 step=1,
                                                 default=datetime.date.today()),
 
-        "article": st.column_config.SelectboxColumn("Артикул",
-                                                    options=articles),
+        "article": "Артикул",
 
         "size": "Размер",
 
@@ -60,7 +58,7 @@ def get_editors_columns_params():
                                                    required=True),
         "attributes": "Состав начинки",
 
-        "comment":  st.column_config.TextColumn("Комментарий", default=''),
+        "comment": st.column_config.TextColumn("Комментарий", default=''),
 
         "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
 
@@ -73,17 +71,18 @@ def get_editors_columns_params():
         "packing_is_done": st.column_config.CheckboxColumn("Упакован",
                                                            default=False),
 
-        "address": "Адрес",
-
-        "region": st.column_config.SelectboxColumn("Регион",
-                                                   options=region,
-                                                   default=region[0],
-                                                   required=True),
-
         "delivery_type": st.column_config.SelectboxColumn("Тип доставки",
                                                           options=delivery_type,
                                                           default=delivery_type[0],
                                                           required=True),
+
+        "address": "Адрес",
+
+        "region": st.column_config.SelectboxColumn("Регион",
+                                                   width='medium',
+                                                   options=region,
+                                                   default=region[0],
+                                                   required=True),
 
         "client": "Клиент",
 
@@ -93,12 +92,21 @@ def get_editors_columns_params():
 
         "created": st.column_config.DatetimeColumn("Создано",
                                                    format="D.MM.YYYY | HH:MM",
-                                                   #default=datetime.datetime.today(),
+                                                   # default=datetime.datetime.today(),
                                                    disabled=True),
     }
 
 
 def redact_tasks():
+    """База данных в этом проекте представляет собой файл pkl с датафреймои библиотеки pandas.
+    Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
+    а кэш делается из session_state - текущего состояния таблицы. Каждое изменение таблицы
+    провоцируют on_change методы, а потом обновление всей страницы. Поэтому стстема
+    такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
+    Как только какое-то поле было изменено, то изменения записываются в кэш,
+    потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
+    сохраняется в базу"""
+
     columns = get_editors_columns_params()
     dataframe_columns_types = {'high_priority': bool,
                                'deadline': "datetime64[ns]",
@@ -147,14 +155,26 @@ def redact_tasks():
 
 ################################################ Page ###################################################
 
-half_screen_1, buff, half_screen_2 = st.columns(3)
+if SHOW_TABLE not in st.session_state:
+    st.session_state[SHOW_TABLE] = False
+
+half_screen_1, half_screen_2 = st.columns(2)
+
 with half_screen_1:
     st.title("🏭 Все заявки")
+    # Кнопка для отображения/скрытия таблицы с изменением текста
+    button_text = 'Открыть для редактирования' if not st.session_state[SHOW_TABLE] else 'Сохранить и свернуть'
+    if st.button(button_text):
+        clear_cash()  # Очистить данные, если таблица скрывается
+        st.session_state[SHOW_TABLE] = not st.session_state[SHOW_TABLE]
+        st.rerun()
 
 with half_screen_2:
-    quarter_1, quarter_2, quarter_3, quarter_4 = st.columns(4)
-    with quarter_4:
-        st.header(' ')
-        st.button('Обновить', on_click=clear_cash)
+    st.write(' ')
+    st.info('Это таблица нарядов со всей информацией в них. Отсюда можно исправлять ошибки, '
+            'опечатки и редактировать почти любую информацию в текущих нарядах. '
+            'Не забывайте сохранять таблицу!')
 
-redact_tasks()
+# Отображение таблицы в зависимости от состояния
+if st.session_state[SHOW_TABLE]:
+    redact_tasks()

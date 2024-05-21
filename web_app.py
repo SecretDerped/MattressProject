@@ -31,12 +31,6 @@ app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 nomenclatures = sbis.get_nomenclatures()
 
-
-# TODO: если это матрас, добавляем в задачи работягам, компоненты не добавляем.
-#  Внедрить фотки
-#  создавать заявки самовывоза
-#  Сделать форму перезагружающейся после создания заявки
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     chat_id = request.args.get('chat_id')
@@ -60,13 +54,11 @@ def index():
 
             send_telegram_message(tg_message, chat_id)
             logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
-            # TODO: создавать задачи работягам на каждый матрас
-            #  Переопределить тип ткани
+            # TODO: Переопределить тип ткани
+            #  Сделать форму перезагружающейся после создания заявки
             #  Печать гарантийного талона
-            #  Спросить Давида как проводить в СБИС товары так, чтобы списывались комплектующие
-            #  Подсчёт ткани
             #  Раздельное меню на матрасы со своими тканями, и на комплектующие, и на кровати
-            #  Система уведомлений
+            #  Пофиксить фотки у сборщика
 
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
@@ -94,7 +86,7 @@ def index():
                     "region": region,
                     "delivery_type": delivery_type,
                     "client": order_data['party'],
-                    "history": "Работник -> Что-то (4:20, 11.09.01)",
+                    "history": "",
                     "created": datetime.datetime.now(),
                 }
                 for _ in range(int(position['quantity'])):

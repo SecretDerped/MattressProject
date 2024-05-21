@@ -12,9 +12,9 @@ st.set_page_config(page_title="Шитьё",
 def show_sewing_tasks():
     # Загрузка данных
     data = read_file(cash_file)
-    tasks_todo = data[data['sewing_is_done'] == False]
+    tasks = data[data['sewing_is_done'] == False]
 
-    sorted_df = tasks_todo.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
+    sorted_df = tasks.sort_values(by=['high_priority', 'deadline'], ascending=[False, True])
     columns_to_display = ['article', 'deadline', 'fabric', 'size']
 
     st.table(sorted_df[columns_to_display])

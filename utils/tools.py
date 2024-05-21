@@ -21,17 +21,6 @@ def read_file(filepath: str) -> pandas.DataFrame:
     return pandas.read_pickle(filepath)
 
 
-def get_cash_rows_without(column_to_hide: str = '', ):
-    data = read_file(cash_filepath)
-    if column_to_hide != '':
-        tasks_todo = data[data[column_to_hide] == False]
-    else:
-        tasks_todo = data
-    sorted_tasks = tasks_todo.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
-                                          ascending=[False, True, True, False])
-    return sorted_tasks
-
-
 def append_to_dataframe(data: dict, filepath: str):
     """
     Принимает словарь task_data. Берёт оттуда значения без ключей
