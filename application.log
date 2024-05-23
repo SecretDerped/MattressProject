@@ -1,47 +1,65 @@
-[2024-05-21 17:24:58,462 | root - INFO]: Method: /point/list? | Code: 200
-[2024-05-21 17:24:59,374 | root - INFO]: Method: /nomenclature/price-list? | Code: 200
-[2024-05-21 17:25:00,887 | root - INFO]: Method: /nomenclature/list? | Code: 200
-[2024-05-21 17:25:04,558 | root - INFO]: Сайт доступен через ngrok: https://5884-46-29-13-252.ngrok-free.app
-[2024-05-21 17:25:04,559 | root - INFO]: Запуск Flask-приложения
-[2024-05-21 17:25:04,582 | werkzeug - INFO]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+[2024-05-23 17:57:08,166 | root - INFO]: Method: /point/list? | Code: 200
+[2024-05-23 17:57:09,024 | root - INFO]: Method: /nomenclature/price-list? | Code: 200
+[2024-05-23 17:57:10,280 | root - INFO]: Method: /nomenclature/list? | Code: 200
+[2024-05-23 17:57:13,193 | root - INFO]: Сайт доступен через ngrok: https://939c-46-29-13-252.ngrok-free.app
+[2024-05-23 17:57:13,194 | root - INFO]: Запуск Flask-приложения
+[2024-05-23 17:57:13,211 | werkzeug - INFO]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5000
-[2024-05-21 17:25:04,583 | werkzeug - INFO]: [33mPress CTRL+C to quit[0m
-[2024-05-21 17:25:04,807 | aiogram.dispatcher - INFO]: Start polling
-[2024-05-21 17:25:05,040 | aiogram.dispatcher - INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
-[2024-05-21 17:25:11,635 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:11] "GET / HTTP/1.1" 200 -
-[2024-05-21 17:25:13,358 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:13] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-[2024-05-21 17:25:16,275 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:16] "GET / HTTP/1.1" 200 -
-[2024-05-21 17:25:18,533 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:18] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
-[2024-05-21 17:25:19,888 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:19] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:25:25,233 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:25] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:25:25,565 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:25] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:25:32,574 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:32] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:25:39,250 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:39] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:25:40,064 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:25:40] "GET /api/articles HTTP/1.1" 200 -
-[2024-05-21 17:26:44,269 | root - INFO]: Сформировано сообщение для заказа: НОВАЯ ЗАЯВКА
+[2024-05-23 17:57:13,214 | werkzeug - INFO]: [33mPress CTRL+C to quit[0m
+[2024-05-23 17:57:13,458 | aiogram.dispatcher - INFO]: Start polling
+[2024-05-23 17:57:13,719 | aiogram.dispatcher - INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
+[2024-05-23 17:57:22,257 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:22] "GET / HTTP/1.1" 200 -
+[2024-05-23 17:57:24,624 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:24] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+[2024-05-23 17:57:25,216 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:25] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:48,273 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:48] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:48,857 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:48] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:50,073 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:50] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:57,595 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:57] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:58,227 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:58] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:57:59,713 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:57:59] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:00,881 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:00] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:01,972 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:01] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:02,996 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:02] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:03,561 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:03] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:04,400 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:04] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:05,772 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:05] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:07,974 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:07] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:09,393 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:09] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:10,054 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:10] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:11,873 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:11] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:14,750 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:14] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:17,469 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:17] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:18,102 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:18] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:19,414 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:19] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:20,666 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:20] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:22,601 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:22] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:25,668 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:25] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:28,237 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:28] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:28,724 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:28] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:30,988 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:30] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:33,874 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:33] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:34,347 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:34] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:58:38,091 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:58:38] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-23 17:59:02,041 | root - INFO]: Сформировано сообщение для заказа: НОВАЯ ЗАЯВКА
 
 Позиции:
-Пенополиуретан 100/2030 1600*2000 - 1 шт.
-SLEEP FORMULA 80/200 - 1 шт.
-НПБ S512 мультипакет 14 см - 1 шт.
-ORTHOPED PRIME 1 80/200 - 4 шт.
+ОРТОПЕД МЕДИФЛЕКС ЛАТЕКС 160/200 - 1 шт.
 
 Дата доставки:
-2024-05-21
+2024-05-23
 
 Адрес:
-г Ростов-на-Дону, ул Уланская, д 11 
+г Краснодар, ул им. 40-летия Победы 
 
 Магазин:
-ООО "ЛЕАР ГРУПП"
+ООО "ГАЗПРОМ ДОБЫЧА КРАСНОДАР"
 
-Цена: 20000
-Предоплата: 120
-Нужно получить: 19880.0
+Цена: 2
+Предоплата: 
+Нужно получить: 2.0
 
-Комментарий: dldl
-[2024-05-21 17:26:44,269 | root - INFO]: Отправка сообщения в Telegram. URL: https://api.telegram.org/bot6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68/sendMessage, данные: {'chat_id': None, 'text': 'НОВАЯ ЗАЯВКА\n\nПозиции:\nПенополиуретан 100/2030 1600*2000 - 1 шт.\nSLEEP FORMULA 80/200 - 1 шт.\nНПБ S512 мультипакет 14 см - 1 шт.\nORTHOPED PRIME 1 80/200 - 4 шт.\n\nДата доставки:\n2024-05-21\n\nАдрес:\nг Ростов-на-Дону, ул Уланская, д 11 \n\nМагазин:\nООО "ЛЕАР ГРУПП"\n\nЦена: 20000\nПредоплата: 120\nНужно получить: 19880.0\n\nКомментарий: dldl'}
-[2024-05-21 17:26:46,013 | httpx - INFO]: HTTP Request: POST https://api.telegram.org/bot6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68/sendMessage "HTTP/1.1 400 Bad Request"
-[2024-05-21 17:26:46,459 | root - INFO]: Method: СБИС.ЗаписатьДокумент | Code: 401
-[2024-05-21 17:26:46,459 | root - INFO]: Пробуем обновить токен...
-[2024-05-21 17:26:50,624 | werkzeug - INFO]: 127.0.0.1 - - [21/May/2024 17:26:50] "POST / HTTP/1.1" 200 -
+Комментарий: ортопеД
+[2024-05-23 17:59:02,042 | root - INFO]: Отправка сообщения в Telegram. URL: https://api.telegram.org/bot6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68/sendMessage, данные: {'chat_id': None, 'text': 'НОВАЯ ЗАЯВКА\n\nПозиции:\nОРТОПЕД МЕДИФЛЕКС ЛАТЕКС 160/200 - 1 шт.\n\nДата доставки:\n2024-05-23\n\nАдрес:\nг Краснодар, ул им. 40-летия Победы \n\nМагазин:\nООО "ГАЗПРОМ ДОБЫЧА КРАСНОДАР"\n\nЦена: 2\nПредоплата: \nНужно получить: 2.0\n\nКомментарий: ортопеД'}
+[2024-05-23 17:59:03,843 | httpx - INFO]: HTTP Request: POST https://api.telegram.org/bot6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68/sendMessage "HTTP/1.1 400 Bad Request"
+[2024-05-23 17:59:03,850 | root - ERROR]: Ошибка: неверный формат данных could not convert string to float: ''
+[2024-05-23 17:59:03,850 | werkzeug - INFO]: 127.0.0.1 - - [23/May/2024 17:59:03] "[31m[1mPOST / HTTP/1.1[0m" 400 -

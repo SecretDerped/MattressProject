@@ -11,11 +11,10 @@ st.set_page_config(page_title="Нарезка ткани",
 cash_file = config.get('site').get('cash_filepath')
 locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 columns_to_display = ['fabric', 'size', 'article', 'deadline', 'comment']
-num_columns = 4
 
 
 @st.experimental_fragment(run_every="5s")
-def show_cutting_tasks():
+def show_cutting_tasks(num_columns=4):
     data = read_file(cash_file)
     data_df = data[data['fabric_is_done'] == False]
     tasks = data_df.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
@@ -44,12 +43,19 @@ def show_cutting_tasks():
         box_text += ']'
 
         with box:
-            if box.button(":orange[**Выполнено**]", key=index):
-                data.at[index, 'fabric_is_done'] = True
-                data.at[index, 'history'] += f' -> Ткань готова ({datetime.now().strftime("%H:%M")})'
-                save_to_file(data, cash_file)
-                st.rerun()
-            box.markdown(box_text)
+            col1, col2 = st.columns([5, 3])
+
+            with col1:
+                st.markdown(box_text)
+                if row['photo']:
+                    st.image(row['photo'], caption='Фото', width=70)
+
+            with col2:
+                if st.button(":orange[**Выполнено**]", key=index):
+                    data.at[index, 'fabric_is_done'] = True
+                    data.at[index, 'history'] += f' -> Ткань готова ({datetime.now().strftime("%H:%M")})'
+                    save_to_file(data, cash_file)
+                    st.rerun()
 
         count += 1
 
@@ -60,7 +66,7 @@ tab1, tab2 = st.tabs(['Плитки', 'Таблица'])
 
 with tab1:
     st.title('✂️ Нарезка ткани')
-    show_cutting_tasks()
+    show_cutting_tasks(3)
 
 with tab2:
     table = read_file(cash_file)

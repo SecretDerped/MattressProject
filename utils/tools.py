@@ -1,4 +1,5 @@
 import re
+from typing import Dict, List
 
 import pandas
 import tomli
@@ -109,8 +110,8 @@ def create_message_str(data):
 Магазин:
 {data['party']}
 
-Цена: {data['price']}
-Предоплата: {data['prepayment']}
+Цена: {data.get('price', 'Не указано')}
+Предоплата: {data.get('prepayment', '0')}
 Нужно получить: {data['amount_to_receive']}""")
     if data['comment'] != '':
         order_message += f"\n\nКомментарий: {data['comment']}"

@@ -1,6 +1,5 @@
 from datetime import datetime
 import streamlit as st
-from streamlit.components.v1 import html
 from utils import icon
 from utils.tools import read_file, config, save_to_file, get_date_str
 
@@ -12,23 +11,11 @@ st.set_page_config(page_title="Шитьё",
                    page_icon="🧵",
                    layout="wide")
 
-
-# Функция для обработки нажатия клавиш
-def keypress_handler(key):
-    if key == "Backquote":
-        st.session_state.show_input = True
+st.session_state.show_input = True
 
 
-# Инициализация состояния
-if "show_input" not in st.session_state:
-    st.session_state.show_input = False
-if "input_text" not in st.session_state:
-    st.session_state.input_text = ""
-
-
-# Обработчик для поля ввода
 def input_submit():
-    st.session_state.show_input = False
+    st.session_state.show_input = not st.session_state.show_input
     st.session_state.saved_text = st.session_state.input_text
 
 
@@ -81,19 +68,5 @@ def show_sewing_tasks(num_columns=4):
         count += 1
 
 
-# Добавляем обработчик нажатия клавиш
-html("""
-<script>
-    document.addEventListener("keydown", function(event) {
-        if (event.key === "`") {
-            window.parent.postMessage({ type: 'keypress', key: event.key }, "*");
-        }
-    });
-</script>
-""")
-
 icon.show_icon("🧵")
 show_sewing_tasks(4)
-
-# Обработка сообщений от фронтенда
-st.experimental_get_messenger().on_receive_message(lambda message: keypress_handler(message.get("key")))

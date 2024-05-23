@@ -18,7 +18,7 @@ def show_materials_tasks():
     data_df = data_df[data_df['comment'] != '']
     tasks = data_df.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                                 ascending=[False, True, True, False])
-    st.dataframe(data_df[columns_to_display],
+    st.dataframe(tasks[columns_to_display],
                  column_config={'deadline': st.column_config.DateColumn("Дата", format="DD.MM"),
                                 'article': st.column_config.TextColumn("Артикул"),
                                 'size': st.column_config.TextColumn("Размер"),

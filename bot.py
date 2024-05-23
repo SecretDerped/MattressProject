@@ -2,7 +2,8 @@ import asyncio
 import logging
 from utils.tools import config
 from aiogram import Bot, Dispatcher, Router
-from aiogram.types import Message, BotCommand, MenuButtonWebApp, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from aiogram.types import Message, BotCommand, MenuButtonWebApp, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, \
+    MenuButtonCommands
 from aiogram.filters.command import Command
 
 
@@ -31,7 +32,7 @@ class Tg:
             )
 
     async def set_menu_button(self):
-        await self.bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Создать заявку", web_app=self.app_url))
+        await self.bot.set_chat_menu_button(menu_button=MenuButtonCommands(text="Запустить"))
 
     async def on_startup(self):
         await self.set_menu_button()

@@ -44,9 +44,9 @@ def index():
                 print(f'{k} :: {v}\n')
 
             order_data['positionsData'] = json.loads(order_data['positionsData'])
-
-            price = float(order_data['price']) if order_data['price'] else 0
-            prepayment = float(order_data['prepayment']) if order_data['prepayment'] else 0
+            # Починить сообщения телеграм. Ошибка: неверный формат данных could not convert string to float: ''. Когда поле пустое, отправляется пустая строка
+            price = float(order_data.get('price')) if order_data.get('price') != '' else 0
+            prepayment = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
             order_data['amount_to_receive'] = price - prepayment
 
             tg_message = create_message_str(order_data)
@@ -58,7 +58,7 @@ def index():
             #  Сделать форму перезагружающейся после создания заявки
             #  Печать гарантийного талона
             #  Раздельное меню на матрасы со своими тканями, и на комплектующие, и на кровати
-            #  Пофиксить фотки у сборщика
+            #  Окошко сотрудника
 
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
