@@ -29,28 +29,32 @@ def show_cutting_tasks(num_columns=4):
         comment = row.get('comment', '')
         if count % num_columns == 0:
             row_container = st.columns(num_columns)
-        box = row_container[count % num_columns].container(height=225, border=True)
+        box = row_container[count % num_columns].container(height=145, border=True)
 
         text_color = 'red' if row['high_priority'] else 'gray'
 
         box_text = f""":{text_color}[**Артикул:** {row['article']}  
                                      **Тип**: {row['fabric']}  
                                      **Размер:** {row['size']} ({side})  
-                                     **Срок**: {deadline}  """
+                                     **Срок**: {deadline}  
+"""
         if row['comment']:
             box_text += f"**Комментарий**: {comment}  "
 
         box_text += ']'
 
         with box:
-            col1, col2 = st.columns([5, 3])
+            photo = row['photo']
+            if photo:
+                col1, col2, buff, col3 = st.columns([12, 2, 1, 5])
+                col2.image(photo, caption='Фото', width=70)
+            else:
+                col1, col3 = st.columns([3, 1])
 
             with col1:
                 st.markdown(box_text)
-                if row['photo']:
-                    st.image(row['photo'], caption='Фото', width=70)
-
-            with col2:
+            with col3:
+                st.header('')
                 if st.button(":orange[**Выполнено**]", key=index):
                     data.at[index, 'fabric_is_done'] = True
                     data.at[index, 'history'] += f' -> Ткань готова ({datetime.now().strftime("%H:%M")})'
@@ -66,7 +70,7 @@ tab1, tab2 = st.tabs(['Плитки', 'Таблица'])
 
 with tab1:
     st.title('✂️ Нарезка ткани')
-    show_cutting_tasks(3)
+    show_cutting_tasks(2)
 
 with tab2:
     table = read_file(cash_file)

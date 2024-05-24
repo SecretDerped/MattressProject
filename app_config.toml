@@ -5,6 +5,11 @@
 "Жаккард" = -10
 "Трикотаж" = -5
 
+[employee]
+"Швейный стол" = ["Олег Олегсандрович", "Гадя Петрович"]
+"Заготовка материалов" = [""]
+
+
 [sbis]
 # Эти данные можно получить из раздела СБИС - Настройки - Безопасность - Подключения СБИС
 #app_client_id = "1431941504152192"
@@ -30,6 +35,7 @@ implementation_filepath = "cash/implementation.xml"  # Расположение 
 # будут добавляться в датафрейм при создании заявки.
 # Список можно получить методом get_nomenclature_list() из sbis_manager.py
 mattress_group_id = 2
+fabrics_group_id = 1
 
 [sbis.reglament_id_list]
 # ID регламента СБИС.
@@ -39,6 +45,8 @@ implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"
 
 [site]
 cash_filepath = "cash/cash.pkl"
+employees = "cash/employees.pkl"
+regions = ['Краснодарский край', 'Ростовская область', 'Крымский полуостров', 'Уральский автономный округ']
 
 [telegram]
 token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"

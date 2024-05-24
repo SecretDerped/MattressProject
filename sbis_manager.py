@@ -219,21 +219,25 @@ class SBISWebApp(SBISApiManager):
     def get_nomenclatures(self):
         point_id = self.get_sale_point_id()
         price_list_id = self.get_price_list_id(point_id)
-
         # ID товарной группы матрасов. Далее стоит проверка товара на
-        # принадлежность этой группе. Товары из этой группы попадают
+        # принадлежность этой группе. Товары из группы матрасов попадают
         # в датафрейм в качестве задания на производство
         mattress_group_id = config.get('sbis').get('mattress_group_id')
+        fabric_group_id = config.get('sbis').get('fabric_group_id')
 
-        # Это для обработки порционных данных
+        # Для обработки данных с пангинацией
         page = 0
         nomenclatures_list = dict()
 
         while True:
             product_list = self.get_nomenclature_list(point_id, price_list_id, page)
+            print(product_list)
+
+            # Выход сразу же, если список номенклатур пустой
+            if not product_list['nomenclatures']:
+                break
 
             page += 1
-
             for product in product_list['nomenclatures']:
                 # Позиции без номера это каталоги. Пропускаем
                 if not product['nomNumber']:
@@ -246,16 +250,22 @@ class SBISWebApp(SBISApiManager):
                                            'description': product.get('description_simple', ''),
                                            'attributes': product.get('attributes', {'': ''}),
                                            'images': product.get('images', None),
-                                           'is_mattress': False}
-                if product['hierarchicalParent'] == mattress_group_id:
+                                           'is_mattress': False,
+                                           'is_fabric': False}
 
+                # Если товар принадлежит к группе матрасов, пишем размер в отдельное поле
+                group = product['hierarchicalParent']
+
+                if group == mattress_group_id:
                     nomenclatures_list[key]['is_mattress'] = True
-
-                    # Если товар принадлежит к группе матрасов, пишем размер в отдельное поле
                     attributes = nomenclatures_list[key]['attributes']
                     nomenclatures_list[key]['size'] = attributes.get('Размер', '0')
                     nomenclatures_list[key]['structure'] = attributes.get('Состав', '')
 
+                if group == fabric_group_id:
+                    nomenclatures_list[key]['is_fabric'] = True
+
+            # Цикл прерывается, если позиций больше нет
             if not product_list['outcome']['hasMore']:
                 break
 

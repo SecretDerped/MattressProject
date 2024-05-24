@@ -16,6 +16,7 @@ password = sbis_config.get('password')
 sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 cash_file = config.get('site').get('cash_filepath')
+regions = config.get('site').get('regions')
 
 high_priority = False
 fabric = "Жаккард"
@@ -31,6 +32,7 @@ app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 nomenclatures = sbis.get_nomenclatures()
 
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     chat_id = request.args.get('chat_id')
@@ -44,7 +46,7 @@ def index():
                 print(f'{k} :: {v}\n')
 
             order_data['positionsData'] = json.loads(order_data['positionsData'])
-            # Починить сообщения телеграм. Ошибка: неверный формат данных could not convert string to float: ''. Когда поле пустое, отправляется пустая строка
+            # TODO: Починить сообщения телеграм. Ошибка: неверный формат данных could not convert string to float: ''. Когда поле пустое, отправляется пустая строка
             price = float(order_data.get('price')) if order_data.get('price') != '' else 0
             prepayment = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
             order_data['amount_to_receive'] = price - prepayment
@@ -104,7 +106,7 @@ def index():
             abort(400, description=f"Неверный формат данных: {str(e)}")
 
     logging.debug("Рендеринг шаблона index.html")
-    return render_template('index.html', nomenclatures=nomenclatures)
+    return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
 
 
 @app.route('/api/articles', methods=['GET'])

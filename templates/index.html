@@ -203,7 +203,6 @@
                         <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
                     </div>
                 </div>
-
                 <!-- Тип доставки и адрес -->
                 <div class="form-group delivery-type-group">
                     <label class="form-label">Тип доставки</label>
@@ -231,13 +230,14 @@
                     </div>
                     <!-- Выбор региона доставки -->
                     <div class="form-group" id="region-group" style="display:none;">
-                    <label for="region_select" class="form-label">Выберите регион</label>
-                    <select id="region_select" name="region_select" class="form-control">
-                        <option value="Ростовская область">Ростовская область</option>
-                        <option value="Северный Кавказ">Северный Кавказ</option>
-                        <option value="Уральский автономный округ">Уральский автономный округ</option>
-                    </select>
-                </div>
+                        <label for="region_select" class="form-label">Регион</label>
+                        <select id="region_select" name="region_select" class="form-control">
+                            <!-- Динамическое заполнение списка регионов -->
+                            {% for region in regions %}
+                                <option value="{{ region }}">{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
             </div>
 

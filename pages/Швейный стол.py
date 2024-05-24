@@ -1,7 +1,7 @@
 from datetime import datetime
 import streamlit as st
 from utils import icon
-from utils.tools import read_file, config, save_to_file, get_date_str
+from utils.tools import read_file, config, save_to_file, get_date_str, get_employees
 
 cash_file = config.get('site').get('cash_filepath')
 
@@ -11,21 +11,9 @@ st.set_page_config(page_title="Шитьё",
                    page_icon="🧵",
                    layout="wide")
 
-st.session_state.show_input = True
 
-
-def input_submit():
-    st.session_state.show_input = not st.session_state.show_input
-    st.session_state.saved_text = st.session_state.input_text
-
-
-# Показ поля ввода, если show_input = True
-if st.session_state.show_input:
-    st.text_input("Введите текст:", key="input_text", on_change=input_submit)
-
-# Показ сохранённого текста
-if "saved_text" in st.session_state:
-    st.write(f"Сохранённый текст: {st.session_state.saved_text}")
+def save_employee():
+    st.session_state.selected_employee = st.session_state.employee
 
 
 @st.experimental_fragment(run_every="5s")
@@ -60,7 +48,11 @@ def show_sewing_tasks(num_columns=4):
         with box:
             if box.button(":green[**Выполнено**]", key=index):
                 data.at[index, 'sewing_is_done'] = True
-                data.at[index, 'history'] += f' -> Пошит ({datetime.now().strftime("%H:%M")})'
+                employee = ''
+                if "selected_employee" in st.session_state:
+                    employee = st.session_state.selected_employee
+                history_note = f'({datetime.now().strftime("%H:%M")}) -> Матрас сшит [ {employee} ]\n'
+                data.at[index, 'history'] += history_note
                 save_to_file(data, cash_file)
                 st.rerun()
             box.markdown(box_text)
@@ -68,5 +60,15 @@ def show_sewing_tasks(num_columns=4):
         count += 1
 
 
-icon.show_icon("🧵")
+col1, col2 = st.columns([3, 1])
+with col1:
+    icon.show_icon("🧵")
+with col2:
+    st.selectbox('Ответственный',
+                 options=get_employees("Швейный стол"),
+                 placeholder="Выберите сотрудника",
+                 index=None,
+                 key="employee",
+                 on_change=save_employee)
+
 show_sewing_tasks(4)

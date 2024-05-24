@@ -43,17 +43,16 @@ def show_gluing_tasks(num_columns = 2):
         with box:
             photo = row['photo']
             if photo:
-                col1, col2, col3, buff = st.columns([6, 4, 1, 1])
-                with col3:
-                    st.image(row['photo'], caption='Фото', width=70)
+                col1, col2, buff, col3 = st.columns([12, 2, 1, 5])
+                col2.image(photo, caption='Фото', width=70)
             else:
-                col1, col2 = st.columns([2, 1])
+                col1, col3 = st.columns([3, 1])
 
             with col1:
-                col1.markdown(box_text)
-            with col2:
+                st.markdown(box_text)
+            with col3:
                 st.header('')
-                if col2.button(":orange[**Выполнено**]", key=index):
+                if st.button(":orange[**Выполнено**]", key=index):
                     data.at[index, 'gluing_is_done'] = True
                     data.at[index, 'history'] += f' -> Основа собрана ({datetime.now().strftime("%H:%M")})'
                     save_to_file(data, cash_file)

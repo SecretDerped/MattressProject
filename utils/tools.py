@@ -92,6 +92,10 @@ def get_date_str(dataframe_row: pandas.Series) -> str:
     return f'{day} {months[int(month) - 1]}, {weekday}'
 
 
+def get_employees(workplace: str):
+    return config.get('employee').get(workplace)
+
+
 # TODO: актуализировать сообщение в телеграм
 def create_message_str(data):
     positions_data = data['positionsData']
