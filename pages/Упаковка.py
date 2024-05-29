@@ -55,6 +55,8 @@ def show_packing_tasks():
             box.markdown(box_text)
         count += 1
 
+################################################ Page ###################################################
+
 
 icon.show_icon("📦")
 show_packing_tasks()

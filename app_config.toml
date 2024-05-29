@@ -45,8 +45,9 @@ implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"
 
 [site]
 cash_filepath = "cash/cash.pkl"
-employees = "cash/employees.pkl"
+employees_cash_filepath = "cash/employees.pkl"
 regions = ['Краснодарский край', 'Ростовская область', 'Крымский полуостров', 'Уральский автономный округ']
+delivery_types = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
 
 [telegram]
 token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"

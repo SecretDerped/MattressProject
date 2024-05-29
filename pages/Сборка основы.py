@@ -61,5 +61,8 @@ def show_gluing_tasks(num_columns = 2):
         count += 1
 
 
+################################################ Page ###################################################
+
+
 icon.show_icon("🔨")
 show_gluing_tasks(2)

@@ -1,5 +1,8 @@
+import os
 import re
-from typing import Dict, List
+
+import pandas as pd
+import streamlit as st
 
 import pandas
 import tomli
@@ -11,7 +14,9 @@ def load_conf(path: str = "app_config.toml"):
 
 
 config = load_conf()
-cash_filepath = config.get('site').get('cash_filepath')
+site_conf = config.get('site')
+cash_filepath = site_conf.get('cash_filepath')
+employees_cash = site_conf.get('employees_cash_filepath')
 
 
 def save_to_file(data: pandas.DataFrame, filepath: str):
@@ -34,6 +39,71 @@ def append_to_dataframe(data: dict, filepath: str):
     print(row)
     df.loc[len(df.index)] = row
     save_to_file(df, filepath)
+
+
+def cashing(dataframe, state):
+    st.session_state[state] = dataframe
+
+
+def get_cash(state):
+    return st.session_state[state]
+
+
+def clear_cash(state):
+    if state in st.session_state:
+        del st.session_state[state]
+
+
+def create_cashfile_if_empty(columns: dict, cash_filepath: str):
+    """Если файл с кэшем отсутствует, создаёт его, прописывая пустые колонки
+    из ключей словаря настройки колонн, типа из editors_columns"""
+    if not os.path.exists(cash_filepath):
+        base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
+        empty_dataframe = pd.DataFrame(base_dict)
+        save_to_file(empty_dataframe, cash_filepath)
+
+
+def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool = False):
+    """База данных в этом проекте представляет собой файл pkl с датафреймои библиотеки pandas.
+    Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
+    а кэш делается из session_state - текущего состояния таблицы. Каждое изменение таблицы
+    провоцируют on_change методы, а потом обновление всей страницы. Поэтому стстема
+    такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
+    Как только какое-то поле было изменено, то изменения записываются в кэш,
+    потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
+    сохраняется в базу."""
+    create_cashfile_if_empty(columns, cashfile)
+
+    # Со страницы создания заявки возвращаются только строки, поэтому тут
+    # некоторые столбцы преобразуются в типы, читаемые для pandas.
+    dataframe_columns_types = {'deadline': "datetime64[ns]",
+                               'created': "datetime64[ns]"}
+    if state not in st.session_state:
+        dataframe = read_file(cashfile)
+        # Проверка наличия нужных колонок в датафрейме
+        for col in dataframe_columns_types.keys():
+            if col in dataframe.columns:
+                dataframe[col] = dataframe[col].astype(dataframe_columns_types[col])
+        cashing(dataframe, state)
+
+    num_rows_state = "dynamic" if can_add_lines else "fixed"
+
+    edited_df = get_cash(state)
+    editor = st.data_editor(
+        edited_df,
+        column_config=columns,
+        hide_index=True,
+        num_rows=num_rows_state,
+        on_change=cashing, args=(edited_df, state),
+        height=420
+    )
+    save_to_file(editor, cashfile)
+
+
+@st.experimental_fragment(run_every="2s")
+def show_table(columns: dict, cashfile: str):
+    """Показывает нередактируемую таблицу данных без индексов. Принимает словарь настроек колонн и путь к кэшу"""
+    st.dataframe(data=read_file(cashfile), column_config=columns, hide_index=True)
 
 
 def get_size_int(string):
@@ -92,8 +162,20 @@ def get_date_str(dataframe_row: pandas.Series) -> str:
     return f'{day} {months[int(month) - 1]}, {weekday}'
 
 
-def get_employees(workplace: str):
-    return config.get('employee').get(workplace)
+def get_employees_on_shift(position: str) -> list:
+    """Принимает строку для фильтрации по роли сотрудника (position).
+Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
+Фильтрует записи, где значение в "is_on_shift" стоит True,
+а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
+Возвращает [список имен сотрудников на смене по искомой роли]"""
+    dataframe = read_file(employees_cash)
+    if 'is_on_shift' not in dataframe.columns or 'position' not in dataframe.columns:
+        raise ValueError("В датафрейме сотрудников должны быть колонки 'is_on_shift' и 'position'")
+
+    filtered_df = dataframe[(dataframe['is_on_shift'] == True) & (
+        dataframe['position'].str.contains(position, case=False, na=False))]
+
+    return filtered_df['name'].tolist()
 
 
 # TODO: актуализировать сообщение в телеграм

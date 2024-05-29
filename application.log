@@ -11,3 +11,14 @@
 [2024-05-24 17:09:24,844 | werkzeug - INFO]: 127.0.0.1 - - [24/May/2024 17:09:24] "GET / HTTP/1.1" 200 -
 [2024-05-24 17:09:27,165 | werkzeug - INFO]: 127.0.0.1 - - [24/May/2024 17:09:27] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
 [2024-05-24 17:19:03,749 | werkzeug - INFO]: 127.0.0.1 - - [24/May/2024 17:19:03] "GET /api/articles HTTP/1.1" 200 -
+[2024-05-24 19:34:37,231 | aiogram.dispatcher - ERROR]: Failed to fetch updates - TelegramNetworkError: HTTP Client says - ServerDisconnectedError: Server disconnected
+[2024-05-24 19:34:37,231 | aiogram.dispatcher - WARNING]: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 6945801898)
+[2024-05-24 19:34:48,479 | aiogram.dispatcher - INFO]: Connection established (tryings = 1, bot id = 6945801898)
+[2024-05-27 02:07:49,394 | aiogram.dispatcher - ERROR]: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+[2024-05-27 02:07:49,394 | aiogram.dispatcher - WARNING]: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 6945801898)
+[2024-05-27 02:07:50,476 | aiogram.dispatcher - ERROR]: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+[2024-05-27 02:07:50,476 | aiogram.dispatcher - WARNING]: Sleep for 1.235596 seconds and try again... (tryings = 1, bot id = 6945801898)
+[2024-05-27 02:08:17,860 | aiogram.dispatcher - INFO]: Connection established (tryings = 2, bot id = 6945801898)
+[2024-05-27 02:56:31,970 | aiogram.dispatcher - ERROR]: Failed to fetch updates - TelegramServerError: Telegram server says - Bad Gateway
+[2024-05-27 02:56:31,970 | aiogram.dispatcher - WARNING]: Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 6945801898)
+[2024-05-27 02:56:59,637 | aiogram.dispatcher - INFO]: Connection established (tryings = 1, bot id = 6945801898)

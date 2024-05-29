@@ -1,19 +1,31 @@
 from datetime import datetime
 import streamlit as st
 from utils import icon
-from utils.tools import read_file, config, save_to_file, get_date_str, get_employees
+from utils.tools import read_file, config, save_to_file, get_date_str, get_employees_on_shift
 
 cash_file = config.get('site').get('cash_filepath')
 
-columns_to_display = ['article', 'deadline', 'fabric', 'size', 'comment']
+page_name = 'Швейный стол'
 
-st.set_page_config(page_title="Шитьё",
+st.set_page_config(page_title=page_name,
                    page_icon="🧵",
                    layout="wide")
 
 
-def save_employee():
-    st.session_state.selected_employee = st.session_state.employee
+def save_employee(position):
+    st.session_state[position] = st.session_state[position]
+
+
+@st.experimental_fragment(run_every="5s")
+def employee_choose(position: str):
+    """Возвращает список сотрудников, находящихся на смене. Поиск по должности"""
+
+    st.selectbox('Ответственный',
+                 options=get_employees_on_shift(position),
+                 placeholder="Выберите сотрудника",
+                 index=None,
+                 key=position,
+                 on_change=save_employee, args=(position,))
 
 
 @st.experimental_fragment(run_every="5s")
@@ -59,16 +71,15 @@ def show_sewing_tasks(num_columns=4):
 
         count += 1
 
+################################################ Page ###################################################
+
 
 col1, col2 = st.columns([3, 1])
 with col1:
     icon.show_icon("🧵")
 with col2:
-    st.selectbox('Ответственный',
-                 options=get_employees("Швейный стол"),
-                 placeholder="Выберите сотрудника",
-                 index=None,
-                 key="employee",
-                 on_change=save_employee)
-
+    employee_choose('швейный стол')
 show_sewing_tasks(4)
+
+#st.write(st.session_state['швейный стол'])
+

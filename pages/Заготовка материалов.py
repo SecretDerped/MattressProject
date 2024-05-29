@@ -3,15 +3,13 @@ from utils import icon, tools
 from utils.tools import read_file
 
 cash_file = tools.config.get('site').get('cash_filepath')
-
-columns_to_display = ['deadline', 'article', 'size', 'attributes', 'comment', 'photo']
-
 st.set_page_config(page_title="Материалы",
                    page_icon="🧱",
                    layout="wide")
 
+
 @st.experimental_fragment(run_every="5s")
-def show_materials_tasks():
+def show_materials_tasks(columns_to_display: list[str]):
     # Загрузка данных
     data = read_file(cash_file)
     data_df = data[data['gluing_is_done'] == False]
@@ -27,6 +25,8 @@ def show_materials_tasks():
                                 'comment': st.column_config.TextColumn("Комментарий", width='large')}
                  )
 
+################################################ Page ###################################################
+
 
 half_screen_1, half_screen_2 = st.columns(2)
 with half_screen_1:
@@ -35,4 +35,5 @@ with half_screen_2:
     st.info('Вы можете сортировать наряды, нажимая на поля таблицы. '
             'Заявка исчезнет, когда для неё соберут основу матраса. ')
 
-show_materials_tasks()
+columns = ['deadline', 'article', 'size', 'attributes', 'comment', 'photo']
+show_materials_tasks(columns)
