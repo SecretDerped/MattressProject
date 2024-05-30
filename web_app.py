@@ -101,7 +101,7 @@ def index():
             abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
 
         except ValueError as e:
-            logging.error(f"Ошибка: неверный формат данных {str(e)}")
+            logging.error(f"Ошибка: неверный формат данных {str(e)}", exc_info=True)
             abort(400, description=f"Неверный формат данных: {str(e)}")
 
     logging.debug("Рендеринг шаблона index.html")

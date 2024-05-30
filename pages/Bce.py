@@ -39,9 +39,11 @@ editors_columns = {
                                                options=fabrics,
                                                default=fabrics[0],
                                                required=True),
-    "attributes": "Состав начинки",
     "comment": st.column_config.TextColumn("Комментарий", default=''),
     "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
+    "history": st.column_config.TextColumn("Действия",
+                                           width='small',
+                                           disabled=True),
     "fabric_is_done": st.column_config.CheckboxColumn("Нарезано",
                                                       default=False),
     "gluing_is_done": st.column_config.CheckboxColumn("Собран",
@@ -61,9 +63,7 @@ editors_columns = {
                                                default=regions[0],
                                                required=True),
     "client": "Клиент",
-    "history": st.column_config.TextColumn("Действия",
-                                           width='large',
-                                           disabled=True),
+    "attributes": "Состав начинки",
     "created": st.column_config.DatetimeColumn("Создано",
                                                format="D.MM.YYYY | HH:MM",
                                                # default=datetime.datetime.today(),
@@ -92,7 +92,7 @@ with tab1:
         st.write(' ')
         st.info('''Чтобы поправить любой наряд, включите режим редактирования.
         Он обладает высшим приоритетом - пока активен режим редактирования,
-        изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''')
+        изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
 
     # Отображение таблицы в зависимости от состояния
     if st.session_state[SHOW_TABLE]:
@@ -107,6 +107,7 @@ with tab2:
     with col2:
         st.write(' ')
         st.info('Выставляйте рабочих на смену. Они будут отображаться при выборе ответственного на нужном экране. '
-                'В поле "Роли" пропишите рабочее место сотруднику. Доступно: швейный стол, сборка основы, нарезка ткани, ')
+                'В поле "Роли" пропишите рабочее место сотруднику.'
+                'Можно вписать несколько. Доступно: сборка основы, нарезка ткани, швейный стол, упаковка', icon="ℹ️")
 
     redact_table(employee_columns, employees_cash, EMPLOYEE_STATE, True)

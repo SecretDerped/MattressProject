@@ -1,11 +1,10 @@
+import locale
 import os
 import re
-
-import pandas as pd
 import streamlit as st
-
-import pandas
+import pandas as pd
 import tomli
+from datetime import datetime
 
 
 def load_conf(path: str = "app_config.toml"):
@@ -13,18 +12,19 @@ def load_conf(path: str = "app_config.toml"):
         return tomli.load(f)
 
 
+locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 config = load_conf()
 site_conf = config.get('site')
 cash_filepath = site_conf.get('cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
 
 
-def save_to_file(data: pandas.DataFrame, filepath: str):
+def save_to_file(data: pd.DataFrame, filepath: str):
     data.to_pickle(filepath)
 
 
-def read_file(filepath: str) -> pandas.DataFrame:
-    return pandas.read_pickle(filepath)
+def read_file(filepath: str) -> pd.DataFrame:
+    return pd.read_pickle(filepath)
 
 
 def append_to_dataframe(data: dict, filepath: str):
@@ -100,7 +100,7 @@ def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool =
     save_to_file(editor, cashfile)
 
 
-@st.experimental_fragment(run_every="2s")
+@st.experimental_fragment(run_every="1s")
 def show_table(columns: dict, cashfile: str):
     """Показывает нередактируемую таблицу данных без индексов. Принимает словарь настроек колонн и путь к кэшу"""
     st.dataframe(data=read_file(cashfile), column_config=columns, hide_index=True)
@@ -151,11 +151,11 @@ def side_eval(size, fabric_type: str = None) -> str:
         return "Ошибка в вычислении размера"
 
 
-def get_date_str(dataframe_row: pandas.Series) -> str:
+def get_date_str(dataframe_row: pd.Series) -> str:
     """
     Принимает дату из датафрейма и преобразует в строку: 08 мая, среда
     """
-    date = pandas.to_datetime(dataframe_row).strftime('%d.%m.%A')
+    date = pd.to_datetime(dataframe_row).strftime('%d.%m.%A')
     months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
               'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
     day, month, weekday = date.split('.')
@@ -178,7 +178,53 @@ def get_employees_on_shift(position: str) -> list:
     return filtered_df['name'].tolist()
 
 
+def save_employee(position):
+    """Метод для работы эффекта on_change виджета из employee_choose.
+    Без него выбираемый сотрудник корректно не записывается в session_state."""
+    st.session_state[position] = st.session_state[position]
+
+
+@st.experimental_fragment(run_every="4s")
+def employee_choose(position: str):
+    """Виджет для выбора активного сотрудника для рабочего места.
+    Рабочее место - строка в качестве аргумента.
+    Показывает выпадающий список из сотрудников, находящихся на смене.
+    При выборе сотрудника в session_state сохраняется строка с именем сотрудника под ключом с названием должности.
+    Пример: st.session_state['швейный стол'] == 'Полиграф Полиграфович'"""
+
+    st.selectbox('Ответственный',
+                 options=get_employees_on_shift(position),
+                 placeholder="Выберите сотрудника",
+                 index=None,
+                 key=position,
+                 on_change=save_employee, args=(position,))
+
+
+def time_now():
+    return datetime.now().strftime("%H:%M")
+
+
+# Функция для проверки состояния кнопки бронирования
+def is_reserved(page_name, index):
+    return st.session_state.get(f'{page_name}_reserved_{index}', False)
+
+
+# Функция для установки состояния кнопки бронирования
+def set_reserved(page_name, index, state):
+    st.session_state[f'{page_name}_reserved_{index}'] = state
+
+
+# Функция для получения имени пользователя, который забронировал
+def get_reserver(page_name, index):
+    return st.session_state.get(f'{page_name}_reserver_{index}', '')
+
+
+# Функция для установки имени пользователя, который забронировал
+def set_reserver(page_name, index, name):
+    st.session_state[f'{page_name}_reserver_{index}'] = name
 # TODO: актуализировать сообщение в телеграм
+
+
 def create_message_str(data):
     positions_data = data['positionsData']
     positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])

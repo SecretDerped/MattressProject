@@ -216,11 +216,15 @@
                     </div>
                     <div>
                         <input type="radio" id="territory" name="delivery_type" value="Край">
-                        <label for="territory"> 🗺️ Край</label>
+                        <label for="territory"> 🏞️ Край</label>
                     </div>
                     <div>
                         <input type="radio" id="region" name="delivery_type" value="Регион">
-                        <label for="region"> 🌎 Регионы</label>
+                        <label for="region"> 🗺️ Регионы</label>
+                    <div>
+                        <input type="radio" id="country" name="delivery_type" value="Страны">
+                        <label for="country"> 🌍 Страны</label>
+                    </div>
                     </div>
                     <!-- Адрес доставки -->
                     <div class="form-group" id="address-group" style="display:none;">
@@ -287,6 +291,10 @@
             }
         });
 
+        $('#delivery_address').change(function () {
+            $('#address_data').val($(this).val());
+        });
+
         $('input[name="delivery_type"]').change(function () {
             var selectedType = $('input[name="delivery_type"]:checked').val();
             if (selectedType === 'Самовывоз') {
@@ -295,7 +303,7 @@
             } else if (selectedType === 'Город' || selectedType === 'Край') {
                 $('#address-group').show();
                 $('#region-group').hide();
-            } else if (selectedType === 'Регион') {
+            } else if (selectedType === 'Регион' || selectedType === 'Страны') {
                 $('#address-group').show();
                 $('#region-group').show();
             }
@@ -319,6 +327,7 @@
             var yyyy = today.getFullYear();
             var formattedDate = yyyy + '-' + mm + '-' + dd;
             $('#delivery_date').val(formattedDate);
+            $('#region_select option:first').prop('selected', true);
         });
     </script>
     <script>
