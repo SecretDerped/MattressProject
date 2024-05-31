@@ -24,7 +24,13 @@ def save_to_file(data: pd.DataFrame, filepath: str):
 
 
 def read_file(filepath: str) -> pd.DataFrame:
-    return pd.read_pickle(filepath)
+    try:
+        return pd.read_pickle(filepath)
+    # Иногда ввод пользователей не успевает за обновлениями базы,
+    # особенно на локальном переходе со страницы на страницу,
+    # поэтому тихо ловим ошибки и страницу обновляем, тогда все данные занесутся корректно.
+    except (RuntimeError, EOFError):
+        st.rerun()
 
 
 def append_to_dataframe(data: dict, filepath: str):
@@ -72,6 +78,7 @@ def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool =
     Как только какое-то поле было изменено, то изменения записываются в кэш,
     потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
     сохраняется в базу."""
+    # Создаёт таблицу из настроек колонн, если её нет
     create_cashfile_if_empty(columns, cashfile)
 
     # Со страницы создания заявки возвращаются только строки, поэтому тут
@@ -102,7 +109,10 @@ def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool =
 
 @st.experimental_fragment(run_every="1s")
 def show_table(columns: dict, cashfile: str):
-    """Показывает нередактируемую таблицу данных без индексов. Принимает словарь настроек колонн и путь к кэшу"""
+    """Показывает нередактируемую таблицу данных без индексов.
+    Принимает словарь настроек колонн и путь к кэшу.
+    Создаёт таблицу из настроек колонн, если её нет"""
+    create_cashfile_if_empty(columns, cashfile)
     st.dataframe(data=read_file(cashfile), column_config=columns, hide_index=True)
 
 
@@ -222,32 +232,38 @@ def get_reserver(page_name, index):
 # Функция для установки имени пользователя, который забронировал
 def set_reserver(page_name, index, name):
     st.session_state[f'{page_name}_reserver_{index}'] = name
-# TODO: актуализировать сообщение в телеграм
 
 
 def create_message_str(data):
     positions_data = data['positionsData']
-    positions_str = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
-    order_message = (f"""НОВАЯ ЗАЯВКА
+    positions = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
+    date = data['delivery_date']
+    type = data['delivery_type']
+    region = data['region_select']
+    address = data['delivery_address']
+    price = data.get('price', 'Не указано')
+    prepay = data['prepayment']
+    to_reserve = data['amount_to_receive']
+    comment = data['comment']
+    order_message = (f"Заявка от клиента: {data['party']}\n\n"
+                     
+                     f"Позиции:\n{positions}\n\n"
+                     
+                     f"Дата получения: {date}\n"
+                     f"Тип доставки: {type}\n"
+                     f"Регион: {region}\n")
+    if address != '':
+        order_message += f"Адрес:\n {address}\n\n"
 
-Позиции:
-{positions_str}
+    order_message += f"Цена: {price}\n"
+    if prepay != '0':
+        order_message += f"Предоплата: {prepay}\n"
+    order_message += f"Нужно получить: {to_reserve}"
 
-Дата доставки:
-{data['delivery_date']}
+    if comment != '':
+        order_message += f"\n\nКомментарий: {comment}"
 
-Адрес:
-{data['delivery_address']}
-
-Магазин:
-{data['party']}
-
-Цена: {data.get('price', 'Не указано')}
-Предоплата: {data.get('prepayment', '0')}
-Нужно получить: {data['amount_to_receive']}""")
-    if data['comment'] != '':
-        order_message += f"\n\nКомментарий: {data['comment']}"
-        return order_message
+    return order_message
 
 
 if __name__ == "__main__":

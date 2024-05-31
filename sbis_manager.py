@@ -225,8 +225,11 @@ class SBISWebApp(SBISApiManager):
         mattress_group_id = config.get('sbis').get('mattress_group_id')
         fabric_group_id = config.get('sbis').get('fabric_group_id')
 
-        # Для обработки данных с пангинацией
+        # Это пригодится чуть ниже
         page = 0
+
+        # Пустой словарик, который будем заполнять данными
+        # В качестве ключа к данными о позиции будет название позиции в СБИС
         nomenclatures_list = dict()
 
         while True:
@@ -236,34 +239,36 @@ class SBISWebApp(SBISApiManager):
             # Выход сразу же, если список номенклатур пустой
             if not product_list['nomenclatures']:
                 break
-
+            # Оп! Пангинация!
             page += 1
             for product in product_list['nomenclatures']:
                 # Позиции без номера это каталоги. Пропускаем
                 if not product['nomNumber']:
                     continue
 
-                key = product['name']
-                nomenclatures_list[key] = {'code': product.get('nomNumber', 0),
-                                           'article': product.get('article', 'Неизвестен'),
-                                           'price': product.get('cost', 0),
-                                           'description': product.get('description_simple', ''),
-                                           'attributes': product.get('attributes', {'': ''}),
-                                           'images': product.get('images', None),
-                                           'is_mattress': False,
-                                           'is_fabric': False}
+                key_name = product['name']
+                nomenclatures_list[key_name] = {'code': product.get('nomNumber', 0),
+                                                'article': product.get('article', 'Неизвестен'),
+                                                'price': product.get('cost', 0),
+                                                'description': product.get('description_simple', ''),
+                                                'attributes': product.get('attributes', {'': ''}),
+                                                'images': product.get('images', None),
+                                                'is_mattress': False,
+                                                'is_fabric': False}
+
+                # Вычисляем группу позиции, типа ткань, матрас, или ещё что-либо
+                group = product['hierarchicalParent']
+                attributes = nomenclatures_list[key_name]['attributes']
 
                 # Если товар принадлежит к группе матрасов, пишем размер в отдельное поле
-                group = product['hierarchicalParent']
-
                 if group == mattress_group_id:
-                    nomenclatures_list[key]['is_mattress'] = True
-                    attributes = nomenclatures_list[key]['attributes']
-                    nomenclatures_list[key]['size'] = attributes.get('Размер', '0')
-                    nomenclatures_list[key]['structure'] = attributes.get('Состав', '')
-
+                    nomenclatures_list[key_name]['is_mattress'] = True
+                    nomenclatures_list[key_name]['size'] = attributes.get('Размер', '0')
+                    nomenclatures_list[key_name]['structure'] = attributes.get('Состав', '')
+                # А если к группе тканей, то нам нужен тип ткани. Нужен для калькулятора бочин
                 if group == fabric_group_id:
-                    nomenclatures_list[key]['is_fabric'] = True
+                    nomenclatures_list[key_name]['is_fabric'] = True
+                    nomenclatures_list[key_name]['type'] = attributes.get('Тип ткани', '')
 
             # Цикл прерывается, если позиций больше нет
             if not product_list['outcome']['hasMore']:
@@ -406,11 +411,11 @@ class SBISWebApp(SBISApiManager):
         customer_info = json.loads(order_data.get('party_data_json', '{}'))
         order_address = customer_info.get('address_data', {}).get('value', None)
 
-        #customer_name = order_data.get('party', None).replace('"', '&quot;')
+        # customer_name = order_data.get('party', None).replace('"', '&quot;')
         comment = order_data.get('comment', None).replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
 
-        #full_price = round(float(order_data.get('price', None)), 2)
+        # full_price = round(float(order_data.get('price', None)), 2)
         prepayment = round(float(order_data.get('prepayment', None)), 2)
         amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
 

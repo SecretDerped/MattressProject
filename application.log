@@ -1,13 +1,12 @@
-[2024-05-30 17:50:04,390 | root - INFO]: Method: /point/list? | Code: 200
-[2024-05-30 17:50:05,240 | root - INFO]: Method: /nomenclature/price-list? | Code: 200
-[2024-05-30 17:50:06,423 | root - INFO]: Method: /nomenclature/list? | Code: 200
-[2024-05-30 17:50:09,297 | root - INFO]: Сайт доступен через ngrok: https://8b47-46-29-13-252.ngrok-free.app
-[2024-05-30 17:50:09,298 | root - INFO]: Запуск Flask-приложения
-[2024-05-30 17:50:09,306 | werkzeug - INFO]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+[2024-05-31 18:00:29,827 | root - INFO]: Method: /point/list? | Code: 200
+[2024-05-31 18:00:30,705 | root - INFO]: Method: /nomenclature/price-list? | Code: 200
+[2024-05-31 18:00:32,976 | root - INFO]: Method: /nomenclature/list? | Code: 200
+[2024-05-31 18:00:35,909 | root - INFO]: Сайт доступен через ngrok: https://5f0c-46-29-13-252.ngrok-free.app
+[2024-05-31 18:00:35,909 | root - INFO]: Запуск Flask-приложения
+[2024-05-31 18:00:35,918 | werkzeug - INFO]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
  * Running on http://127.0.0.1:5000
-[2024-05-30 17:50:09,306 | werkzeug - INFO]: [33mPress CTRL+C to quit[0m
-[2024-05-30 17:50:09,527 | aiogram.dispatcher - INFO]: Start polling
-[2024-05-30 17:50:09,779 | aiogram.dispatcher - INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
-[2024-05-30 17:50:19,770 | aiogram.event - INFO]: Update id=33119907 is handled. Duration 358 ms by bot id=6945801898
-[2024-05-30 17:50:25,243 | werkzeug - INFO]: 127.0.0.1 - - [30/May/2024 17:50:25] "GET /?chat_id=1945461539 HTTP/1.1" 200 -
-[2024-05-30 17:50:28,038 | werkzeug - INFO]: 127.0.0.1 - - [30/May/2024 17:50:28] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+[2024-05-31 18:00:35,918 | werkzeug - INFO]: [33mPress CTRL+C to quit[0m
+[2024-05-31 18:00:36,139 | aiogram.dispatcher - INFO]: Start polling
+[2024-05-31 18:00:36,378 | aiogram.dispatcher - INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
+[2024-05-31 18:00:50,255 | aiogram.dispatcher - INFO]: Polling stopped
+[2024-05-31 18:00:50,508 | aiogram.dispatcher - INFO]: Polling stopped for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'

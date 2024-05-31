@@ -6,9 +6,10 @@ site_conf = config.get('site')
 
 task_cash = site_conf.get('cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
-regions = site_conf.get('regions')
-delivery_type = site_conf.get('delivery_types')
 
+delivery_type = site_conf.get('delivery_types')
+regions = site_conf.get('regions')
+# TODO: внедрить типаж тканей и название
 fabrics = list(config.get('fabric_corrections'))
 
 st.set_page_config(page_title="Производственный терминал",
@@ -39,11 +40,13 @@ editors_columns = {
                                                options=fabrics,
                                                default=fabrics[0],
                                                required=True),
-    "comment": st.column_config.TextColumn("Комментарий", default=''),
     "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
-    "history": st.column_config.TextColumn("Действия",
-                                           width='small',
-                                           disabled=True),
+    "comment": st.column_config.TextColumn("Комментарий",
+                                           default='',
+                                           width='small'),
+    "attributes": st.column_config.TextColumn("Состав начинки",
+                                              default='',
+                                              width='medium'),
     "fabric_is_done": st.column_config.CheckboxColumn("Нарезано",
                                                       default=False),
     "gluing_is_done": st.column_config.CheckboxColumn("Собран",
@@ -52,21 +55,29 @@ editors_columns = {
                                                       default=False),
     "packing_is_done": st.column_config.CheckboxColumn("Упакован",
                                                        default=False),
+    "history": st.column_config.TextColumn("Действия",
+                                           width='small',
+                                           disabled=True),
+    "client": st.column_config.TextColumn("Заказчик",
+                                          default='',
+                                          width='medium'),
     "delivery_type": st.column_config.SelectboxColumn("Тип доставки",
                                                       options=delivery_type,
                                                       default=delivery_type[0],
                                                       required=True),
-    "address": "Адрес",
+    "address": st.column_config.TextColumn("Адрес",
+                                           default='Наш склад',
+                                           width='large'),
     "region": st.column_config.SelectboxColumn("Регион",
                                                width='medium',
                                                options=regions,
                                                default=regions[0],
                                                required=True),
-    "client": "Клиент",
-    "attributes": "Состав начинки",
     "created": st.column_config.DatetimeColumn("Создано",
                                                format="D.MM.YYYY | HH:MM",
-                                               # default=datetime.datetime.today(),
+                                               # Этот параметр не позволяет создать
+                                               # запись прямо в таблице, минуя окно формирования заявок.
+                                               default=datetime.datetime.now(),
                                                disabled=True),
 }
 

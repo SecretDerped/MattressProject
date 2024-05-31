@@ -6,7 +6,28 @@
 "Трикотаж" = -5
 
 
+[site]
+# Настройки рабочего пространства.
+# Пропишите регионы доставки через запятую внутри квадратных скобок.
+regions = [
+    'Краснодарский край',
+    'Ростовская область',
+    'Крымский полуостров',
+    'Уральский автономный округ',
+]  # Скобка, которая показывает конец списка.
+
+
+delivery_types = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
+cash_filepath = "cash/cash.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
+employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
+
 [sbis]
+# Данные от аккаунта СБИС. От его имени будут формироваться заявки
+#login = "leartest"
+login = "Харьковский_Гас_РС"
+#password = "Leartest2007!"
+password = "Харьковский_Гас_РС4342"
+
 # Эти данные можно получить из раздела СБИС - Настройки - Безопасность - Подключения СБИС
 #app_client_id = "1431941504152192"
 app_client_id = "6545046667107472"
@@ -15,35 +36,22 @@ app_secret = "JYXNGTMT8QU5SQTJDEMLXGGX"
 #secret_key = "qwTLov0WOF8mgL3h8zRpcbITQxGBdY763n2tTrPYhRLviLy12agCCbyxPuuBak3IDfScRd1yX4IJJphJy1eO56L0vmCz5MIVQEMQEJXpS1QlpqlMI15Gbx"
 secret_key = "VcRzvQs9JRWTXCHzeP8jFRquZqeOVL4y6o0L9zvNZJqn8ptQwuRot3skjUmItb8uSkglbWBDln0e7tJvRIze3vLo6I0bxk62T6RTdYKWA4MHatsLMaKMZm"
 
-# Данные от аккаунта СБИС. От его имени будут формироваться заявки
-#login = "leartest"
-login = "Харьковский_Гас_РС"
-#password = "Leartest2007!"
-password = "Харьковский_Гас_РС4342"
-
 # Данные для корректной загрузки списка товаров
 sale_point_name = "Гаспарян Роман Славикович, ИП"  # Полное название торговой точки
 price_list_name = "Позиции для Telegram-бота"  # Название прайс-листа из СБИС - Бизнес - Цены
 implementation_filepath = "cash/implementation.xml"  # Расположение шаблона формирования реализации в СБИС
 #task_filepath = "cash/task.html"  # Расположение шаблона формирования задачи СБИС
 
-# Все товары, у которых поле hierarchicalId равно этому ID,
-# будут добавляться в датафрейм при создании заявки.
-# Список можно получить методом get_nomenclature_list() из sbis_manager.py
-mattress_group_id = 2
-fabrics_group_id = 1
+# Список свойств товаров можно получить методом get_nomenclature_list() из sbis_manager.py
+mattress_group_id = 2  # Товары с hierarchicalId равным mattress_group_id считаются матрасами и добавляются в датафрейм
+fabrics_group_id = 1  # Эти товары - ткани. Показываются при выборе ткани из окна заявок.
 
 [sbis.reglament_id_list]
 # ID регламента СБИС.
-implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"
+implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"  # Реализация матрасов
 #order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
 #task = "05999956-3a78-4f91-bb80-a08b7eceb954"
 
-[site]
-cash_filepath = "cash/cash.pkl"
-employees_cash_filepath = "cash/employees.pkl"
-regions = ['Краснодарский край', 'Ростовская область', 'Крымский полуостров', 'Уральский автономный округ']
-delivery_types = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
 
 [telegram]
 token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"

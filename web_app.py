@@ -17,9 +17,8 @@ sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 cash_file = config.get('site').get('cash_filepath')
 regions = config.get('site').get('regions')
-
+fabric = list(config.get('fabric_corrections'))[0]
 high_priority = False
-fabric = "Жаккард"
 region = "Краснодарский край"
 delivery_type = "Самовывоз"
 
@@ -40,17 +39,19 @@ def index():
         logging.debug(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
-
+            # Запрос возвращает строки в качестве данных
             order_data = request.form.to_dict()
             for k, v in order_data.items():
-                print(f'{k} :: {v}\n')
+                print(f'{k} :: {v} ({type(v)})\n')
 
             order_data['positionsData'] = json.loads(order_data['positionsData'])
-            # TODO: Починить сообщения телеграм. Ошибка: неверный формат данных could not convert string to float: ''. Когда поле пустое, отправляется пустая строка
-            price = float(order_data.get('price')) if order_data.get('price') != '' else 0
-            prepayment = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
-            order_data['amount_to_receive'] = price - prepayment
+            order_data['fabric'] = json.loads(order_data['fabric'])
 
+            order_data['price'] = float(order_data.get('price')) if order_data.get('price') != '' else 0
+            order_data['prepayment'] = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
+            order_data['amount_to_receive'] = order_data['price'] - order_data['prepayment']
+
+            order_data['fabric_type'] = order_data['fabric'].get('type', '')
             tg_message = create_message_str(order_data)
             logging.info(f"Сформировано сообщение для заказа: {tg_message}")
 
@@ -64,7 +65,6 @@ def index():
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
             for position in order_data['positionsData']:
-
                 item = nomenclatures[position['article']]
                 # Позиции не в группе "Матрасы" пропускаются
                 if not item['is_mattress']:
@@ -75,22 +75,26 @@ def index():
                     "deadline": order_data['delivery_date'],
                     "article": item['article'],
                     "size": item['size'],
-                    "fabric": fabric,  # Пока хардкод
-                    "attributes": item['structure'],
-                    "comment": order_data['comment'],
+                    "fabric": order_data['fabric'],  # Пока хардкод
+                    #"fabric_type": order_data['fabric_type'],
                     "photo": order_data['photo_data'],
+                    "comment": order_data['comment'],
+                    "attributes": item['structure'],
                     "fabric_is_done": False,
                     "gluing_is_done": False,
                     "sewing_is_done": False,
                     "packing_is_done": False,
-                    "address": order_data["delivery_address"],
-                    "region": region,
-                    "delivery_type": delivery_type,
-                    "client": order_data['party'],
                     "history": "",
+                    "client": order_data['party'],
+                    "delivery_type": order_data['delivery_type'],
+                    "address": order_data["delivery_address"],
+                    "region": order_data['region_select'],
                     "created": datetime.datetime.now(),
                 }
                 for _ in range(int(position['quantity'])):
+                    # В этом методе данные будут заполняться из этого словаря построчно.
+                    # При добавлении нового поля, или перемещении, нужно это учитывать.
+                    # Порядок task_data должен быть как в editors_columns на странице бригадира
                     append_to_dataframe(task_data, cash_file)
 
             sbis.write_implementation(order_data)
