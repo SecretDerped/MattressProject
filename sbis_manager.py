@@ -11,7 +11,7 @@ imp_filepath = config.get('sbis').get('implementation_filepath')
 
 console_out = logging.StreamHandler()
 file_log = logging.FileHandler(f"application.log", mode="w")
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s | %(name)s - %(levelname)s]: %(message)s',
                     handlers=(file_log, console_out),
                     encoding='utf-8')
@@ -216,16 +216,20 @@ class SBISWebApp(SBISApiManager):
                   'page': page}
         return self.main_query('/nomenclature/list?', params)
 
-    def get_nomenclatures(self):
+    def get_nomenclatures(self) -> dict:
+        """Подтягивает номенклатуру из прайс-листа в разделе Бизнес - Цены
+        в виде словаря с названиями позиций в качестве ключей, а в значениях - словарь свойств позиции.
+        Важно: на момент июня 2024-го СБИС не даёт подтягивать номенклатуру просто так, только из
+        прайс-листа. """
         point_id = self.get_sale_point_id()
         price_list_id = self.get_price_list_id(point_id)
         # ID товарной группы матрасов. Далее стоит проверка товара на
         # принадлежность этой группе. Товары из группы матрасов попадают
         # в датафрейм в качестве задания на производство
         mattress_group_id = config.get('sbis').get('mattress_group_id')
-        fabric_group_id = config.get('sbis').get('fabric_group_id')
+        fabrics_group_id = config.get('sbis').get('fabrics_group_id')
 
-        # Это пригодится чуть ниже
+        # Это пригодится чуть ниже для пангинации
         page = 0
 
         # Пустой словарик, который будем заполнять данными
@@ -234,7 +238,6 @@ class SBISWebApp(SBISApiManager):
 
         while True:
             product_list = self.get_nomenclature_list(point_id, price_list_id, page)
-            print(product_list)
 
             # Выход сразу же, если список номенклатур пустой
             if not product_list['nomenclatures']:
@@ -266,7 +269,7 @@ class SBISWebApp(SBISApiManager):
                     nomenclatures_list[key_name]['size'] = attributes.get('Размер', '0')
                     nomenclatures_list[key_name]['structure'] = attributes.get('Состав', '')
                 # А если к группе тканей, то нам нужен тип ткани. Нужен для калькулятора бочин
-                if group == fabric_group_id:
+                if group == fabrics_group_id:
                     nomenclatures_list[key_name]['is_fabric'] = True
                     nomenclatures_list[key_name]['type'] = attributes.get('Тип ткани', '')
 
@@ -282,13 +285,20 @@ class SBISWebApp(SBISApiManager):
 
         delivery_date_str = data.get('delivery_date', None)
         delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
-
-        customer_info = json.loads(data.get('party_data', '{}'))
-        customer_inn = customer_info.get('data', {}).get('inn', None)
-        customer_kpp = customer_info.get('data', {}).get('kpp', None)
-        order_address = customer_info.get('address_data', {}).get('value', None)
-
         customer_name = data.get('party', None).replace('"', '&quot;')
+
+        # Если поле "Компания" оставить пустым при создании заявки, счёт оформится как розница,
+        # а если нет, то в счёте будет юр.лицо
+        wholesale = False
+        if data['party_data']:
+            wholesale = True
+
+        if wholesale:
+            customer_info = json.loads(data.get('party_data', {}))
+            customer_inn = customer_info.get('data', {}).get('inn', None)
+            customer_kpp = customer_info.get('data', {}).get('kpp', None)
+            company_address = customer_info.get('address_data', {}).get('value', None)
+
         comment = data.get('comment', None).replace('"', '&quot;')
         items = data.get('positionsData', '[]')
 
@@ -307,48 +317,44 @@ class SBISWebApp(SBISApiManager):
         <НаимДок НаимДокОпр="Товарная накладная" ПоФактХЖ="Документ о передаче товара при торговых операциях"/>
         <ИдентДок ДатаДокПТ="{today}"/>
         <СодФХЖ1>
-          <ГрузОтпр ОКПО="0120807602">
+          <ГрузОтпр ОКПО="0151033706">
             <ИдСв>
-              <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
-                <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
+              <СвИП ИННФЛ="230911595879" СвГосРегИП="323237500002399">
+                <ФИО Имя="Роман" Отчество="Славикович" Фамилия="Гаспарян"/>
               </СвИП>
             </ИдСв>
             <Адрес>
-              <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
+              <АдрИнф АдрТекст="Краснодарский край, г.о. город Краснодар, г. Краснодар" КодСтр="643"/>
             </Адрес>
-            <Контакт ЭлПочта="it@le-ar.ru"/>
-            <БанкРекв НомерСчета="40802810270010040929">
-              <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
-            </БанкРекв>
-          </ГрузОтпр>
+          </ГрузОтпр>'''
+        if wholesale:
+            xml_content += f''''
           <ГрузПолуч ОКПО="20524053">
             <ИдСв>
               <СвОрг>
                 <СвЮЛ ИННЮЛ="{customer_inn}" '''
-        if customer_kpp:
-            xml_content += f'КПП="{customer_kpp}" '
-
-        xml_content += f'''НаимОрг="{customer_name}"/>
+            if customer_kpp:
+                xml_content += f'КПП="{customer_kpp}" '
+            xml_content += f'''НаимОрг="{customer_name}"/>
           </СвОрг>
         </ИдСв>
         <Адрес>
-          <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
+          <АдрИнф АдрТекст="{company_address}" КодСтр="643"/>
         </Адрес>
-      </ГрузПолуч>
-      <Продавец ОКПО="0120807602">
-        <ИдСв>
-          <СвИП ИННФЛ="231003981502" СвГосРегИП="317237500347162">
-            <ФИО Имя="Давид" Отчество="Арсенович" Фамилия="Кесиян"/>
-          </СвИП>
-        </ИдСв>
-        <Адрес>
-          <АдрРФ Город="г. Краснодар" Дом="27" Индекс="350042" КодРегион="23" Улица="ул. Клиническая"/>
-        </Адрес>
-        <Контакт ЭлПочта="it@le-ar.ru"/>
-        <БанкРекв НомерСчета="40802810270010040929">
-          <СвБанк БИК="044525092" КорСчет="30101810645250000092" НаимБанк="Московский Филиал АО КБ &quot;Модульбанк&quot; МОСКВА"/>
-        </БанкРекв>
-      </Продавец>
+      </ГрузПолуч>'''
+        xml_content += f'''
+          <Продавец ОКПО="0151033706">
+            <ИдСв>
+              <СвИП ИННФЛ="230911595879" СвГосРегИП="323237500002399">
+                <ФИО Имя="Роман" Отчество="Славикович" Фамилия="Гаспарян"/>
+              </СвИП>
+            </ИдСв>
+            <Адрес>
+              <АдрИнф АдрТекст="Краснодарский край, г.о. город Краснодар, г. Краснодар" КодСтр="643"/>
+            </Адрес>
+          </Продавец>'''
+        if wholesale:
+            xml_content += f'''
       <Покупатель ОКПО="20524053">
         <ИдСв>
           <СвОрг>
@@ -356,26 +362,32 @@ class SBISWebApp(SBISApiManager):
           </СвОрг>
         </ИдСв>
         <Адрес>
-          <АдрИнф АдрТекст="{order_address}" КодСтр="643"/>
+          <АдрИнф АдрТекст="{company_address}" КодСтр="643"/>
         </Адрес>
         <Контакт Тлф="8 (861) 204-05-06" ЭлПочта="dir@le-ar.ru"/>
         <БанкРекв НомерСчета="40702810512550035771">
           <СвБанк БИК="044525360" КорСчет="30101810445250000360" НаимБанк="Филиал &quot;Корпоративный&quot; ПАО &quot;Совкомбанк&quot; МОСКВА"/>
         </БанкРекв>
-      </Покупатель>
-      <Основание НаимОсн="-"/>
-      <ИнфПолФХЖ1>
-        <ТекстИнф Значен="{comment}" Идентиф="Примечание"/>
-        <ТекстИнф Значен="{comment}" Идентиф="ИнфПередТабл"/>
-        <ТекстИнф Значен="{delivery_date}" Идентиф="Срок"/>
-        <ТекстИнф Значен="23:59:59" Идентиф="СрокВремя"/>
-        <ТекстИнф Значен="Основной склад" Идентиф="СкладНаименование"/>
-        <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимПост"/>
-        <ТекстИнф Значен="ИП Кесиян Давид Арсенович" Идентиф="НаимГрузОтпр"/>
-      </ИнфПолФХЖ1>
-    </СодФХЖ1>
-  </СвДокПТПр>
-  <СодФХЖ2>'''
+      </Покупатель>'''
+        else:
+            xml_content += f'''
+          <Покупатель>
+            <ИдСв/>
+          </Покупатель>'''
+        xml_content += f'''
+          <Основание НаимОсн="-"/>
+          <ИнфПолФХЖ1>
+            <ТекстИнф Значен="{comment}" Идентиф="Примечание"/>
+            <ТекстИнф Значен="{comment}" Идентиф="ИнфПередТабл"/>
+            <ТекстИнф Значен="{delivery_date}" Идентиф="Срок"/>
+            <ТекстИнф Значен="23:59:59" Идентиф="СрокВремя"/>
+            <ТекстИнф Значен="Основной склад" Идентиф="СкладНаименование"/>
+            <ТекстИнф Значен="ИП Гаспарян Роман Славикович" Идентиф="НаимПост"/>
+            <ТекстИнф Значен="ИП Гаспарян Роман Славикович" Идентиф="НаимГрузОтпр"/>
+          </ИнфПолФХЖ1>
+        </СодФХЖ1>
+      </СвДокПТПр>
+      <СодФХЖ2>'''
 
         item_num = 1
         total_quantity = 0
@@ -396,19 +408,29 @@ class SBISWebApp(SBISApiManager):
             item_num += 1
 
         xml_content += f'''
-    <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
-  </СодФХЖ2>
-</СвДокПТПрКроме>
-<СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
-<Подписант ОблПолн="2"/>
-</Документ>
-</Файл>'''
+        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
+      </СодФХЖ2>
+    </СвДокПТПрКроме>
+    <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
+    <Подписант ОблПолн="2">
+      <ИП СвГосРегИП="323237500002399">
+        <ФИО/>
+      </ИП>
+    </Подписант>
+  </Документ>
+
+</Файл>
+'''
         with open(imp_filepath, 'w') as file:
             return file.write(xml_content)
 
     def write_implementation(self, order_data: dict):
+        print(order_data)
 
-        customer_info = json.loads(order_data.get('party_data_json', '{}'))
+        # Такая конструкция вернёт пустой словарь, вместо None, если данных нет
+        customer_info = json.loads(order_data.get('party_data', {}) or '{}')
+        print(customer_info)
+
         order_address = customer_info.get('address_data', {}).get('value', None)
 
         # customer_name = order_data.get('party', None).replace('"', '&quot;')
@@ -425,10 +447,15 @@ class SBISWebApp(SBISApiManager):
             encoded_string = base64.b64encode(file.read())
             base64_file = encoded_string.decode('ascii')
 
+        if customer_info == {}:
+            regulation = self.reg_id['direct_sell']
+        else:
+            regulation = self.reg_id['wholesale']
+        print(f'{regulation = }')
         params = {"Документ": {
             "Тип": "ДокОтгрИсх",
             "Вложение": [{'Файл': {'Имя': imp_filepath, 'ДвоичныеДанные': base64_file}}],
-            "Регламент": {"Идентификатор": self.reg_id['implementation']},
+            "Регламент": {"Идентификатор": regulation},
             "Контакт": order_contact,
             "Примечание": comment,
             "Ответственный": {"Фамилия": "Харьковский",

@@ -1,5 +1,3 @@
-import locale
-
 import streamlit as st
 from utils.tools import get_size_int, side_eval, config, read_file, save_to_file, get_date_str, employee_choose, \
     is_reserved, get_reserver, time_now, set_reserver, set_reserved

@@ -139,7 +139,7 @@ def get_size_int(string):
     return {'length': length, 'width': width, 'height': height}
 
 
-def side_eval(size, fabric_type: str = None) -> str:
+def side_eval(size, fabric: str = None) -> str:
     """
     Вычисляет сколько нужно отрезать боковины, используя размер из функции get_size_int.
    Формула для вычисления размера боковины: (Длина * 2 + Ширина * 2) + корректировка
@@ -151,9 +151,11 @@ def side_eval(size, fabric_type: str = None) -> str:
         result = (size.get('length', 0) * 2 + size.get('width', 0) * 2)
         corrections = config.get('fabric_corrections', {'Текстиль': 0})
 
-        match corrections.get(fabric_type, 0):
-            case value:
-                result += value
+        # Ищет в названии ткани совпадения со словарём коррекций тканей и отсчитывает нужное кол-во сантиметров
+        correction_value = next(
+            (value for key, value in corrections.items() if re.search(key, fabric, re.IGNORECASE)), 0)
+
+        result += correction_value
 
         return str(result)
 

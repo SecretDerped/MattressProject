@@ -152,6 +152,11 @@
                     <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
                     <input type="hidden" id="positionsData" name="positionsData" value="" required>
                 </div>
+                <!-- Ткани -->
+                <div class="form-group">
+                    <label for="fabric" class="form-label">Ткань</label>
+                    <input type="text" id="fabric" name="fabric" class="form-control" placeholder="Введите название ткани...">
+                </div>
                 <!-- Комментарий -->
                 <div class="form-group">
                     <label for="comment" class="form-label">Комментарий ко всему заказу</label>
@@ -219,7 +224,7 @@
                         <label for="territory"> 🏞️ Край</label>
                     </div>
                     <div>
-                        <input type="radio" id="region" name="delivery_type" value="Регион">
+                        <input type="radio" id="region" name="delivery_type" value="Регионы">
                         <label for="region"> 🗺️ Регионы</label>
                     <div>
                         <input type="radio" id="country" name="delivery_type" value="Страны">
@@ -234,7 +239,7 @@
                     </div>
                     <!-- Выбор региона доставки -->
                     <div class="form-group" id="region-group" style="display:none;">
-                        <label for="region_select" class="form-label">Регион</label>
+                        <label for="region_select" class="form-label">Регионы</label>
                         <select id="region_select" name="region_select" class="form-control">
                             <!-- Динамическое заполнение списка регионов -->
                             {% for region in regions %}
@@ -247,7 +252,7 @@
 
             <!-- Кнопка отправки формы -->
             <div class="form-group">
-                <button type="submit" class="btn btn-primary">Создать реализацию</button>
+                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>Создать реализацию</button>
             </div>
         </form>
     </div>
@@ -261,35 +266,34 @@
             fileError.style.display = 'none';
 
             if (file && file.size <= 20 * 1024 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/png')) {
-                document.querySelector('.custom-file-input-button').textContent = fileName;
-                document.querySelector('.custom-file-input-button').classList.remove('btn-danger');
-                document.querySelector('.custom-file-input-button').classList.add('btn-primary');
+                updateFileButton(fileName, 'btn-primary', 'btn-danger');
             } else {
-                document.querySelector('.custom-file-input-button').textContent = '📁 Выбрать файл | Перетащите файл сюда ☁️';
+                updateFileButton('📁 Выбрать файл | Перетащите файл сюда ☁️', 'btn-danger', 'btn-primary');
                 fileError.style.display = 'block';
-                document.querySelector('.custom-file-input-button').classList.add('btn-danger');
-                document.querySelector('.custom-file-input-button').classList.remove('btn-primary');
                 event.target.value = ''; // сбросить input
             }
         });
 
-        $("#party").suggestions({
-            token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
-            type: "PARTY",
-            onSelect: function (suggestion) {
-                console.log(suggestion);
-                $('#party_data').val(JSON.stringify(suggestion));
-            }
-        });
+        function updateFileButton(text, addClass, removeClass) {
+            var button = document.querySelector('.custom-file-input-button');
+            button.textContent = text;
+            button.classList.add(addClass);
+            button.classList.remove(removeClass);
+        }
 
-        $("#delivery_address").suggestions({
-            token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
-            type: "ADDRESS",
-            onSelect: function (suggestion) {
-                console.log(suggestion);
-                $('#address_data').val(JSON.stringify(suggestion));
-            }
-        });
+        function initializeSuggestions(selector, type, outputSelector) {
+            $(selector).suggestions({
+                token: "4eaa705b0abe5c4a4d7f1e28ff2575c61532a8da",
+                type: type,
+                onSelect: function (suggestion) {
+                    console.log(suggestion);
+                    $(outputSelector).val(JSON.stringify(suggestion));
+                }
+            });
+        }
+
+        initializeSuggestions("#party", "PARTY", "#party_data");
+        initializeSuggestions("#delivery_address", "ADDRESS", "#address_data");
 
         $('#delivery_address').change(function () {
             $('#address_data').val($(this).val());
@@ -297,17 +301,21 @@
 
         $('input[name="delivery_type"]').change(function () {
             var selectedType = $('input[name="delivery_type"]:checked').val();
+            toggleAddressFields(selectedType);
+        });
+
+        function toggleAddressFields(selectedType) {
             if (selectedType === 'Самовывоз') {
                 $('#address-group').hide();
                 $('#region-group').hide();
             } else if (selectedType === 'Город' || selectedType === 'Край') {
                 $('#address-group').show();
                 $('#region-group').hide();
-            } else if (selectedType === 'Регион' || selectedType === 'Страны') {
+            } else if (selectedType === 'Регионы' || selectedType === 'Страны') {
                 $('#address-group').show();
                 $('#region-group').show();
             }
-        });
+        }
 
         $("#photo").change(function () {
             var file = this.files[0];
@@ -321,6 +329,12 @@
         });
 
         $(document).ready(function () {
+            setInitialDateAndRegion();
+            initializeFabricAutocomplete();
+            initializePositionsAutocomplete();
+        });
+
+        function setInitialDateAndRegion() {
             var today = new Date();
             var dd = String(today.getDate()).padStart(2, '0');
             var mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -328,16 +342,23 @@
             var formattedDate = yyyy + '-' + mm + '-' + dd;
             $('#delivery_date').val(formattedDate);
             $('#region_select option:first').prop('selected', true);
-        });
-    </script>
-    <script>
-        $(document).ready(function () {
-            var positions = [];
+        }
 
+        function initializePositionsAutocomplete() {
+            var positions = [];
             $('#positionsTable').hide();
+
+            function checkPositions() {
+                if (positions.length > 0) {
+                    $('#submitBtn').prop('disabled', false);
+                } else {
+                    $('#submitBtn').prop('disabled', true);
+                }
+            }
 
             function updatePositionsInput() {
                 $('#positionsData').val(JSON.stringify(positions));
+                checkPositions();
             }
 
             function addPosition(article, quantity) {
@@ -360,31 +381,13 @@
 
                     var quantityCell = $('<td class="quantity-col"></td>');
                     var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
-                        var quantity = parseInt(quantityInput.text(), 10);
-                        if (quantity > 1) {
-                            quantityInput.text(quantity - 1);
-                            positions[index].quantity = quantity - 1;
-                            updatePositionsInput();
-                        } else {
-                            positions.splice(index, 1);
-                            updatePositionsTable();
-                            updatePositionsInput();
-                        }
+                        updateQuantity(index, -1);
                     });
                     var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
-                        var value = parseInt($(this).text(), 10);
-                        if (value >= 1 && value <= 999) {
-                            positions[index].quantity = value;
-                            updatePositionsInput();
-                        }
+                        updateQuantity(index, parseInt($(this).text(), 10));
                     });
                     var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
-                        var quantity = parseInt(quantityInput.text(), 10);
-                        if (quantity < 999) {
-                            quantityInput.text(quantity + 1);
-                            positions[index].quantity = quantity + 1;
-                            updatePositionsInput();
-                        }
+                        updateQuantity(index, 1);
                     });
                     quantityCell.append(minusButton, quantityInput, plusButton);
                     row.append(quantityCell);
@@ -392,16 +395,25 @@
                     tableBody.append(row);
                 });
 
-                if (positions.length > 0) {
-                    $('#positionsTable').show();
-                } else {
-                    $('#positionsTable').hide();
+                $('#positionsTable').toggle(positions.length > 0);
+            }
+
+            function updateQuantity(index, delta) {
+                var quantity = positions[index].quantity + delta;
+                if (quantity > 0 && quantity <= 999) {
+                    positions[index].quantity = quantity;
+                    updatePositionsTable();
+                    updatePositionsInput();
+                } else if (quantity <= 0) {
+                    positions.splice(index, 1);
+                    updatePositionsTable();
+                    updatePositionsInput();
                 }
             }
 
             $('#newArticle').autocomplete({
                 source: function (request, response) {
-                    $.getJSON('/api/articles', function (data) {
+                    $.getJSON('/api/nomenclatures', function (data) {
                         var results = $.ui.autocomplete.filter(data, request.term);
                         response(results.slice(0, 5));
                     });
@@ -415,8 +427,27 @@
             }).focus(function () {
                 $(this).autocomplete("search", "");
             });
+        }
+
+        function initializeFabricAutocomplete() {
+             $('#fabric').autocomplete({
+            source: function (request, response) {
+                $.getJSON('/api/fabrics', function (data) {
+                    var results = $.ui.autocomplete.filter(data, request.term);
+                    response(results.slice(0, 5));
+                });
+            },
+            minLength: 0,
+            select: function (event, ui) {
+                $('#fabric').val(ui.item.value);
+                return false;
+            }
+        }).focus(function () {
+            $(this).autocomplete("search", "");
         });
+        }
     </script>
+
 </body>
 
 </html>

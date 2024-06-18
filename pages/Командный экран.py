@@ -9,8 +9,6 @@ employees_cash = site_conf.get('employees_cash_filepath')
 
 delivery_type = site_conf.get('delivery_types')
 regions = site_conf.get('regions')
-# TODO: внедрить типаж тканей и название
-fabrics = list(config.get('fabric_corrections'))
 
 st.set_page_config(page_title="Производственный терминал",
                    page_icon="🛠️",
@@ -36,10 +34,8 @@ editors_columns = {
                                             default=datetime.date.today()),
     "article": "Артикул",
     "size": "Размер",
-    "fabric": st.column_config.SelectboxColumn("Тип ткани",
-                                               options=fabrics,
-                                               default=fabrics[0],
-                                               required=True),
+    "fabric": st.column_config.TextColumn("Тип ткани",
+                                          default='Текстиль'),
     "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
     "comment": st.column_config.TextColumn("Комментарий",
                                            default='',
@@ -75,9 +71,6 @@ editors_columns = {
                                                required=True),
     "created": st.column_config.DatetimeColumn("Создано",
                                                format="D.MM.YYYY | HH:MM",
-                                               # Этот параметр не позволяет создать
-                                               # запись прямо в таблице, минуя окно формирования заявок.
-                                               default=datetime.datetime.now(),
                                                disabled=True),
 }
 
@@ -118,7 +111,7 @@ with tab2:
     with col2:
         st.write(' ')
         st.info('Выставляйте рабочих на смену. Они будут отображаться при выборе ответственного на нужном экране. '
-                'В поле "Роли" пропишите рабочее место сотруднику.'
+                'В поле "Роли" пропишите рабочее место сотруднику. '
                 'Можно вписать несколько. Доступно: сборка основы, нарезка ткани, швейный стол, упаковка', icon="ℹ️")
 
     redact_table(employee_columns, employees_cash, EMPLOYEE_STATE, True)

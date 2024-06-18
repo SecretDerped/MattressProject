@@ -17,19 +17,18 @@ sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 cash_file = config.get('site').get('cash_filepath')
 regions = config.get('site').get('regions')
-fabric = list(config.get('fabric_corrections'))[0]
 high_priority = False
-region = "Краснодарский край"
-delivery_type = "Самовывоз"
 
 tg_token = config.get('telegram').get('token')
 
 # Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
+
 nomenclatures = sbis.get_nomenclatures()
+fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -44,23 +43,18 @@ def index():
             for k, v in order_data.items():
                 print(f'{k} :: {v} ({type(v)})\n')
 
-            order_data['positionsData'] = json.loads(order_data['positionsData'])
-            order_data['fabric'] = json.loads(order_data['fabric'])
+            order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
 
             order_data['price'] = float(order_data.get('price')) if order_data.get('price') != '' else 0
             order_data['prepayment'] = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
             order_data['amount_to_receive'] = order_data['price'] - order_data['prepayment']
 
-            order_data['fabric_type'] = order_data['fabric'].get('type', '')
             tg_message = create_message_str(order_data)
             logging.info(f"Сформировано сообщение для заказа: {tg_message}")
 
             send_telegram_message(tg_message, chat_id)
             logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
-            # TODO: Переопределить тип ткани
-            #  Сделать форму перезагружающейся после создания заявки
-            #  Печать гарантийного талона
-            #  Раздельное меню на матрасы со своими тканями, и на комплектующие, и на кровати
+            # TODO: Печать гарантийного талона
 
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
@@ -75,8 +69,7 @@ def index():
                     "deadline": order_data['delivery_date'],
                     "article": item['article'],
                     "size": item['size'],
-                    "fabric": order_data['fabric'],  # Пока хардкод
-                    #"fabric_type": order_data['fabric_type'],
+                    "fabric": order_data['fabric'],
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
                     "attributes": item['structure'],
@@ -95,6 +88,7 @@ def index():
                     # В этом методе данные будут заполняться из этого словаря построчно.
                     # При добавлении нового поля, или перемещении, нужно это учитывать.
                     # Порядок task_data должен быть как в editors_columns на странице бригадира
+                    # TODO: привязать pydantic
                     append_to_dataframe(task_data, cash_file)
 
             sbis.write_implementation(order_data)
@@ -111,11 +105,21 @@ def index():
     logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
 
-
-@app.route('/api/articles', methods=['GET'])
+@app.route('/api/nomenclatures', methods=['GET'])
 def get_articles():
-    logging.debug("Получен GET-запрос к /api/articles")
+    """Запрос выдаёт список строк с названиями товаров.
+    Символы строк в формате Unicode escape-последовательности"""
+    logging.debug("Получен GET-запрос к /api/nomenclatures")
     return jsonify(list(nomenclatures))
+
+
+@app.route('/api/fabrics', methods=['GET'])
+def get_fabrics():
+    """Запрос почти как /api/nomenclatures, только выдаёт
+    не все товары, а список строк с названиями тканей.
+    Символы строк в формате Unicode escape-последовательности"""
+    logging.debug("Получен GET-запрос к /api/fabrics")
+    return jsonify(list(fabrics))
 
 
 def send_telegram_message(text, chat_id):

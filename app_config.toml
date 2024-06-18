@@ -2,6 +2,7 @@
 # Коррекция размера отреза тканей для боковины.
 # Вставьте в название ткани слово из этого списка,
 # чтобы применить указанные изменения для нарезчика.
+# Метод ищет эти слова в названии ткани в СБИС.
 "Жаккард" = -10
 "Трикотаж" = -5
 
@@ -43,12 +44,13 @@ implementation_filepath = "cash/implementation.xml"  # Расположение 
 #task_filepath = "cash/task.html"  # Расположение шаблона формирования задачи СБИС
 
 # Список свойств товаров можно получить методом get_nomenclature_list() из sbis_manager.py
-mattress_group_id = 2  # Товары с hierarchicalId равным mattress_group_id считаются матрасами и добавляются в датафрейм
-fabrics_group_id = 1  # Эти товары - ткани. Показываются при выборе ткани из окна заявок.
+mattress_group_id = 2  # Товары с hierarchicalParent равным mattress_group_id считаются матрасами и добавляются в датафрейм
+fabrics_group_id = 285  # Эти товары - ткани. Показываются при выборе ткани из окна заявок.
 
 [sbis.reglament_id_list]
 # ID регламента СБИС.
-implementation = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05"  # Реализация матрасов
+wholesale = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05" # Реализация матрасов
+direct_sell = "f67256dd-8674-4a75-91d0-22d3494e4c13" # Розница
 #order_delivery = "2c36b133-7a8a-4f69-82a6-89409c38a373"
 #task = "05999956-3a78-4f91-bb80-a08b7eceb954"
 
