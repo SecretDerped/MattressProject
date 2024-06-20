@@ -13,6 +13,7 @@ st.set_page_config(page_title=page_name,
                    page_icon=page_icon,
                    layout="wide")
 
+# TODO: уведомления на сборку по штрихам
 
 @st.experimental_fragment(run_every="1s")
 def show_sewing_tasks(num_columns: int = 4):

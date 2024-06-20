@@ -1,4 +1,3 @@
-from datetime import datetime
 import streamlit as st
 from utils.tools import save_to_file, read_file, get_date_str, config, employee_choose, is_reserved, get_reserver, \
     time_now, set_reserver, set_reserved
@@ -15,6 +14,7 @@ st.set_page_config(page_title=page_name,
                    layout="wide")
 
 
+# TODO: уведомления на сборку по штрихам
 @st.experimental_fragment(run_every="1s")
 def show_gluing_tasks(num_columns: int = 2):
     data = read_file(cash_file)
@@ -32,7 +32,7 @@ def show_gluing_tasks(num_columns: int = 2):
         if count % num_columns == 0:
             row_container = st.columns(num_columns)
 
-        box = row_container[count % num_columns].container(height=185, border=True)
+        box = row_container[count % num_columns].container(height=195, border=True)
         box_text = ''
         # Текст контейнера красится в красный, когда у наряда приоритет
         text_color = 'red' if row['high_priority'] else 'gray'

@@ -54,7 +54,6 @@ def index():
 
             send_telegram_message(tg_message, chat_id)
             logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
-            # TODO: Печать гарантийного талона
 
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
@@ -69,7 +68,8 @@ def index():
                     "deadline": order_data['delivery_date'],
                     "article": item['article'],
                     "size": item['size'],
-                    "fabric": order_data['fabric'],
+                    "base_fabric": order_data['base_fabric'],
+                    "side_fabric": order_data['side_fabric'],
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
                     "attributes": item['structure'],
@@ -104,6 +104,7 @@ def index():
 
     logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
+
 
 @app.route('/api/nomenclatures', methods=['GET'])
 def get_articles():

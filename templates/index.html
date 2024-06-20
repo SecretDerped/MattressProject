@@ -154,8 +154,12 @@
                 </div>
                 <!-- Ткани -->
                 <div class="form-group">
-                    <label for="fabric" class="form-label">Ткань</label>
-                    <input type="text" id="fabric" name="fabric" class="form-control" placeholder="Введите название ткани...">
+                    <label for="base_fabric" class="form-label">Ткань (верх/низ)</label>
+                    <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
+                </div>
+                <div class="form-group">
+                    <label for="side_fabric" class="form-label">Ткань (сбоку)</label>
+                    <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Введите название ткани...">
                 </div>
                 <!-- Комментарий -->
                 <div class="form-group">
@@ -330,7 +334,8 @@
 
         $(document).ready(function () {
             setInitialDateAndRegion();
-            initializeFabricAutocomplete();
+            initializeFabricAutocomplete("#base_fabric");
+            initializeFabricAutocomplete("#side_fabric");
             initializePositionsAutocomplete();
         });
 
@@ -429,22 +434,22 @@
             });
         }
 
-        function initializeFabricAutocomplete() {
-             $('#fabric').autocomplete({
-            source: function (request, response) {
-                $.getJSON('/api/fabrics', function (data) {
-                    var results = $.ui.autocomplete.filter(data, request.term);
-                    response(results.slice(0, 5));
-                });
-            },
-            minLength: 0,
-            select: function (event, ui) {
-                $('#fabric').val(ui.item.value);
-                return false;
-            }
-        }).focus(function () {
-            $(this).autocomplete("search", "");
-        });
+        function initializeFabricAutocomplete(selector) {
+            $(selector).autocomplete({
+                source: function (request, response) {
+                    $.getJSON('/api/fabrics', function (data) {
+                        var results = $.ui.autocomplete.filter(data, request.term);
+                        response(results.slice(0, 5));
+                    });
+                },
+                minLength: 0,
+                select: function (event, ui) {
+                    $(selector).val(ui.item.value);
+                    return false;
+                }
+            }).focus(function () {
+                $(this).autocomplete("search", "");
+            });
         }
     </script>
 

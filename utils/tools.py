@@ -73,7 +73,7 @@ def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool =
     """База данных в этом проекте представляет собой файл pkl с датафреймои библиотеки pandas.
     Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
     а кэш делается из session_state - текущего состояния таблицы. Каждое изменение таблицы
-    провоцируют on_change методы, а потом обновление всей страницы. Поэтому стстема
+    провоцируют on_change методы, а потом обновление всей страницы. Поэтому система
     такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
     Как только какое-то поле было изменено, то изменения записываются в кэш,
     потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
@@ -116,7 +116,7 @@ def show_table(columns: dict, cashfile: str):
     st.dataframe(data=read_file(cashfile), column_config=columns, hide_index=True)
 
 
-def get_size_int(string):
+def get_size_int(size: str):
     """
     Принимает строку с размером матраса типа "180х200".
     Ищет первые два или три числа, разделенных любым символом.
@@ -129,7 +129,7 @@ def get_size_int(string):
 
     pattern = r'(\d+)(?:\D+(\d+))?(?:\D+(\d+))?'
 
-    match = re.search(pattern, string)
+    match = re.search(pattern, size)
     if not match:
         return {'length': 0, 'width': 0, 'height': 0}
 
@@ -139,14 +139,15 @@ def get_size_int(string):
     return {'length': length, 'width': width, 'height': height}
 
 
-def side_eval(size, fabric: str = None) -> str:
+def side_eval(size: str, fabric: str = None) -> str:
     """
     Вычисляет сколько нужно отрезать боковины, используя размер из функции get_size_int.
    Формула для вычисления размера боковины: (Длина * 2 + Ширина * 2) + корректировка
    В зависимости от типа ткани корректировка прописывается в app_config.toml,
    в разделе [fabric_corrections]
    """
-
+    size = get_size_int(size)
+    print(f'{fabric} = ')
     try:
         result = (size.get('length', 0) * 2 + size.get('width', 0) * 2)
         corrections = config.get('fabric_corrections', {'Текстиль': 0})
@@ -156,10 +157,12 @@ def side_eval(size, fabric: str = None) -> str:
             (value for key, value in corrections.items() if re.search(key, fabric, re.IGNORECASE)), 0)
 
         result += correction_value
+        print(result)
 
         return str(result)
 
-    except Exception:
+    except Exception as e:
+        print(e)
         return "Ошибка в вычислении размера"
 
 
@@ -176,10 +179,10 @@ def get_date_str(dataframe_row: pd.Series) -> str:
 
 def get_employees_on_shift(position: str) -> list:
     """Принимает строку для фильтрации по роли сотрудника (position).
-Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
-Фильтрует записи, где значение в "is_on_shift" стоит True,
-а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
-Возвращает [список имен сотрудников на смене по искомой роли]"""
+    Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
+    Фильтрует записи, где значение в "is_on_shift" стоит True,
+    а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
+    Возвращает [список имен сотрудников на смене по искомой роли]"""
     dataframe = read_file(employees_cash)
     if 'is_on_shift' not in dataframe.columns or 'position' not in dataframe.columns:
         raise ValueError("В датафрейме сотрудников должны быть колонки 'is_on_shift' и 'position'")

@@ -27,15 +27,17 @@ employee_columns = {
 editors_columns = {
     "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
     "deadline": st.column_config.DateColumn("Срок",
-                                            min_value=datetime.date(2020, 1, 1),
-                                            max_value=datetime.date(2199, 12, 31),
+                                            min_value=datetime.date(2000, 1, 1),
+                                            max_value=datetime.date(2999, 12, 31),
                                             format="DD.MM.YYYY",
                                             step=1,
                                             default=datetime.date.today()),
     "article": "Артикул",
     "size": "Размер",
-    "fabric": st.column_config.TextColumn("Тип ткани",
-                                          default='Текстиль'),
+    "base_fabric": st.column_config.TextColumn("Ткань (Верх / Низ)",
+                                               default='Текстиль'),
+    "side_fabric": st.column_config.TextColumn("Ткань (Бок)",
+                                               default='Текстиль'),
     "photo": st.column_config.ImageColumn("Фото", help="Кликните, чтобы развернуть"),
     "comment": st.column_config.TextColumn("Комментарий",
                                            default='',
@@ -103,7 +105,7 @@ with tab1:
         redact_table(editors_columns, task_cash, TASK_STATE)
     if not st.session_state[SHOW_TABLE]:
         show_table(editors_columns, task_cash)
-
+# TODO: совместный табель - история смен сотрудников
 with tab2:
     col1, col2 = st.columns([1, 2])
     with col1:
