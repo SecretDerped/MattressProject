@@ -42,6 +42,8 @@ editors_columns = {
     "comment": st.column_config.TextColumn("Комментарий",
                                            default='',
                                            width='small'),
+    "springs": st.column_config.TextColumn("Пружины",
+                                           default=''),
     "attributes": st.column_config.TextColumn("Состав начинки",
                                               default='',
                                               width='medium'),

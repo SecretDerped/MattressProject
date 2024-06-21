@@ -29,6 +29,7 @@ sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
+springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -72,6 +73,7 @@ def index():
                     "side_fabric": order_data['side_fabric'],
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
+                    "springs": order_data['springs'],
                     "attributes": item['structure'],
                     "fabric_is_done": False,
                     "gluing_is_done": False,
@@ -95,12 +97,14 @@ def index():
             return "   Заказ принят. Реализация записана. Задания созданы."
 
         except KeyError as e:
-            logging.error(f"Отсутствует обязательное поле {str(e)}, ")
+            logging.error(f"Отсутствует обязательное поле {str(e)}, ", exc_info=True)
             abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
 
         except ValueError as e:
-            logging.error(f"Ошибка: неверный формат данных {str(e)}", exc_info=True)
-            abort(400, description=f"Неверный формат данных: {str(e)}")
+            logging.error(f"Ошибка: неверный формат данных - {str(e)}", exc_info=True)
+            abort(400, description=f"Неверный формат данных: {str(e)}. Если ошибка возникла при добавлении нового "
+                                   f"поля в коде, проверьте порядок данных task_data в web_app.py. Он должен быть как "
+                                   f"в editors_columns на странице бригадира.")
 
     logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
@@ -121,6 +125,15 @@ def get_fabrics():
     Символы строк в формате Unicode escape-последовательности"""
     logging.debug("Получен GET-запрос к /api/fabrics")
     return jsonify(list(fabrics))
+
+
+@app.route('/api/springs', methods=['GET'])
+def get_springs():
+    """Запрос почти как /api/nomenclatures, только выдаёт
+    не все товары, а список строк с названиями пружинных блоков.
+    Символы строк в формате Unicode escape-последовательности"""
+    logging.debug("Получен GET-запрос к /api/springs")
+    return jsonify(list(springs))
 
 
 def send_telegram_message(text, chat_id):

@@ -89,6 +89,7 @@
             left: 0;
             top: 0;
             cursor: pointer;
+            z-index: 2; /* Добавлено */
         }
 
         .custom-file-input-button {
@@ -102,6 +103,8 @@
             width: calc(100% - 20px);
             text-align: center;
             border: none;
+            position: relative; /* Добавлено */
+            z-index: 1; /* Добавлено */
         }
 
         .custom-file-input-button:hover {
@@ -113,6 +116,7 @@
             margin: 0 auto;
             width: 75%;
             margin-top: 20px;
+            margin-bottom: 20px;
             border-radius: 10px;
         }
 
@@ -152,14 +156,20 @@
                     <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
                     <input type="hidden" id="positionsData" name="positionsData" value="" required>
                 </div>
-                <!-- Ткани -->
+                <!-- Ткань (база) -->
                 <div class="form-group">
-                    <label for="base_fabric" class="form-label">Ткань (верх/низ)</label>
+                    <label for="base_fabric" class="form-label">Ткань (верху и внизу)</label>
                     <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
                 </div>
+                <!-- Ткань (бочина) -->
                 <div class="form-group">
                     <label for="side_fabric" class="form-label">Ткань (сбоку)</label>
-                    <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Введите название ткани...">
+                    <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань такая же">
+                </div>
+                <!-- Пружины -->
+                <div class="form-group">
+                    <label for="springs" class="form-label">Пружинный блок</label>
+                    <input type="text" id="springs" name="springs" class="form-control" placeholder="Введите название пружин...">
                 </div>
                 <!-- Комментарий -->
                 <div class="form-group">
@@ -334,8 +344,9 @@
 
         $(document).ready(function () {
             setInitialDateAndRegion();
-            initializeFabricAutocomplete("#base_fabric");
-            initializeFabricAutocomplete("#side_fabric");
+            initializeAutocomplete("#base_fabric", '/api/fabrics');
+            initializeAutocomplete("#side_fabric", '/api/fabrics');
+            initializeAutocomplete("#springs", '/api/springs');
             initializePositionsAutocomplete();
         });
 
@@ -434,10 +445,10 @@
             });
         }
 
-        function initializeFabricAutocomplete(selector) {
+        function initializeAutocomplete(selector, apiUrl) {
             $(selector).autocomplete({
                 source: function (request, response) {
-                    $.getJSON('/api/fabrics', function (data) {
+                    $.getJSON(apiUrl, function (data) {
                         var results = $.ui.autocomplete.filter(data, request.term);
                         response(results.slice(0, 5));
                     });

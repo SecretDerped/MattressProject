@@ -33,6 +33,7 @@ def show_sewing_tasks(num_columns: int = 4):
     for index, row in tasks.iterrows():
         deadline = get_date_str(row['deadline'])
         comment = row.get('comment', '')
+
         if count % num_columns == 0:
             row_container = st.columns(num_columns)
 
@@ -49,7 +50,6 @@ def show_sewing_tasks(num_columns: int = 4):
 """
         if row['comment']:
             box_text += f"  **Комментарий**: {comment}  "
-
         box_text += ']'
 
         with box:

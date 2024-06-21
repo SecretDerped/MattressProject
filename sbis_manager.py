@@ -220,7 +220,7 @@ class SBISWebApp(SBISApiManager):
         """Подтягивает номенклатуру из прайс-листа в разделе Бизнес - Цены
         в виде словаря с названиями позиций в качестве ключей, а в значениях - словарь свойств позиции.
         Важно: на момент июня 2024-го СБИС не даёт подтягивать номенклатуру просто так, только из
-        прайс-листа. """
+        прайс-листа. ЕСЛИ НОМЕНКЛАТУРА НЕ ВЫГРУЖАЕТСЯ, ПРОВЕРЬ ПРАЙС-ЛИСТ "Позиции для Telegram-бота" """
         point_id = self.get_sale_point_id()
         price_list_id = self.get_price_list_id(point_id)
         # ID товарной группы матрасов. Далее стоит проверка товара на
@@ -228,6 +228,7 @@ class SBISWebApp(SBISApiManager):
         # в датафрейм в качестве задания на производство
         mattress_group_id = config.get('sbis').get('mattress_group_id')
         fabrics_group_id = config.get('sbis').get('fabrics_group_id')
+        springs_group_id = config.get('sbis').get('springs_group_id')
 
         # Это пригодится чуть ниже для пангинации
         page = 0
@@ -238,6 +239,7 @@ class SBISWebApp(SBISApiManager):
 
         while True:
             product_list = self.get_nomenclature_list(point_id, price_list_id, page)
+            print(product_list)
 
             # Выход сразу же, если список номенклатур пустой
             if not product_list['nomenclatures']:
@@ -257,7 +259,8 @@ class SBISWebApp(SBISApiManager):
                                                 'attributes': product.get('attributes', {'': ''}),
                                                 'images': product.get('images', None),
                                                 'is_mattress': False,
-                                                'is_fabric': False}
+                                                'is_fabric': False,
+                                                'is_springs': False}
 
                 # Вычисляем группу позиции, типа ткань, матрас, или ещё что-либо
                 group = product['hierarchicalParent']
@@ -268,10 +271,14 @@ class SBISWebApp(SBISApiManager):
                     nomenclatures_list[key_name]['is_mattress'] = True
                     nomenclatures_list[key_name]['size'] = attributes.get('Размер', '0')
                     nomenclatures_list[key_name]['structure'] = attributes.get('Состав', '')
-                # А если к группе тканей, то нам нужен тип ткани. Нужен для калькулятора бочин
+                # А если к группе тканей, то ставится тип "Ткань"
                 if group == fabrics_group_id:
                     nomenclatures_list[key_name]['is_fabric'] = True
-                    nomenclatures_list[key_name]['type'] = attributes.get('Тип ткани', '')
+                    # Раньше аттрибут типа ткани использовался для коррекции бочины
+                    # Теперь поиск идёт по ключевым словам в названии ткани
+                    # nomenclatures_list[key_name]['type'] = attributes.get('Тип ткани', '')
+                if group == springs_group_id:
+                    nomenclatures_list[key_name]['is_springs'] = True
 
             # Цикл прерывается, если позиций больше нет
             if not product_list['outcome']['hasMore']:
@@ -285,6 +292,7 @@ class SBISWebApp(SBISApiManager):
 
         delivery_date_str = data.get('delivery_date', None)
         delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
+        # Заменяем двойные кавычки на &quot;, иначе XML посчитает эти кавычки за конец строки и разметка сломается.
         customer_name = data.get('party', None).replace('"', '&quot;')
 
         # Если поле "Компания" оставить пустым при создании заявки, счёт оформится как розница,
