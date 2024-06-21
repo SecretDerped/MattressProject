@@ -6,7 +6,7 @@ page_name = 'Сборка основы'
 page_icon = "🔨"
 reserve_button_text = 'Взять'
 done_button_text = 'Готово'
-columns_to_display = ['deadline', 'article', 'size', 'attributes', 'comment', 'photo']
+#columns_to_display = ['deadline', 'article', 'size', 'attributes', 'comment', 'photo']
 
 cash_file = config.get('site').get('cash_filepath')
 st.set_page_config(page_title=page_name,
@@ -14,7 +14,6 @@ st.set_page_config(page_title=page_name,
                    layout="wide")
 
 
-# TODO: уведомления на сборку по штрихам
 @st.experimental_fragment(run_every="1s")
 def show_gluing_tasks(num_columns: int = 2):
     data = read_file(cash_file)
@@ -91,4 +90,4 @@ with col1:
     st.title(f'{page_icon} {page_name}')
 with col2:
     employee_choose(page_name)
-show_gluing_tasks(3)
+show_gluing_tasks(2)

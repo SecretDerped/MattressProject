@@ -33,3 +33,4 @@ Result: {'nomenclatures': [{'accountingSubType': None, 'article': None, 'attribu
 [2024-06-21 14:02:15,168 | asyncio - DEBUG]: Using proactor: IocpProactor
 [2024-06-21 14:02:15,170 | aiogram.dispatcher - INFO]: Start polling
 [2024-06-21 14:02:15,441 | aiogram.dispatcher - INFO]: Run polling for bot @Gasparian_R_C_bot id=6945801898 - 'Gasparian R.C. | Заявки'
+[2024-06-21 17:57:47,802 | aiogram.dispatcher - INFO]: Polling stopped
