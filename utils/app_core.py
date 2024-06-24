@@ -29,17 +29,29 @@ class Page:
 
 
 class ManufacturePage(Page):
-    def __init__(self, name, icon, columns_order, box_text_template):
+    def __init__(self, name, icon):
         super().__init__(name, icon)
-        self.columns_order = columns_order
-        self.box_text_template = box_text_template
 
     def load_tasks(self):
         data = read_file(self.cash)
         return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                                 ascending=[False, True, True, False])
 
-    def _get_box_text(self, index, row, text):
+    @staticmethod
+    def _inner_box_text(row):
+        """Метод, выдающий текст внутри бокса. Для каждой страницы с плитками заявок можно переопределять этот метод."""
+        return (f"**Артикул:** {row.get('article')}  \n"
+                f"**Ткань**: {row.get('base_fabric')}  \n"
+                f"**Тип доставки**: {row.get('delivery_type')}  \n"
+                f"**Адрес:** {row.get('address')}  \n"
+                f"**Клиент:** {row.get('client')}  \n"
+                f"**Верх/Низ**: {row.get('base_fabric')}  \n"
+                f"**Бочина**: {row.get('side_fabric')}  \n"
+                f"**Состав:** {row.get('attributes')}  \n"
+                f"**Размер:** {row.get('size')} ({side_eval(row.get('size'), row.get('side_fabric'))}  \n"
+                f"**Срок**: {get_date_str(row.get('deadline'))}  \n")
+
+    def _form_box_text(self, index, row):
         # Текст контейнера красится в красный, когда у наряда приоритет
         text_color = 'red' if row['high_priority'] else 'gray'
         box_text = ''
@@ -48,8 +60,7 @@ class ManufacturePage(Page):
         if is_reserved(self.name, index):
             reserver = get_reserver(self.name, index)
             box_text += f":orange[**Взято - {reserver}**]  \n"
-        box_text += f':{text_color}[{text}'
-# TODO: Вынести текст отдельно от бокса. Привязать к странице
+        box_text += f':{text_color}[{self._inner_box_text(row)}'
         if row['comment']:
             box_text += f"**Комментарий**: {row['comment']}  "
 
@@ -57,7 +68,7 @@ class ManufacturePage(Page):
         return box_text
 
     @st.experimental_fragment(run_every="1s")
-    def show_tasks_tiles(self, data: pandas.DataFrame, num_columns: int = 3) -> bool:
+    def show_tasks_tiles(self, data: pandas.DataFrame, stage_to_done: str, num_columns: int = 3) -> bool:
 
         if len(data) == 0:
             return st.header('Все заявки выполнены! Хорошая работа 🏖️')
@@ -80,14 +91,14 @@ class ManufacturePage(Page):
                     col1, col3 = st.columns([3, 1])
 
                 with col1:
-                    st.markdown(self._get_box_text(index, row, self.box_text_template))
+                    st.markdown(self._form_box_text(index, row))
                 with col3:
                     st.title('')
                     st.subheader('')
                     if self.name in st.session_state and st.session_state[self.name]:
                         if is_reserved(self.name, index):
                             if st.button(f":green[**{self.done_button_text}**]", key=f'{self.name}_done_{index}'):
-                                data.at[index, 'fabric_is_done'] = True
+                                data.at[index, stage_to_done] = True
                                 employee = st.session_state[self.name]
                                 history_note = f'({time_now()}) {self.name} [ {employee} ] -> {self.done_button_text}; \n'
                                 data.at[index, 'history'] += history_note
