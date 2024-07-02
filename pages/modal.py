@@ -1,25 +1,53 @@
-from streamlit_elements import elements, mui
+import streamlit as st
+from streamlit_elements import elements, mui, event
 
-from streamlit_elements import event
+frame = elements("callbacks_hotkey")
 
-with elements("callbacks_hotkey"):
-    # Invoke a callback when a specific hotkey sequence is pressed.
-    #
-    # For more information regarding sequences syntax and supported keys,
-    # go to Mousetrap's project page linked below.
-    #
-    # /!\ Hotkeys work if you don't have focus on Streamlit Elements's frame /!\
-    # /!\ As with other callbacks, this reruns the whole app /!\
+st.info('Убедитесь, что сканер включён.')
 
-    def hotkey_pressed():
-        print("Hotkey pressed")
+# Инициализация состояния
+if 'show_input' not in st.session_state:
+    st.session_state['show_input'] = False
 
-    event.Hotkey("g", hotkey_pressed)
+if 'input_text' not in st.session_state:
+    st.session_state['input_text'] = ""
 
-    # If you want your hotkey to work even in text fields, set bind_inputs to True.
-    event.Hotkey("h", hotkey_pressed, bindInputs=True)
-    mui.TextField(label="Try pressing 'h' while typing some text here.")
+if 'employee' not in st.session_state:
+    st.session_state['employee'] = ""
 
-    # If you want to override default hotkeys (ie. ctrl+f to search in page),
-    # set overrideDefault to True.
-    event.Hotkey("ctrl+f", hotkey_pressed, overrideDefault=True)
+# Функция для обработки горячей клавиши "!"
+def hotkey_pressed():
+    st.session_state.input_text = ""
+    st.session_state.show_input = True
+
+# Функция для сохранения введенного текста по горячей клавише "*"
+def save_input():
+    if st.session_state.input_text:
+        st.session_state.employee = st.session_state.input_text
+        st.session_state.show_input = False
+
+# Кнопка для включения сканера
+def button_pressed():
+    st.toast('Сканер включён!', icon='🚨')
+
+with frame:
+    # Обработчики горячих клавиш
+    event.Hotkey("!", hotkey_pressed, bindInputs=True)
+    event.Hotkey("*", save_input, bindInputs=True)
+
+    scaner_button = mui.Button(onClick=button_pressed)
+    with scaner_button:
+        mui.icon.EmojiPeople()
+        mui.Typography("Включить сканер")
+
+    # Поле ввода всегда на странице, но управляется состоянием
+    if st.session_state.show_input:
+        mui.TextField(
+            label="Чтение карточки...",
+            value=st.session_state.input_text,
+            onChange=lambda e: setattr(st.session_state, 'input_text', e.target.value),
+            autoFocus=True,
+        )
+
+    if st.session_state.employee:
+        mui.Typography(st.session_state.employee)

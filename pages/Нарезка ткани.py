@@ -9,9 +9,6 @@ class CuttingPage(ManufacturePage):
         super().__init__(name, icon)
         self.columns_order = columns_order
 
-
-
-
     def show_cutting_table(self, tasks):
         with st.form(key='tasks_form'):
             inner_col_1, inner_col_2 = st.columns([4, 1])
@@ -55,7 +52,7 @@ class CuttingPage(ManufacturePage):
                         st.rerun()
 
     @staticmethod
-    def _inner_box_text(row):
+    def inner_box_text(row):
         return (f"**Артикул:** {row.get('article')}  \n"
                 f"**Ткань (верх/низ)**: {row.get('base_fabric')}  \n"
                 f"**Ткань (бочина)**: {row.get('base_fabric')}  \n"

@@ -10,8 +10,7 @@ page_icon = "🧵"
 reserve_button_text = 'Взять'
 done_button_text = 'Готово'
 st.set_page_config(page_title=page_name,
-                   page_icon=page_icon,
-                   layout="wide")
+                   page_icon=page_icon)
 
 # TODO: уведомления на сборку по штрихам
 

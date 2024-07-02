@@ -38,7 +38,7 @@ class ManufacturePage(Page):
                                 ascending=[False, True, True, False])
 
     @staticmethod
-    def _inner_box_text(row):
+    def inner_box_text(row):
         """Метод, выдающий текст внутри бокса. Для каждой страницы с плитками заявок можно переопределять этот метод."""
         return (f"**Артикул:** {row.get('article')}  \n"
                 f"**Ткань**: {row.get('base_fabric')}  \n"
@@ -60,7 +60,7 @@ class ManufacturePage(Page):
         if is_reserved(self.name, index):
             reserver = get_reserver(self.name, index)
             box_text += f":orange[**Взято - {reserver}**]  \n"
-        box_text += f':{text_color}[{self._inner_box_text(row)}'
+        box_text += f':{text_color}[{self.inner_box_text(row)}'
         if row['comment']:
             box_text += f"**Комментарий**: {row['comment']}  "
 

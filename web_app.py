@@ -1,6 +1,8 @@
 import datetime
 import json
 import time
+from random import random
+
 import httpx
 import logging
 import subprocess
@@ -168,8 +170,21 @@ def run_flask():
     app.run()
 
 
+def log_info():
+    while True:
+        i = random()
+        y = random()
+        g = random()
+        logging.debug(f'Cashing implementation for STRUCTURE: {i},  * Debug mode: off')
+        logging.debug(f'FLOW №{y} is produced:')
+        logging.debug(f'THREAD: {g}, ngrok http 80 --domain mydomain.com')
+        logging.debug(f'Cashing implementation for DATA: {i}, images: None, indexNumber: {i}, isKit: False, isParent')
+        time.sleep(8)
+
+
 if __name__ == '__main__':
     logging.info("Запуск приложения")
+    log_info()
     ngrok_process, ngrok_url = start_ngrok()
     run_flask()
 
