@@ -2,9 +2,8 @@ import asyncio
 import logging
 import subprocess
 import threading
-from web_app import run_flask
+from web_app import run_flask, start_ngrok
 from bot import Tg
-from web_app import start_ngrok
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
 logger = logging.getLogger(__name__)

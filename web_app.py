@@ -1,7 +1,6 @@
 import datetime
 import json
 import time
-from random import random
 
 import httpx
 import logging
@@ -19,12 +18,14 @@ sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 cash_file = config.get('site').get('cash_filepath')
 regions = config.get('site').get('regions')
-high_priority = False
-
 tg_token = config.get('telegram').get('token')
+high_priority = False
+sequence_gluing = []
+sequence_sewing = []
 
-# Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
+                    level=logging.DEBUG,
+                    encoding='utf-8')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -112,6 +113,58 @@ def index():
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
 
 
+@app.route('/gluing')
+def gluing():
+    logging.debug('Рендеринг страницы склейки')
+    return render_template('gluing.html')
+
+
+@app.route('/sewing')
+def sewing():
+    logging.debug('Рендеринг страницы швейного стола')
+    return render_template('sewing.html')
+
+
+@app.route('/log_sequence_gluing', methods=['POST'])
+def log_sequence_gluing():
+    global sequence_gluing
+    data = request.json
+    key = data['key']
+
+    if key == '(':
+        sequence_gluing = []
+    elif key == ')':
+        completed_sequence = ''.join(sequence_gluing)[:-5]
+        sequence_gluing = []
+        logging.debug(f"Завершенная последовательность (склейка): {completed_sequence}")
+        return jsonify({'sequence': completed_sequence})
+    else:
+        sequence_gluing.append(key)
+        logging.debug(f"Текущая последовательность (склейка): {''.join(sequence_gluing)}")
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/log_sequence_sewing', methods=['POST'])
+def log_sequence_sewing():
+    global sequence_sewing
+    data = request.json
+    key = data['key']
+
+    if key == '(':
+        sequence_sewing = []
+    elif key == ')':
+        completed_sequence = ''.join(sequence_sewing)[:-5]
+        sequence_sewing = []
+        logging.debug(f"Завершенная последовательность (швейный стол): {completed_sequence}")
+        return jsonify({'sequence': completed_sequence})
+    else:
+        sequence_sewing.append(key)
+        logging.debug(f"Текущая последовательность (швейный стол): {''.join(sequence_sewing)}")
+
+    return jsonify({'status': 'ok'})
+
+
 @app.route('/api/nomenclatures', methods=['GET'])
 def get_articles():
     """Запрос выдаёт список строк с названиями товаров.
@@ -170,21 +223,8 @@ def run_flask():
     app.run()
 
 
-def log_info():
-    while True:
-        i = random()
-        y = random()
-        g = random()
-        logging.debug(f'Cashing implementation for STRUCTURE: {i},  * Debug mode: off')
-        logging.debug(f'FLOW №{y} is produced:')
-        logging.debug(f'THREAD: {g}, ngrok http 80 --domain mydomain.com')
-        logging.debug(f'Cashing implementation for DATA: {i}, images: None, indexNumber: {i}, isKit: False, isParent')
-        time.sleep(8)
-
-
 if __name__ == '__main__':
     logging.info("Запуск приложения")
-    log_info()
     ngrok_process, ngrok_url = start_ngrok()
     run_flask()
 

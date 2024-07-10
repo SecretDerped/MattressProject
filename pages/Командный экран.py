@@ -21,7 +21,8 @@ SHOW_TABLE = 'show_table'
 employee_columns = {
     "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
     "name": st.column_config.TextColumn("Имя / Фамилия"),
-    "position": st.column_config.TextColumn("Роли")
+    "position": st.column_config.TextColumn("Роли"),
+    "id": st.column_config.TextColumn("Уникальный код")
 }
 
 editors_columns = {
