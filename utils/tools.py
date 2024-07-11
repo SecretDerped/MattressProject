@@ -62,49 +62,11 @@ def clear_cash(state):
 
 def create_cashfile_if_empty(columns: dict, cash_filepath: str):
     """Если файл с кэшем отсутствует, создаёт его, прописывая пустые колонки
-    из ключей словаря настройки колонн, типа из editors_columns"""
+    из ключей словаря настройки колонн, типа из tasks_columns_config"""
     if not os.path.exists(cash_filepath):
         base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
         empty_dataframe = pd.DataFrame(base_dict)
         save_to_file(empty_dataframe, cash_filepath)
-
-
-def redact_table(columns: dict, cashfile: str, state: str, can_add_lines: bool = False):
-    """База данных в этом проекте представляет собой файл pkl с датафреймои библиотеки pandas.
-    Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
-    а кэш делается из session_state - текущего состояния таблицы. Каждое изменение таблицы
-    провоцируют on_change методы, а потом обновление всей страницы. Поэтому система
-    такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
-    Как только какое-то поле было изменено, то изменения записываются в кэш,
-    потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
-    сохраняется в базу."""
-    # Создаёт таблицу из настроек колонн, если её нет
-    create_cashfile_if_empty(columns, cashfile)
-
-    # Со страницы создания заявки возвращаются только строки, поэтому тут
-    # некоторые столбцы преобразуются в типы, читаемые для pandas.
-    dataframe_columns_types = {'deadline': "datetime64[ns]",
-                               'created': "datetime64[ns]"}
-    if state not in st.session_state:
-        dataframe = read_file(cashfile)
-        # Проверка наличия нужных колонок в датафрейме
-        for col in dataframe_columns_types.keys():
-            if col in dataframe.columns:
-                dataframe[col] = dataframe[col].astype(dataframe_columns_types[col])
-        cashing(dataframe, state)
-
-    num_rows_state = "dynamic" if can_add_lines else "fixed"
-
-    edited_df = get_cash(state)
-    editor = st.data_editor(
-        edited_df,
-        column_config=columns,
-        hide_index=True,
-        num_rows=num_rows_state,
-        on_change=cashing, args=(edited_df, state),
-        height=420
-    )
-    save_to_file(editor, cashfile)
 
 
 @st.experimental_fragment(run_every="1s")
@@ -191,6 +153,12 @@ def get_employees_on_shift(position: str) -> list:
         dataframe['position'].str.contains(position, case=False, na=False))]
 
     return filtered_df['name'].tolist()
+
+
+def barcode_link(id: str) -> str:
+    """Возвращает ссылку со сгенерированным штрих-кодом. ВАРНИНГ: захардкоденный айпишник"""
+    # TODO: Вставить в сслылку динамический локальный апишник
+    return f'http://192.168.1.29:5000/api/barcode/{id}'
 
 
 def save_employee(position):

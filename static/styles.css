@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap');
+
 :root {
     --placeholder-color: #adb5bd;
 }
@@ -89,8 +91,8 @@ body {
     width: calc(100% - 20px);
     text-align: center;
     border: none;
-    position: relative; /* Добавлено */
-    z-index: 1; /* Добавлено */
+    position: relative;
+    z-index: 1;
 }
 
 .custom-file-input-button:hover {
@@ -108,7 +110,9 @@ button[type="submit"] {
 
 h1 {
     text-align: center;
+    font-size: 2.5rem;
     margin-top: 1rem;
+    color: #31333f;
 }
 
 @media (min-width: 768px) {
@@ -118,5 +122,13 @@ h1 {
 }
 
 #message {
+    font-family: 'Source Sans Pro', sans-serif;
+    text-align: center;
     font-size: 24px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #31333f;
+
 }

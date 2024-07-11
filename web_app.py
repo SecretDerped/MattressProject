@@ -1,13 +1,19 @@
 import datetime
 import json
+import os
+import sys
 import time
 
 import httpx
 import logging
 import subprocess
-from flask import Flask, render_template, request, abort, jsonify
+from flask import Flask, render_template, request, abort, jsonify, send_file
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, create_message_str, append_to_dataframe
+from barcode import Code128
+from barcode.writer import ImageWriter, SVGWriter
+from io import BytesIO
+from barcode import generate
 
 config = load_conf()
 
@@ -92,7 +98,7 @@ def index():
                 for _ in range(int(position['quantity'])):
                     # В этом методе данные будут заполняться из этого словаря построчно.
                     # При добавлении нового поля, или перемещении, нужно это учитывать.
-                    # Порядок task_data должен быть как в editors_columns на странице бригадира
+                    # Порядок task_data должен быть как в tasks_columns_config на странице бригадира
                     # TODO: привязать pydantic
                     append_to_dataframe(task_data, cash_file)
 
@@ -107,7 +113,7 @@ def index():
             logging.error(f"Ошибка: неверный формат данных - {str(e)}", exc_info=True)
             abort(400, description=f"Неверный формат данных: {str(e)}. Если ошибка возникла при добавлении нового "
                                    f"поля в коде, проверьте порядок данных task_data в web_app.py. Он должен быть как "
-                                   f"в editors_columns на странице бригадира.")
+                                   f"в tasks_columns на странице бригадира.")
 
     logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
@@ -191,6 +197,33 @@ def get_springs():
     return jsonify(list(springs))
 
 
+@app.route('/api/barcode/<employee_id>', methods=['GET'])
+def get_barcode(employee_id: str = ''):
+    """Создаёт штрих-код для сотрудника.
+    В качестве параметра используется id сотрудника
+    в нижнем регистре, который окружается (скобками).
+    При переходе по ссылке, создаётся линейный штрих-код
+    Code128 в формате svg и выводится на экран"""
+
+    # Создаем BytesIO для хранения SVG-кода штрих-кода
+    barcode_bites = BytesIO()
+
+    # Инициализация штрих-кода и запись в SVG
+    barcode = Code128(f'({employee_id.lower()})')
+    barcode.write(barcode_bites,
+                  options={"module_height": 17.0,
+                           "module_width": 0.9,
+                           'foreground': 'black'},
+                  text=employee_id)
+
+    # Возвращаем SVG-код в качестве строки из BytesIO
+    barcode_bites.seek(0)
+    svg_data = barcode_bites.getvalue().decode('utf-8')
+
+    # Рендерим шаблон Flask, передавая SVG-код
+    return render_template('barcode.html', svg_data=svg_data)
+
+
 def send_telegram_message(text, chat_id):
     url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
 
@@ -220,7 +253,7 @@ def start_ngrok():
 
 def run_flask():
     logging.info("Запуск Flask-приложения")
-    app.run()
+    app.run(host='0.0.0.0')
 
 
 if __name__ == '__main__':

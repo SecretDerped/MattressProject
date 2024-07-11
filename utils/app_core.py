@@ -12,13 +12,20 @@ class Page:
 
         self.cash = config.get('site').get('cash_filepath')
 
-        self.reserve_button_text = 'Взять'
-        self.done_button_text = 'Готово'
-
         st.set_page_config(page_title=self.name,
                            page_icon=self.icon,
                            layout="wide")
         self.header()
+
+    def header(self):
+        st.title(f'{self.icon} {self.name}')
+
+
+class ManufacturePage(Page):
+    def __init__(self, name, icon):
+        super().__init__(name, icon)
+        self.reserve_button_text = 'Взять'
+        self.done_button_text = 'Готово'
 
     def header(self):
         col1, col2 = st.columns([3, 1])
@@ -26,11 +33,6 @@ class Page:
             st.title(f'{self.icon} {self.name}')
         with col2:
             employee_choose(self.name)
-
-
-class ManufacturePage(Page):
-    def __init__(self, name, icon):
-        super().__init__(name, icon)
 
     def load_tasks(self):
         data = read_file(self.cash)
