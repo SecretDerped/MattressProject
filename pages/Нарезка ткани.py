@@ -39,16 +39,16 @@ class CuttingPage(ManufacturePage):
                 submit_button = st.form_submit_button(label='Подтвердить')
 
                 if submit_button:
-                    employee = st.session_state.get(self.name)
+                    employee = st.session_state.get(self.page_name)
                     if not employee:
                         st.warning("Сначала отметьте сотрудника.")
                     else:
                         for index, row in edited_tasks_df.iterrows():
                             if row['fabric_is_done']:
-                                history_note = f'({time_now()}) {self.name} [ {employee} ] -> {self.done_button_text}; \n'
+                                history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
                                 tasks.at[index, 'history'] += history_note
                                 tasks.at[index, 'fabric_is_done'] = True
-                        save_to_file(tasks, self.cash)
+                        save_to_file(tasks, self.task_cash)
                         st.rerun()
 
     @staticmethod
@@ -63,11 +63,11 @@ class CuttingPage(ManufacturePage):
 ################################################ Page ###################################################
 
 
-Cutting = CuttingPage(name='Нарезка ткани',
-                      icon="✂️",
-                      columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline', 'comment'])
+Page = CuttingPage(name='Нарезка',
+                   icon="✂️",
+                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline', 'comment'])
 
-data = Cutting.load_tasks()
+data = Page.load_tasks()
 
 cutting_tasks = data[(data['fabric_is_done'] == False) &
                      (data['sewing_is_done'] == False) &
@@ -76,7 +76,7 @@ cutting_tasks = data[(data['fabric_is_done'] == False) &
 tab_tiles, tab_table = st.tabs(['Плитки', 'Таблица'])
 
 with tab_tiles:
-    Cutting.show_tasks_tiles(cutting_tasks, 'fabric_is_done', 2)
+    Page.show_tasks_tiles(cutting_tasks, 'fabric_is_done', 2)
 
 with tab_table:
     col_table, col_info = st.columns([4, 1])
@@ -84,7 +84,7 @@ with tab_table:
         # Вычисляемое поле размера бочины.
         cutting_tasks['side'] = cutting_tasks['size'].apply(side_eval, args=(str(cutting_tasks['side_fabric']),))
         # Создаем форму для обработки изменений в таблице
-        Cutting.show_cutting_table(cutting_tasks)
+        Page.show_cutting_table(cutting_tasks)
     with col_info:
         st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
                 'Попробуйте отсортировать по размеру!', icon="ℹ️")

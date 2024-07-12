@@ -19,7 +19,7 @@ regions = [
 
 
 delivery_types = ['Самовывоз', "Город", "Край", "Регионы", "Страны"]
-cash_filepath = "cash/cash.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
+tasks_cash_filepath = "cash/tasks.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
 employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
 
 [sbis]
@@ -41,7 +41,7 @@ secret_key = "VcRzvQs9JRWTXCHzeP8jFRquZqeOVL4y6o0L9zvNZJqn8ptQwuRot3skjUmItb8uSk
 sale_point_name = "Гаспарян Роман Славикович, ИП"  # Полное название торговой точки
 price_list_name = "Позиции для Telegram-бота"  # Название прайс-листа из СБИС - Бизнес - Цены
 implementation_filepath = "cash/implementation.xml"  # Расположение шаблона формирования реализации в СБИС
-#task_filepath = "cash/task.html"  # Расположение шаблона формирования задачи СБИС
+#task_filepath = "task_cash/task.html"  # Расположение шаблона формирования задачи СБИС
 
 # Список свойств товаров можно получить методом get_nomenclature_list() из sbis_manager.py
 mattress_group_id = 2  # Товары с hierarchicalParent равным mattress_group_id считаются матрасами и добавляются в датафрейм

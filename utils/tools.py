@@ -69,15 +69,6 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
         save_to_file(empty_dataframe, cash_filepath)
 
 
-@st.experimental_fragment(run_every="1s")
-def show_table(columns: dict, cashfile: str):
-    """Показывает нередактируемую таблицу данных без индексов.
-    Принимает словарь настроек колонн и путь к кэшу.
-    Создаёт таблицу из настроек колонн, если её нет"""
-    create_cashfile_if_empty(columns, cashfile)
-    st.dataframe(data=read_file(cashfile), column_config=columns, hide_index=True)
-
-
 def get_size_int(size: str):
     """
     Принимает строку с размером матраса типа "180х200".
@@ -139,72 +130,14 @@ def get_date_str(dataframe_row: pd.Series) -> str:
     return f'{day} {months[int(month) - 1]}, {weekday}'
 
 
-def get_employees_on_shift(position: str) -> list:
-    """Принимает строку для фильтрации по роли сотрудника (position).
-    Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
-    Фильтрует записи, где значение в "is_on_shift" стоит True,
-    а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
-    Возвращает [список имен сотрудников на смене по искомой роли]"""
-    dataframe = read_file(employees_cash)
-    if 'is_on_shift' not in dataframe.columns or 'position' not in dataframe.columns:
-        raise ValueError("В датафрейме сотрудников должны быть колонки 'is_on_shift' и 'position'")
-
-    filtered_df = dataframe[(dataframe['is_on_shift'] == True) & (
-        dataframe['position'].str.contains(position, case=False, na=False))]
-
-    return filtered_df['name'].tolist()
-
-
 def barcode_link(id: str) -> str:
     """Возвращает ссылку со сгенерированным штрих-кодом. ВАРНИНГ: захардкоденный айпишник"""
     # TODO: Вставить в сслылку динамический локальный апишник
     return f'http://192.168.1.29:5000/api/barcode/{id}'
 
 
-def save_employee(position):
-    """Метод для работы эффекта on_change виджета из employee_choose.
-    Без него выбираемый сотрудник корректно не записывается в session_state."""
-    st.session_state[position] = st.session_state[position]
-
-
-@st.experimental_fragment(run_every="4s")
-def employee_choose(position: str):
-    """Виджет для выбора активного сотрудника для рабочего места.
-    Рабочее место - строка в качестве аргумента.
-    Показывает выпадающий список из сотрудников, находящихся на смене.
-    При выборе сотрудника в session_state сохраняется строка с именем сотрудника под ключом с названием должности.
-    Пример: st.session_state['швейный стол'] == 'Полиграф Полиграфович'"""
-
-    st.selectbox('Ответственный',
-                 options=get_employees_on_shift(position),
-                 placeholder="Выберите сотрудника",
-                 index=None,
-                 key=position,
-                 on_change=save_employee, args=(position,))
-
-
 def time_now():
     return datetime.now().strftime("%H:%M")
-
-
-# Функция для проверки состояния кнопки бронирования
-def is_reserved(page_name, index):
-    return st.session_state.get(f'{page_name}_reserved_{index}', False)
-
-
-# Функция для установки состояния кнопки бронирования
-def set_reserved(page_name, index, state):
-    st.session_state[f'{page_name}_reserved_{index}'] = state
-
-
-# Функция для получения имени пользователя, который забронировал
-def get_reserver(page_name, index):
-    return st.session_state.get(f'{page_name}_reserver_{index}', '')
-
-
-# Функция для установки имени пользователя, который забронировал
-def set_reserver(page_name, index, name):
-    st.session_state[f'{page_name}_reserver_{index}'] = name
 
 
 def create_message_str(data):

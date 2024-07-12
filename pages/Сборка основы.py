@@ -2,7 +2,7 @@ import streamlit as st
 from utils.tools import save_to_file, read_file, get_date_str, config, employee_choose, is_reserved, get_reserver, \
     time_now, set_reserver, set_reserved
 
-page_name = 'Сборка основы'
+page_name = 'Сборка'
 page_icon = "🔨"
 reserve_button_text = 'Взять'
 done_button_text = 'Готово'
