@@ -2,7 +2,7 @@ import streamlit as st
 
 from utils.app_core import Page
 from utils.tools import clear_cash, read_file, cashing, \
-    get_cash, save_to_file, barcode_link
+    get_cash, save_to_file, barcode_link, create_cashfile_if_empty
 
 
 class BrigadierPage(Page):
@@ -14,6 +14,8 @@ class BrigadierPage(Page):
 
     def show_employees_editor(self):
         # Создаёт таблицу из настроек колонн, если её нет
+        create_cashfile_if_empty(self.employee_columns_config, self.employees_cash)
+        # Если кэша нет, загружаем туда данные
         if self.EMPLOYEE_STATE not in st.session_state:
             dataframe = read_file(self.employees_cash)
             # Создаётся колонка строк, где каждая ячейка формируется на основе соответсвующего индекса в датафрейме.
@@ -28,6 +30,7 @@ class BrigadierPage(Page):
         editor = st.data_editor(
             edited_df,
             column_config=self.employee_columns_config,
+            column_order=("is_on_shift", "name", "position", "barcode"),
             hide_index=True,
             num_rows="dynamic",
             on_change=cashing, args=(edited_df, self.EMPLOYEE_STATE),
@@ -55,6 +58,7 @@ class BrigadierPage(Page):
         editor = st.data_editor(
             edited_df,
             column_config=self.tasks_columns_config,
+            column_order=(column for column in self.tasks_columns_config.keys()),
             hide_index=True,
             num_rows="fixed",
             on_change=cashing, args=(edited_df, self.TASK_STATE),
@@ -65,7 +69,10 @@ class BrigadierPage(Page):
     @st.experimental_fragment(run_every="1s")
     def show_tasks_table(self):
         """Показывает нередактируемую таблицу данных без индексов."""
-        st.dataframe(data=read_file(self.task_cash), column_config=self.tasks_columns_config, hide_index=True)
+        st.dataframe(data=read_file(self.task_cash),
+                     column_config=self.tasks_columns_config,
+                     column_order=(column for column in self.tasks_columns_config.keys()),
+                     hide_index=True)
 
 
 ################################################ Page ####################################################

@@ -26,8 +26,7 @@ cash_file = config.get('site').get('cash_filepath')
 regions = config.get('site').get('regions')
 tg_token = config.get('telegram').get('token')
 high_priority = False
-sequence_gluing = []
-sequence_sewing = []
+sequence_buffer = {}
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
                     level=logging.DEBUG,
@@ -131,42 +130,28 @@ def sewing():
     return render_template('sewing.html')
 
 
-@app.route('/log_sequence_gluing', methods=['POST'])
-def log_sequence_gluing():
-    global sequence_gluing
+@app.route('/log_sequence_gluing', endpoint="log_sequence_gluing", methods=['POST'])
+@app.route('/log_sequence_sewing', endpoint="log_sequence_sewing", methods=['POST'])
+def log_sequence():
+    """Метод ловит запросы со страниц работяг со сканерами. Если пользователь на странице, то каждый раз, когда
+    вводится символ начала последовательности ввода (открывающая круглая скобка), функция начинает запоминать
+    нажатые клавиши, сохраняя их глобально, а после символа завершения ввода (закрывающая круглая скобка)
+    возвращает считанную последовательность"""
+    global sequence_buffer
     data = request.json
     key = data['key']
 
     if key == '(':
-        sequence_gluing = []
+        # Инициализируется новый пустой список в глобальном буфере. Туда посимвольно будет вводиться последовательность
+        sequence_buffer[request.endpoint] = []
     elif key == ')':
-        completed_sequence = ''.join(sequence_gluing)[:-5]
-        sequence_gluing = []
-        logging.debug(f"Завершенная последовательность (склейка): {completed_sequence}")
+        # Создаётся строка, куда попадут все символы из буфера, за исключением сигналов Shift
+        completed_sequence = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
+        logging.debug(f"Завершенная последовательность со сканера: {completed_sequence}")
         return jsonify({'sequence': completed_sequence})
     else:
-        sequence_gluing.append(key)
-        logging.debug(f"Текущая последовательность (склейка): {''.join(sequence_gluing)}")
-
-    return jsonify({'status': 'ok'})
-
-
-@app.route('/log_sequence_sewing', methods=['POST'])
-def log_sequence_sewing():
-    global sequence_sewing
-    data = request.json
-    key = data['key']
-
-    if key == '(':
-        sequence_sewing = []
-    elif key == ')':
-        completed_sequence = ''.join(sequence_sewing)[:-5]
-        sequence_sewing = []
-        logging.debug(f"Завершенная последовательность (швейный стол): {completed_sequence}")
-        return jsonify({'sequence': completed_sequence})
-    else:
-        sequence_sewing.append(key)
-        logging.debug(f"Текущая последовательность (швейный стол): {''.join(sequence_sewing)}")
+        sequence_buffer[request.endpoint].append(key)
+        logging.debug(f"Текущий ввод со сканера: {sequence_buffer[request.endpoint]}")
 
     return jsonify({'status': 'ok'})
 

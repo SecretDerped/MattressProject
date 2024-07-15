@@ -9,7 +9,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 
-# TODO: добавить пружинные блоки
 def run_flask_app():
     run_flask()
 
