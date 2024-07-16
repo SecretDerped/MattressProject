@@ -1,6 +1,7 @@
 import locale
 import os
 import re
+import socket
 import streamlit as st
 import pandas as pd
 import tomli
@@ -35,8 +36,8 @@ def read_file(filepath: str) -> pd.DataFrame:
 
 def append_to_dataframe(data: dict, filepath: str):
     """
-    Принимает словарь task_data. Берёт оттуда значения без ключей
-    и формирует запись в конце указанного датафрейма.
+    Принимает словарь для датафрейма, где ключи совпадают с названиями колонок.
+    Берёт оттуда значения без ключей и формирует запись в конце указанного датафрейма.
     """
     df = read_file(filepath)
     row = []
@@ -66,6 +67,7 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
     if not os.path.exists(cash_filepath):
         base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
         empty_dataframe = pd.DataFrame(base_dict)
+        #empty_dataframe.index.
         save_to_file(empty_dataframe, cash_filepath)
 
 
@@ -131,9 +133,10 @@ def get_date_str(dataframe_row: pd.Series) -> str:
 
 
 def barcode_link(id: str) -> str:
-    """Возвращает ссылку со сгенерированным штрих-кодом. ВАРНИНГ: захардкоденный айпишник"""
-    # TODO: Вставить в сслылку динамический локальный апишник
-    return f'http://192.168.1.29:5000/api/barcode/{id}'
+    """Возвращает ссылку со сгенерированным штрих-кодом."""
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    return f'http://{local_ip}:5000/api/barcode/{id}'
 
 
 def time_now():

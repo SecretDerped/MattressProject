@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(data => {
             if (data.sequence) {
                 console.log(`Считанная последовательность (швейный стол): ${data.sequence}`);
-                document.getElementById('message').innerText = `Считанная последовательность: ${data.sequence}`;
+                document.getElementById('message').innerText = `${data.sequence}`;
             }
         });
     }

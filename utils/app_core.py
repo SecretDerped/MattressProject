@@ -16,9 +16,9 @@ class Page:
 
         self.employee_columns_config = {
             "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
-            "name": st.column_config.TextColumn("Имя / Фамилия"),
-            "position": st.column_config.TextColumn("Роли", width='medium'),
-            "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть"),
+            "name": st.column_config.TextColumn("Имя / Фамилия", default=''),
+            "position": st.column_config.TextColumn("Роли", width='medium', default=''),
+            "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=True),
         }
 
         self.tasks_columns_config = {

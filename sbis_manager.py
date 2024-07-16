@@ -11,7 +11,7 @@ imp_filepath = config.get('sbis').get('implementation_filepath')
 
 console_out = logging.StreamHandler()
 file_log = logging.FileHandler(f"application.log", mode="w")
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     format='[%(asctime)s | %(name)s - %(levelname)s]: %(message)s',
                     handlers=(file_log, console_out),
                     encoding='utf-8')
@@ -239,7 +239,8 @@ class SBISWebApp(SBISApiManager):
 
         while True:
             product_list = self.get_nomenclature_list(point_id, price_list_id, page)
-            print(product_list)
+            logging.debug("Nomenclature list: ")
+            logging.debug(product_list)
 
             # Выход сразу же, если список номенклатур пустой
             if not product_list['nomenclatures']:
@@ -433,11 +434,12 @@ class SBISWebApp(SBISApiManager):
             return file.write(xml_content)
 
     def write_implementation(self, order_data: dict):
-        print(order_data)
+        logging.info("Order data:")
+        logging.info(order_data)
 
         # Такая конструкция вернёт пустой словарь, вместо None, если данных нет
         customer_info = json.loads(order_data.get('party_data', {}) or '{}')
-        print(customer_info)
+        logging.debug(customer_info)
 
         order_address = customer_info.get('address_data', {}).get('value', None)
 
@@ -459,7 +461,7 @@ class SBISWebApp(SBISApiManager):
             regulation = self.reg_id['direct_sell']
         else:
             regulation = self.reg_id['wholesale']
-        print(f'{regulation = }')
+        logging.debug(f'{regulation = }')
         params = {"Документ": {
             "Тип": "ДокОтгрИсх",
             "Вложение": [{'Файл': {'Имя': imp_filepath, 'ДвоичныеДанные': base64_file}}],

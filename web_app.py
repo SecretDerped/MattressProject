@@ -1,19 +1,16 @@
 import datetime
 import json
-import os
-import sys
 import time
-
 import httpx
 import logging
 import subprocess
-from flask import Flask, render_template, request, abort, jsonify, send_file
+
+import pandas as pd
+from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, create_message_str, append_to_dataframe
 from barcode import Code128
-from barcode.writer import ImageWriter, SVGWriter
 from io import BytesIO
-from barcode import generate
 
 config = load_conf()
 
@@ -22,7 +19,8 @@ login = sbis_config.get('login')
 password = sbis_config.get('password')
 sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
-cash_file = config.get('site').get('cash_filepath')
+tasks_cash = config.get('site').get('tasks_cash_filepath')
+employees_cash = config.get('site').get('employees_cash_filepath')
 regions = config.get('site').get('regions')
 tg_token = config.get('telegram').get('token')
 high_priority = False
@@ -44,13 +42,13 @@ springs = {key: value for key, value in nomenclatures.items() if value['is_sprin
 def index():
     chat_id = request.args.get('chat_id')
     if request.method == 'POST':
-        logging.debug(f"Получен POST-запрос. Данные формы: {request.form}")
+        logging.info(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
             # Запрос возвращает строки в качестве данных
             order_data = request.form.to_dict()
             for k, v in order_data.items():
-                print(f'{k} :: {v} ({type(v)})\n')
+                logging.debug(f'index/ POST: {k} :: {v} ({type(v)})\n')
 
             order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
 
@@ -99,7 +97,7 @@ def index():
                     # При добавлении нового поля, или перемещении, нужно это учитывать.
                     # Порядок task_data должен быть как в tasks_columns_config на странице бригадира
                     # TODO: привязать pydantic
-                    append_to_dataframe(task_data, cash_file)
+                    append_to_dataframe(task_data, tasks_cash)
 
             sbis.write_implementation(order_data)
             return "   Заказ принят. Реализация записана. Задания созданы."
@@ -146,9 +144,10 @@ def log_sequence():
         sequence_buffer[request.endpoint] = []
     elif key == ')':
         # Создаётся строка, куда попадут все символы из буфера, за исключением сигналов Shift
-        completed_sequence = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
-        logging.debug(f"Завершенная последовательность со сканера: {completed_sequence}")
-        return jsonify({'sequence': completed_sequence})
+        sequence = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
+        logging.debug(f"Завершенная последовательность со сканера: {sequence}")
+        employee_name = get_name_from_dataframe(employees_cash, sequence)
+        return jsonify({'sequence': employee_name})
     else:
         sequence_buffer[request.endpoint].append(key)
         logging.debug(f"Текущий ввод со сканера: {sequence_buffer[request.endpoint]}")
@@ -184,17 +183,19 @@ def get_springs():
 
 @app.route('/api/barcode/<employee_id>', methods=['GET'])
 def get_barcode(employee_id: str = ''):
-    """Создаёт штрих-код для сотрудника.
-    В качестве параметра используется id сотрудника
-    в нижнем регистре, который окружается (скобками).
-    При переходе по ссылке, создаётся линейный штрих-код
-    Code128 в формате svg и выводится на экран"""
+    """Параметры: employee_id: id сотрудника из датафрейма.
+    При переходе по ссылке на основе id создаётся линейный штрих-код
+    Code128 в формате svg и выводится на экран.
+    """
+
+    employee_id = employee_id.lower()
 
     # Создаем BytesIO для хранения SVG-кода штрих-кода
     barcode_bites = BytesIO()
 
-    # Инициализация штрих-кода и запись в SVG
-    barcode = Code128(f'({employee_id.lower()})')
+    # Инициализация штрих-кода и запись в SVG. Скобки в строке обязательны - они считаются символами начала и конца
+    # считывания последовательности введённых символов на страницах работяг со штрих-кодами.
+    barcode = Code128(f'({employee_id})')
     barcode.write(barcode_bites,
                   options={"module_height": 17.0,
                            "module_width": 0.9,
@@ -207,6 +208,33 @@ def get_barcode(employee_id: str = ''):
 
     # Рендерим шаблон Flask, передавая SVG-код
     return render_template('barcode.html', svg_data=svg_data)
+
+
+def get_name_from_dataframe(file_path, index):
+    """
+    Загружает DataFrame из файла .pkl и возвращает значение из колонки 'name' по заданному индексу.
+
+    :param file_path: Путь к файлу .pkl
+    :param index: Индекс строки, значение из которой нужно получить
+    :return: Значение из колонки 'name' по заданному индексу
+    """
+    try:
+        # Загружаем DataFrame из файла .pkl
+        df = pd.read_pickle(file_path)
+        # Проверяем, что DataFrame содержит колонку 'name'
+        if 'name' not in df.columns:
+            raise KeyError("Column 'name' does not exist in the DataFrame.")
+
+        # Получаем значение из колонки 'name' по заданному индексу
+        name_value = df['name'].get(int(index), 'Неизвестен')
+        return name_value
+
+    except FileNotFoundError:
+        return f"Нет доступа к файлу '{file_path}'."
+    except KeyError as e:
+        return str(e)
+    except Exception as e:
+        return f"Системная ошибка: {str(e)}"
 
 
 def send_telegram_message(text, chat_id):

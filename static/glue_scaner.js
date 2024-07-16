@@ -26,8 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(data => {
             if (data.sequence) {
-                console.log(`Считанная последовательность (склейка): ${data.sequence}`);
-                document.getElementById('message').innerText = `Считанная последовательность: ${data.sequence}`;
+                console.log(`Считанная последовательность: ${data.sequence}`);
+                document.getElementById('message').innerText = `${data.sequence}`;
             }
         });
     }
