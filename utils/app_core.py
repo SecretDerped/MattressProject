@@ -78,6 +78,9 @@ class Page:
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
                            layout="wide")
+        
+    def header(self):
+        st.title(f'{self.icon} {self.page_name}')
 
     def load_tasks(self):
         # Создаётся таблица из настроек колонн, если её нет

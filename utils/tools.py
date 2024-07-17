@@ -7,17 +7,23 @@ import pandas as pd
 import tomli
 from datetime import datetime
 
+locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
+hostname = socket.gethostname()
+
 
 def load_conf(path: str = "app_config.toml"):
     with open(path, "rb") as f:
         return tomli.load(f)
 
 
-locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 config = load_conf()
+
+local_ip = socket.gethostbyname(hostname)
+
 site_conf = config.get('site')
 cash_filepath = site_conf.get('cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
+flask_port = site_conf.get('flask_port')
 
 
 def save_to_file(data: pd.DataFrame, filepath: str):
@@ -67,8 +73,22 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
     if not os.path.exists(cash_filepath):
         base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
         empty_dataframe = pd.DataFrame(base_dict)
-        #empty_dataframe.index.
         save_to_file(empty_dataframe, cash_filepath)
+
+
+def scripts_in_dir(directory):
+    """
+    Возвращает список имен файлов .py и .html в указанной директории,
+    исключая '__init__.py' и 'barcode.py'. Жуткий хардкод, но работает.
+
+    :param directory: Путь к директории
+    :return: Список имен файлов .py и .html
+    """
+    scripts = []
+    for file in os.listdir(directory):
+        if (file.endswith('.py') or file.endswith('.html')) and file not in ['__init__.py', 'barcode.html']:
+            scripts.append(file)
+    return scripts
 
 
 def get_size_int(size: str):
@@ -76,7 +96,7 @@ def get_size_int(size: str):
     Принимает строку с размером матраса типа "180х200".
     Ищет первые два или три числа, разделенных любым символом.
     Если не находит число, ставит 0.
-    Возвращает словарь с размерами:
+    :return: Словарь с размерами:
     {'length': 180,
     'width': 200,
     'height': 0}
@@ -134,9 +154,7 @@ def get_date_str(dataframe_row: pd.Series) -> str:
 
 def barcode_link(id: str) -> str:
     """Возвращает ссылку со сгенерированным штрих-кодом."""
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
-    return f'http://{local_ip}:5000/api/barcode/{id}'
+    return f'http://{local_ip}:{flask_port}/api/barcode/{id}'
 
 
 def time_now():

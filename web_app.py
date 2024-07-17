@@ -12,6 +12,10 @@ from utils.tools import load_conf, create_message_str, append_to_dataframe
 from barcode import Code128
 from io import BytesIO
 
+logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
+                    level=logging.DEBUG,
+                    encoding='utf-8')
+
 config = load_conf()
 
 sbis_config = config.get('sbis')
@@ -19,16 +23,18 @@ login = sbis_config.get('login')
 password = sbis_config.get('password')
 sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
-tasks_cash = config.get('site').get('tasks_cash_filepath')
-employees_cash = config.get('site').get('employees_cash_filepath')
-regions = config.get('site').get('regions')
+
+site_config = config.get('site')
+regions = site_config.get('regions')
+flask_port = site_config.get('flask_port')
+tasks_cash = site_config.get('tasks_cash_filepath')
+employees_cash = site_config.get('employees_cash_filepath')
+
 tg_token = config.get('telegram').get('token')
+
 high_priority = False
 sequence_buffer = {}
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
-                    level=logging.DEBUG,
-                    encoding='utf-8')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -188,8 +194,8 @@ def get_barcode(employee_id: str = ''):
     Code128 в формате svg и выводится на экран.
     """
 
-    employee_id = employee_id.lower()
-
+    employee_id = int(employee_id)
+    employee_name = get_name_from_dataframe(employees_cash, employee_id)
     # Создаем BytesIO для хранения SVG-кода штрих-кода
     barcode_bites = BytesIO()
 
@@ -200,7 +206,7 @@ def get_barcode(employee_id: str = ''):
                   options={"module_height": 17.0,
                            "module_width": 0.9,
                            'foreground': 'black'},
-                  text=employee_id)
+                  text=employee_name)
 
     # Возвращаем SVG-код в качестве строки из BytesIO
     barcode_bites.seek(0)
@@ -249,7 +255,7 @@ def send_telegram_message(text, chat_id):
 
 
 def start_ngrok():
-    process = subprocess.Popen(['utils/ngrok.exe', 'http', '5000'])
+    process = subprocess.Popen(['utils/ngrok.exe', 'http', flask_port])
     url = None
 
     while url is None:

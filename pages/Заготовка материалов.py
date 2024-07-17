@@ -35,9 +35,9 @@ components_tasks = data[(data['sewing_is_done'] == False) &
                         (data['packing_is_done'] == False) &
                         (data['comment'] != '')]
 
-half_screen_1, half_screen_2 = st.columns(2)
+half_screen_1, half_screen_2 = st.columns([2, 1])
 with half_screen_1:
-    st.title(f'{Page.icon} {Page.page_name}')
+    Page.header()
 with half_screen_2:
     st.info('Вы можете сортировать наряды, нажимая на поля таблицы. '
             'Заявка исчезнет, когда для неё соберут основу матраса. ', icon="ℹ️")

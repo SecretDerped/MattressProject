@@ -2,12 +2,12 @@
 showErrorDetails = true
 
 # * "developer" : Проказывает настройки в меню-точечках справа вверху
-# * "viewer"    : Прячет
-# * "minimal"   : Показывает не всё
-toolbarMode = "developer"
+# * "viewer"    : Показывает не всё
+# * "minimal"   : Прячет
+toolbarMode = "minimal"
 
 # Показывает странички слева
-showSidebarNavigation = true
+showSidebarNavigation = false
 
 [theme]
 primaryColor = "#4B58FF"  # Синий
