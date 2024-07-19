@@ -14,15 +14,16 @@ class StartPage(Page):
         st_port = self.streamlit_port
         fl_port = self.flask_port
 
-        st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/Командный_экран', type="primary")
+        # От выбранного порта зависит выбор приложения
+        st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/command', type="primary")
 
-        st.link_button('**Заявки**', f'https://youtube.com', type="primary")
+        st.link_button('**Заявки**', f'http://{local_ip}:{fl_port}', type="primary")
 
-        st.link_button('**Заготовка**', f'http://{local_ip}:{st_port}/Заготовка_материалов')
+        st.link_button('**Заготовка**', f'http://{local_ip}:{st_port}/components')
 
-        st.link_button('**Нарезка**', f'http://{local_ip}:{st_port}/Нарезка_ткани')
+        st.link_button('**Нарезка**', f'http://{local_ip}:{st_port}/cutting')
 
-        st.link_button('**Упаковка**', f'http://{local_ip}:{st_port}/Упаковка')
+        st.link_button('**Упаковка**', f'http://{local_ip}:{st_port}/packing')
 
         st.link_button('**Сборка**', f'http://{local_ip}:{fl_port}]/gluing')
 

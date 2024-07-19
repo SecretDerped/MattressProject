@@ -7,7 +7,7 @@ from aiogram.types import Message, BotCommand, MenuButtonWebApp, InlineKeyboardM
 from aiogram.filters.command import Command
 
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, encoding='utf-8')
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
 logger = logging.getLogger(__name__)
 
 

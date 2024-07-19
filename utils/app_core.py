@@ -1,8 +1,5 @@
 import datetime
-
-import pandas
 import streamlit as st
-
 from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty
 
 
@@ -11,21 +8,19 @@ class Page:
         self.page_name = page_name
         self.icon = icon
 
-        self.task_cash = config.get('site').get('tasks_cash_filepath')
         self.employees_cash = config.get('site').get('employees_cash_filepath')
-
         self.employee_columns_config = {
             "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
             "name": st.column_config.TextColumn("Имя / Фамилия", default=''),
             "position": st.column_config.TextColumn("Роли", width='medium', default=''),
             "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=True),
         }
+        create_cashfile_if_empty(self.employee_columns_config, self.employees_cash)
 
+        self.task_cash = config.get('site').get('tasks_cash_filepath')
         self.tasks_columns_config = {
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
             "deadline": st.column_config.DateColumn("Срок",
-                                                    min_value=datetime.date(2000, 1, 1),
-                                                    max_value=datetime.date(2999, 12, 31),
                                                     format="DD.MM.YYYY",
                                                     step=1,
                                                     default=datetime.date.today()),
@@ -74,6 +69,7 @@ class Page:
                                                        format="D.MM.YYYY | HH:MM",
                                                        disabled=True),
         }
+        create_cashfile_if_empty(self.tasks_columns_config, self.task_cash)
 
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
@@ -83,8 +79,6 @@ class Page:
         st.title(f'{self.icon} {self.page_name}')
 
     def load_tasks(self):
-        # Создаётся таблица из настроек колонн, если её нет
-        create_cashfile_if_empty(self.tasks_columns_config, self.task_cash)
         data = read_file(self.task_cash)
         return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                                 ascending=[False, True, True, False])
@@ -109,8 +103,8 @@ class ManufacturePage(Page):
         Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
         Фильтрует записи, где значение в "is_on_shift" стоит True,
         а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
-        Возвращает [список имен сотрудников на смене по искомой роли]"""
-        create_cashfile_if_empty(self.employee_columns_config, self.employees_cash)
+
+        :returns: [список имен сотрудников на смене по искомой роли]"""
         dataframe = read_file(self.employees_cash)
         if 'is_on_shift' not in dataframe.columns or 'position' not in dataframe.columns:
             raise ValueError("В датафрейме сотрудников должны быть колонки 'is_on_shift' и 'position'")
@@ -186,9 +180,11 @@ class ManufacturePage(Page):
         box_text += ']'
         return box_text
 
-    @st.experimental_fragment(run_every="1s")
-    def show_tasks_tiles(self, data: pandas.DataFrame, stage_to_done: str, num_columns: int = 3) -> bool:
-
+    def show_tasks_tiles(self, data, stage_to_done: str, num_columns: int = 3) -> bool:
+        """Принимает отфильтрованные данные. Выводит заявки в виде плиточек на страницу.
+        Отфильтрованные данные выводятся, а потом, при нажатии "Готово" на заявке, по
+        индексу изменения соотносятся с главным хранилищем и записываются"""
+        main_data = super().load_tasks()
         page = self.page_name
 
         if len(data) == 0:
@@ -197,7 +193,6 @@ class ManufacturePage(Page):
         row_container = st.columns(num_columns)
         count = 0
         for index, row in data.iterrows():
-
             if count % num_columns == 0:
                 row_container = st.columns(num_columns)
 
@@ -214,26 +209,23 @@ class ManufacturePage(Page):
                 with col1:
                     st.markdown(self._form_box_text(index, row))
                 with col3:
-                    st.title('')
-                    st.subheader('')
                     if page in st.session_state and st.session_state[page]:
+                        employee = st.session_state[page]
+
                         if self.reserve_check(index):
                             if st.button(f":green[**{self.done_button_text}**]", key=f'{page}_done_{index}'):
-                                data.at[index, stage_to_done] = True
-                                employee = st.session_state[page]
                                 history_note = f'({time_now()}) {page} [ {employee} ] -> {self.done_button_text}; \n'
-                                data.at[index, 'history'] += history_note
-                                save_to_file(data, self.task_cash)
+                                main_data.at[index, stage_to_done] = True
+                                main_data.at[index, 'history'] += history_note
+                                save_to_file(main_data, self.task_cash)
                                 st.rerun()
                         else:
-                            if st.button(f":blue[**{self.reserve_button_text}**]",
-                                         key=f'{page}_reserve_{index}'):
-                                employee = st.session_state[page]
+                            if st.button(f":blue[**{self.reserve_button_text}**]", key=f'{page}_reserve_{index}'):
                                 history_note = f'({time_now()}) {page} [ {employee} ] -> {self.reserve_button_text}; \n'
-                                data.at[index, 'history'] += history_note
                                 self.set_reserver(index, employee)
                                 self.set_reserved_state(index, True)
-                                save_to_file(data, self.task_cash)
+                                main_data.at[index, 'history'] += history_note
+                                save_to_file(main_data, self.task_cash)
                                 st.rerun()
             count += 1
         return True

@@ -10,8 +10,8 @@ config = load_conf()
 imp_filepath = config.get('sbis').get('implementation_filepath')
 
 console_out = logging.StreamHandler()
-file_log = logging.FileHandler(f"application.log", mode="w")
-logging.basicConfig(level=logging.INFO,
+file_log = logging.FileHandler(f"cash/application.log", mode="w")
+logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s | %(name)s - %(levelname)s]: %(message)s',
                     handlers=(file_log, console_out),
                     encoding='utf-8')

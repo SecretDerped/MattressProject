@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime as dt
 import json
 import time
 import httpx
@@ -8,7 +8,7 @@ import subprocess
 import pandas as pd
 from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf, create_message_str, append_to_dataframe
+from utils.tools import load_conf, create_message_str, append_to_dataframe, read_file, save_to_file
 from barcode import Code128
 from io import BytesIO
 
@@ -33,8 +33,9 @@ employees_cash = site_config.get('employees_cash_filepath')
 tg_token = config.get('telegram').get('token')
 
 high_priority = False
+# Глобальный словарь для отслеживания текущих задач
 sequence_buffer = {}
-
+current_tasks = {}
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -78,7 +79,7 @@ def index():
 
                 task_data = {
                     "high_priority": high_priority,
-                    "deadline": order_data['delivery_date'],
+                    "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
                     "article": item['article'],
                     "size": item['size'],
                     "base_fabric": order_data['base_fabric'],
@@ -96,7 +97,7 @@ def index():
                     "delivery_type": order_data['delivery_type'],
                     "address": order_data["delivery_address"],
                     "region": order_data['region_select'],
-                    "created": datetime.datetime.now(),
+                    "created": dt.now(),
                 }
                 for _ in range(int(position['quantity'])):
                     # В этом методе данные будут заполняться из этого словаря построчно.
@@ -148,15 +149,69 @@ def log_sequence():
     if key == '(':
         # Инициализируется новый пустой список в глобальном буфере. Туда посимвольно будет вводиться последовательность
         sequence_buffer[request.endpoint] = []
+        logging.debug(f"Получен символ начала считывания. Инициализация приёма последовательности...")
     elif key == ')':
         # Создаётся строка, куда попадут все символы из буфера, за исключением сигналов Shift
-        sequence = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
-        logging.debug(f"Завершенная последовательность со сканера: {sequence}")
-        employee_name = get_name_from_dataframe(employees_cash, sequence)
-        return jsonify({'sequence': employee_name})
+        employee_id = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
+        logging.debug(f"Завершенная последовательность: {employee_id}")
+
+        employee_name = get_name_from_dataframe(employees_cash, employee_id)
+        res = {
+                'sequence': employee_name,
+                'task_data': {'error': 'Нет данных'}
+            }
+
+        tasks = read_file(tasks_cash).sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
+                                                  ascending=[False, True, True, False])
+        if tasks.empty:
+            return jsonify(res)
+
+        tasks = tasks[(tasks['gluing_is_done'] == False) &
+                      (tasks['sewing_is_done'] == False) &
+                      (tasks['packing_is_done'] == False)]
+        print(tasks)
+
+        for i in range(0, len(tasks)):
+            task = tasks.iloc[i]
+            if task.name in current_tasks.values():
+                res['task_data'] = task.to_dict()
+                return jsonify(res)
+
+        current_tasks[employee_id] = task.name  # Используем индекс строки как идентификатор задачи
+        if employee_id not in current_tasks or current_tasks[employee_id] is None:
+            pass
+
+        else:
+            task_id = current_tasks[employee_id]
+            task = tasks.loc[task_id]
+
+        task_data = task.to_dict()
+
+        return jsonify({
+            'sequence': employee_name,
+            'task_data': task_data
+        })
+
     else:
         sequence_buffer[request.endpoint].append(key)
-        logging.debug(f"Текущий ввод со сканера: {sequence_buffer[request.endpoint]}")
+        logging.debug(f"Текущий ввод: {sequence_buffer[request.endpoint]}")
+
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/complete_task', methods=['POST'])
+def complete_task():
+    data = request.json
+    task_id = data['task_id']
+    employee_sequence = data['employee_sequence']
+
+    tasks = read_file(tasks_cash)
+    if task_id not in tasks.index:
+        return jsonify({'status': 'error', 'message': 'Задача не найдена'}), 400
+
+    tasks.loc[task_id, 'gluing_is_done'] = True
+    save_to_file(tasks, tasks_cash)
+    current_tasks[employee_sequence] = None
 
     return jsonify({'status': 'ok'})
 

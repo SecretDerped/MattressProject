@@ -32,7 +32,8 @@ def save_to_file(data: pd.DataFrame, filepath: str):
 
 def read_file(filepath: str) -> pd.DataFrame:
     try:
-        return pd.read_pickle(filepath)
+        data = pd.read_pickle(filepath)
+        return data
     # Иногда ввод пользователей не успевает за обновлениями базы,
     # особенно на локальном переходе со страницы на страницу,
     # поэтому тихо ловим ошибки и страницу обновляем, тогда все данные занесутся корректно.
@@ -46,11 +47,8 @@ def append_to_dataframe(data: dict, filepath: str):
     Берёт оттуда значения без ключей и формирует запись в конце указанного датафрейма.
     """
     df = read_file(filepath)
-    row = []
-    for k in data.values():
-        row.append(k)
-    print(row)
-    df.loc[len(df.index)] = row
+    new_row = pd.DataFrame([data])
+    df = pd.concat([df, new_row], ignore_index=True)
     save_to_file(df, filepath)
 
 
@@ -122,7 +120,6 @@ def side_eval(size: str, fabric: str = None) -> str:
    в разделе [fabric_corrections]
    """
     size = get_size_int(size)
-    print(f'{fabric} = ')
     try:
         result = (size.get('length', 0) * 2 + size.get('width', 0) * 2)
         corrections = config.get('fabric_corrections', {'Текстиль': 0})
@@ -132,7 +129,6 @@ def side_eval(size: str, fabric: str = None) -> str:
             (value for key, value in corrections.items() if re.search(key, fabric, re.IGNORECASE)), 0)
 
         result += correction_value
-        print(result)
 
         return str(result)
 
