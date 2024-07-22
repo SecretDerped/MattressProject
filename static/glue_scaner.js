@@ -8,18 +8,18 @@ document.addEventListener('DOMContentLoaded', function () {
         if (key === '(') {
             capturing = true;
             currentEmployeeSequence = '';
-            sendKey(key);
+            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
         } else if (key === ')') {
             capturing = false;
-            sendKey(key);
+            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
         } else if (capturing) {
             currentEmployeeSequence += key;
-            sendKey(key);
+            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
         }
     });
 
-    function sendKey(key) {
-        fetch('/log_sequence_gluing', {
+    function sendKey(key, url) {
+        fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -28,45 +28,62 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(data => {
+            console.log(data); // Логирование ответа сервера
             if (data.sequence) {
                 console.log(`Считанная последовательность: ${data.sequence}`);
                 document.getElementById('message').innerText = `Сотрудник: ${data.sequence}`;
             }
             if (data.task_data) {
-                let firstRecordHtml = Object.entries(data.task_data)
-                    .map(([key, value]) => `<div>${key}: ${value}</div>`)
-                    .join('');
-                document.getElementById('task_data').innerHTML = firstRecordHtml;
-                document.getElementById('buttons').style.display = 'block';
-                document.getElementById('complete_button').dataset.taskId = data.task_data.id; // Используем идентификатор задачи
-                document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+                if (data.task_data.error) {
+                    document.getElementById('task_data').innerText = data.task_data.error;
+                } else {
+                    let firstRecordHtml = Object.entries(data.task_data)
+                        .map(([key, value]) => `<div>${key}: ${value}</div>`)
+                        .join('');
+                    document.getElementById('task_data').innerHTML = firstRecordHtml;
+                    document.getElementById('buttons').style.display = 'block';
+                    document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+                }
             }
+        })
+        .catch(error => {
+            console.error('Ошибка при отправке запроса:', error);
         });
     }
 
     document.getElementById('hide_button').addEventListener('click', function () {
-        document.getElementById('message').innerText = 'Жду штрих-код...';
-        document.getElementById('task_data').innerHTML = 'Данные первой записи будут отображаться здесь.';
-        document.getElementById('buttons').style.display = 'none';
+        resetPage();
     });
 
     document.getElementById('complete_button').addEventListener('click', function () {
-        let taskId = this.dataset.taskId;
         let employeeSequence = this.dataset.employeeSequence;
 
-        fetch('/complete_task', {
+        console.log(`Завершение задачи для сотрудника: ${employeeSequence}`); // Логирование перед отправкой запроса
+
+        fetch('/complete_task_gluing', { // Меняем на '/complete_task_sewing' для страницы сшивания
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ task_id: taskId, employee_sequence: employeeSequence })
+            body: JSON.stringify({ employee_sequence: employeeSequence })
         })
         .then(response => response.json())
         .then(data => {
             if (data.status === 'ok') {
-                // Симуляция ввода закрывающей скобки
-                sendKey(')');
+                // Возвращаем страницу в начальное состояние
+                resetPage();
+            } else {
+                console.error('Ошибка при завершении задачи:', data.message);
             }
+        })
+        .catch(error => {
+            console.error('Ошибка при завершении задачи:', error);
         });
     });
+
+    function resetPage() {
+        document.getElementById('message').innerText = 'Жду штрих-код...';
+        document.getElementById('task_data').innerHTML = 'Данные первой записи будут отображаться здесь.';
+        document.getElementById('buttons').style.display = 'none';
+    }
 });

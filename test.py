@@ -5,7 +5,7 @@ import streamlit as st
 from utils import icon
 from utils.tools import read_file, config, save_to_file, get_date_str
 
-cash_file = config.get('site').get('cash_filepath')
+cash_file = config.get('site').get('tasks_cash')
 
 st.set_page_config(page_title="Клейка", page_icon="🧵", layout="wide")
 

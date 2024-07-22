@@ -5,10 +5,10 @@ import httpx
 import logging
 import subprocess
 
-import pandas as pd
 from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf, create_message_str, append_to_dataframe, read_file, save_to_file
+from utils.tools import load_conf, create_message_str, append_to_dataframe, read_file, save_to_file, load_tasks, \
+    get_employee_name, time_now, get_filtered_tasks
 from barcode import Code128
 from io import BytesIO
 
@@ -129,91 +129,41 @@ def gluing():
     return render_template('gluing.html')
 
 
+@app.route('/log_sequence_gluing', endpoint="log_sequence_gluing", methods=['POST'])
+def log_sequence_gluing():
+    filter_conditions = [
+        "gluing_is_done == False",
+        "sewing_is_done == False",
+        "packing_is_done == False"
+    ]
+    return log_sequence('Сборка', 'Отметка', 'gluing_is_done', filter_conditions)
+
+
+@app.route('/complete_task_gluing', methods=['POST'])
+def complete_task_gluing():
+    return complete_task('Сборка', 'Готово', 'gluing_is_done')
+
+
 @app.route('/sewing')
 def sewing():
     logging.debug('Рендеринг страницы швейного стола')
     return render_template('sewing.html')
 
 
-@app.route('/log_sequence_gluing', endpoint="log_sequence_gluing", methods=['POST'])
 @app.route('/log_sequence_sewing', endpoint="log_sequence_sewing", methods=['POST'])
-def log_sequence():
-    """Метод ловит запросы со страниц работяг со сканерами. Если пользователь на странице, то каждый раз, когда
-    вводится символ начала последовательности ввода (открывающая круглая скобка), функция начинает запоминать
-    нажатые клавиши, сохраняя их глобально, а после символа завершения ввода (закрывающая круглая скобка)
-    возвращает считанную последовательность"""
-    global sequence_buffer
-    data = request.json
-    key = data['key']
-
-    if key == '(':
-        # Инициализируется новый пустой список в глобальном буфере. Туда посимвольно будет вводиться последовательность
-        sequence_buffer[request.endpoint] = []
-        logging.debug(f"Получен символ начала считывания. Инициализация приёма последовательности...")
-    elif key == ')':
-        # Создаётся строка, куда попадут все символы из буфера, за исключением сигналов Shift
-        employee_id = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
-        logging.debug(f"Завершенная последовательность: {employee_id}")
-
-        employee_name = get_name_from_dataframe(employees_cash, employee_id)
-        res = {
-                'sequence': employee_name,
-                'task_data': {'error': 'Нет данных'}
-            }
-
-        tasks = read_file(tasks_cash).sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
-                                                  ascending=[False, True, True, False])
-        if tasks.empty:
-            return jsonify(res)
-
-        tasks = tasks[(tasks['gluing_is_done'] == False) &
-                      (tasks['sewing_is_done'] == False) &
-                      (tasks['packing_is_done'] == False)]
-        print(tasks)
-
-        for i in range(0, len(tasks)):
-            task = tasks.iloc[i]
-            if task.name in current_tasks.values():
-                res['task_data'] = task.to_dict()
-                return jsonify(res)
-
-        current_tasks[employee_id] = task.name  # Используем индекс строки как идентификатор задачи
-        if employee_id not in current_tasks or current_tasks[employee_id] is None:
-            pass
-
-        else:
-            task_id = current_tasks[employee_id]
-            task = tasks.loc[task_id]
-
-        task_data = task.to_dict()
-
-        return jsonify({
-            'sequence': employee_name,
-            'task_data': task_data
-        })
-
-    else:
-        sequence_buffer[request.endpoint].append(key)
-        logging.debug(f"Текущий ввод: {sequence_buffer[request.endpoint]}")
-
-    return jsonify({'status': 'ok'})
+def log_sequence_sewing():
+    filter_conditions = [
+        "gluing_is_done == True",
+        "sewing_is_done == False",
+        "fabric_is_done == True",
+        "packing_is_done == False"
+    ]
+    return log_sequence('Шитье', 'Отметка', 'sewing_is_done', filter_conditions)
 
 
-@app.route('/complete_task', methods=['POST'])
-def complete_task():
-    data = request.json
-    task_id = data['task_id']
-    employee_sequence = data['employee_sequence']
-
-    tasks = read_file(tasks_cash)
-    if task_id not in tasks.index:
-        return jsonify({'status': 'error', 'message': 'Задача не найдена'}), 400
-
-    tasks.loc[task_id, 'gluing_is_done'] = True
-    save_to_file(tasks, tasks_cash)
-    current_tasks[employee_sequence] = None
-
-    return jsonify({'status': 'ok'})
+@app.route('/complete_task_sewing', methods=['POST'])
+def complete_task_sewing():
+    return complete_task('Шитье', 'Готово', 'sewing_is_done')
 
 
 @app.route('/api/nomenclatures', methods=['GET'])
@@ -250,7 +200,7 @@ def get_barcode(employee_id: str = ''):
     """
 
     employee_id = int(employee_id)
-    employee_name = get_name_from_dataframe(employees_cash, employee_id)
+    employee_name = get_employee_name(employee_id)
     # Создаем BytesIO для хранения SVG-кода штрих-кода
     barcode_bites = BytesIO()
 
@@ -271,31 +221,93 @@ def get_barcode(employee_id: str = ''):
     return render_template('barcode.html', svg_data=svg_data)
 
 
-def get_name_from_dataframe(file_path, index):
-    """
-    Загружает DataFrame из файла .pkl и возвращает значение из колонки 'name' по заданному индексу.
+def log_sequence(page_name, action, done_field, filter_conditions):
+    global sequence_buffer, current_tasks
+    data = request.json
+    key = data['key']
 
-    :param file_path: Путь к файлу .pkl
-    :param index: Индекс строки, значение из которой нужно получить
-    :return: Значение из колонки 'name' по заданному индексу
-    """
-    try:
-        # Загружаем DataFrame из файла .pkl
-        df = pd.read_pickle(file_path)
-        # Проверяем, что DataFrame содержит колонку 'name'
-        if 'name' not in df.columns:
-            raise KeyError("Column 'name' does not exist in the DataFrame.")
+    if key == '(':
+        sequence_buffer[request.endpoint] = []
+        logging.debug(f"Получен символ начала считывания. Инициализация приёма последовательности...")
+    elif key == ')':
+        employee_id = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
+        logging.debug(f"Завершенная последовательность: {employee_id}")
 
-        # Получаем значение из колонки 'name' по заданному индексу
-        name_value = df['name'].get(int(index), 'Неизвестен')
-        return name_value
+        employee_name = get_employee_name(employee_id)
 
-    except FileNotFoundError:
-        return f"Нет доступа к файлу '{file_path}'."
-    except KeyError as e:
-        return str(e)
-    except Exception as e:
-        return f"Системная ошибка: {str(e)}"
+        tasks = load_tasks()
+        if tasks.empty:
+            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Нет данных'}})
+
+        filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
+
+        task_id = current_tasks.get(employee_id)
+        if task_id is not None:
+            task = filtered_tasks.loc[task_id]
+            logging.debug(f"Возвращаем задачу для сотрудника {employee_id}: {task.to_dict()}")
+            return jsonify({'sequence': employee_name, 'task_data': task.to_dict()})
+
+        for task_id in filtered_tasks.index:
+            if task_id not in current_tasks.values():
+                current_tasks[employee_id] = task_id
+                task = filtered_tasks.loc[task_id]
+                update_task_history(tasks, task_id, page_name, employee_name, action)
+                save_to_file(tasks, tasks_cash)
+                logging.debug(f"Назначаем новую задачу сотруднику {employee_id}: {task.to_dict()}")
+                return jsonify({'sequence': employee_name, 'task_data': task.to_dict()})
+
+        return jsonify({'sequence': employee_name, 'task_data': {'error': 'Нет доступных задач'}})
+
+    else:
+        if request.endpoint in sequence_buffer:
+            sequence_buffer[request.endpoint].append(key)
+        else:
+            sequence_buffer[request.endpoint] = [key]
+        logging.debug(f"Текущий ввод: {sequence_buffer[request.endpoint]}")
+
+    return jsonify({'status': 'ok'})
+
+
+def complete_task(page_name, action, done_field):
+    global current_tasks
+    data = request.json
+    employee_id = data['employee_sequence'].replace('Shift', '')
+
+    logging.debug(f"Получен запрос на завершение задачи. employee_id: {employee_id}")
+
+    # Получаем task_id из глобального словаря current_tasks
+    task_id = current_tasks.get(employee_id)
+
+    if task_id is None:
+        logging.error(f"Задача не найдена для сотрудника: {employee_id}")
+        return jsonify({'status': 'error', 'message': 'Task not found for this employee'}), 404
+
+    tasks = load_tasks()
+    if task_id not in tasks.index:
+        logging.error(f"Task ID not found in tasks: {task_id}")
+        return jsonify({'status': 'error', 'message': 'Task ID not found'}), 404
+
+    # Обновляем статус задачи
+    tasks.at[task_id, done_field] = True
+    employee_name = get_employee_name(employee_id)
+    update_task_history(tasks, task_id, page_name, employee_name, action)
+    save_to_file(tasks, tasks_cash)
+
+    # Удаляем задачу из текущих задач сотрудника
+    current_tasks.pop(employee_id, None)
+
+    logging.debug(f"Задача {task_id} завершена сотрудником {employee_id}. Статус обновлен.")
+
+    return jsonify({'status': 'ok'})
+
+
+def update_task_history(tasks, task_id, page_name, employee_name, action):
+    history_note = f'({time_now()}) {page_name} [ {employee_name} ] -> {action}; \n'
+    if 'history' in tasks.columns:
+        tasks.at[task_id, 'history'] += history_note
+    else:
+        tasks.at[task_id, 'history'] = history_note
+    logging.debug(f"История задачи {task_id} обновлена: {history_note}")
 
 
 def send_telegram_message(text, chat_id):

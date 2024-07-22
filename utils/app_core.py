@@ -1,6 +1,7 @@
 import datetime
 import streamlit as st
-from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty
+from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty, \
+    load_tasks
 
 
 class Page:
@@ -78,10 +79,9 @@ class Page:
     def header(self):
         st.title(f'{self.icon} {self.page_name}')
 
-    def load_tasks(self):
-        data = read_file(self.task_cash)
-        return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
-                                ascending=[False, True, True, False])
+    @staticmethod
+    def load_tasks():
+        return load_tasks()
 
 
 class ManufacturePage(Page):

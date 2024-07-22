@@ -21,7 +21,7 @@ config = load_conf()
 local_ip = socket.gethostbyname(hostname)
 
 site_conf = config.get('site')
-cash_filepath = site_conf.get('cash_filepath')
+tasks_cash = site_conf.get('tasks_cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
 flask_port = site_conf.get('flask_port')
 
@@ -39,6 +39,19 @@ def read_file(filepath: str) -> pd.DataFrame:
     # поэтому тихо ловим ошибки и страницу обновляем, тогда все данные занесутся корректно.
     except (RuntimeError, EOFError):
         st.rerun()
+
+
+def load_tasks():
+    data = read_file(tasks_cash)
+    return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
+                            ascending=[False, True, True, False])
+
+
+def get_filtered_tasks(tasks, conditions):
+    """Фильтрует задачи на основе переданных условий."""
+    for condition in conditions:
+        tasks = tasks.query(condition)
+    return tasks
 
 
 def append_to_dataframe(data: dict, filepath: str):
@@ -72,6 +85,32 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
         base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
         empty_dataframe = pd.DataFrame(base_dict)
         save_to_file(empty_dataframe, cash_filepath)
+
+
+def get_employee_name(index):
+    """
+    Загружает DataFrame из файла кэша сотрудников и возвращает значение из колонки 'name' по заданному индексу.
+
+    :param index: ID сотрудника, он же индекс строки
+    :return: Значение из колонки 'name' по заданному индексу
+    """
+    try:
+        # Загружаем DataFrame из файла .pkl
+        df = pd.read_pickle(employees_cash)
+        # Проверяем, что DataFrame содержит колонку 'name'
+        if 'name' not in df.columns:
+            raise KeyError("Column 'name' does not exist in the DataFrame.")
+
+        # Получаем значение из колонки 'name' по заданному индексу
+        name_value = df['name'].get(int(index), 'Неизвестен')
+        return name_value
+
+    except FileNotFoundError:
+        return f"Нет доступа к файлу '{employees_cash}'."
+    except KeyError as e:
+        return str(e)
+    except Exception as e:
+        return f"Системная ошибка: {str(e)}"
 
 
 def scripts_in_dir(directory):
