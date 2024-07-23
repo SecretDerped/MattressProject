@@ -6,6 +6,13 @@
 
 body {
     font-family: 'Source Sans Pro', sans-serif;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
 .form-column {
@@ -121,14 +128,83 @@ h1 {
     }
 }
 
-#message {
-    font-family: 'Source Sans Pro', sans-serif;
-    text-align: center;
-    font-size: 24px;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+h1 {
+    font-size: 2.5rem;
     color: #31333f;
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
 
+.main-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+}
+
+#center-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+#task_data {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 32px;
+    color: #31333f;
+    padding: 20px;
+    text-align: center;
+}
+
+#buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    font-size: 24px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 0 10px;
+    border: none;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.btn-hide {
+    background-color: #ffffff;
+    border: 2px solid #ff4d4d;
+    color: #31333f;
+}
+
+.btn-hide:hover {
+    background-color: #ffe6e6;
+}
+
+.btn-complete {
+    background-color: #007bff;
+    color: #ffffff;
+}
+
+.btn-complete:hover {
+    background-color: #0056b3;
+}
+
+#message {
+    font-size: 1.5rem;
+    color: #31333f;
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
 }

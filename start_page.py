@@ -25,7 +25,7 @@ class StartPage(Page):
 
         st.link_button('**Упаковка**', f'http://{local_ip}:{st_port}/packing')
 
-        st.link_button('**Сборка**', f'http://{local_ip}:{fl_port}]/gluing')
+        st.link_button('**Сборка**', f'http://{local_ip}:{fl_port}/gluing')
 
         st.link_button('**Швейный стол**', f'http://{local_ip}:{fl_port}/sewing')
 

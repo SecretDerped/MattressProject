@@ -82,8 +82,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function resetPage() {
-        document.getElementById('message').innerText = 'Жду штрих-код...';
-        document.getElementById('task_data').innerHTML = 'Данные первой записи будут отображаться здесь.';
+        document.getElementById('message').innerText = '';
+        document.getElementById('task_data').innerHTML = 'Жду штрих-код...';
         document.getElementById('buttons').style.display = 'none';
     }
 });

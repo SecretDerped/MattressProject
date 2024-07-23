@@ -88,18 +88,12 @@ Page = CuttingPage(name='Нарезка',
                    columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline',
                                   'comment'])
 
-tab_tiles, tab_table = st.tabs(['Плитки', 'Таблица'])
+col_table, col_info = st.columns([4, 1])
 
-with tab_tiles:
-    Page.cutting_tiles()
+with col_table:
+    Page.cutting_table()
 
-with tab_table:
-    col_table, col_info = st.columns([4, 1])
-
-    with col_table:
-        Page.cutting_table()
-
-    with col_info:
-        st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
-                'Попробуйте отсортировать по размеру!', icon="ℹ️")
+with col_info:
+    st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
+            'Попробуйте отсортировать по размеру!', icon="ℹ️")
 

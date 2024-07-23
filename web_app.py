@@ -8,7 +8,7 @@ import subprocess
 from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, create_message_str, append_to_dataframe, read_file, save_to_file, load_tasks, \
-    get_employee_name, time_now, get_filtered_tasks
+    get_employee_name, time_now, get_filtered_tasks, get_date_str
 from barcode import Code128
 from io import BytesIO
 
@@ -136,7 +136,15 @@ def log_sequence_gluing():
         "sewing_is_done == False",
         "packing_is_done == False"
     ]
-    return log_sequence('Сборка', 'Отметка', 'gluing_is_done', filter_conditions)
+
+    def transform_task_data(task):
+        return {
+            'Артикул': task['article'],
+            'Состав': task['attributes'],
+            'Размер': task['size'],
+            'Срок': get_date_str(task['deadline'])
+        }
+    return log_sequence('Сборка', 'Отметка', filter_conditions, transform_task_data)
 
 
 @app.route('/complete_task_gluing', methods=['POST'])
@@ -158,7 +166,16 @@ def log_sequence_sewing():
         "fabric_is_done == True",
         "packing_is_done == False"
     ]
-    return log_sequence('Шитье', 'Отметка', 'sewing_is_done', filter_conditions)
+
+    def transform_task_data(task):
+        return {
+            'Артикул': task['article'],
+            'Размер': task['size'],
+            'Ткань (Верх / Низ)': task['base_fabric'],
+            'Ткань (Боковина)': task['side_fabric'],
+            'deadline': get_date_str(task['deadline'])
+        }
+    return log_sequence('Шитье', 'Отметка', filter_conditions, transform_task_data)
 
 
 @app.route('/complete_task_sewing', methods=['POST'])
@@ -221,7 +238,7 @@ def get_barcode(employee_id: str = ''):
     return render_template('barcode.html', svg_data=svg_data)
 
 
-def log_sequence(page_name, action, done_field, filter_conditions):
+def log_sequence(page_name, action, filter_conditions, transform_task_data):
     global sequence_buffer, current_tasks
     data = request.json
     key = data['key']
@@ -245,7 +262,8 @@ def log_sequence(page_name, action, done_field, filter_conditions):
         if task_id is not None:
             task = filtered_tasks.loc[task_id]
             logging.debug(f"Возвращаем задачу для сотрудника {employee_id}: {task.to_dict()}")
-            return jsonify({'sequence': employee_name, 'task_data': task.to_dict()})
+            transformed_task = transform_task_data(task)
+            return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
         for task_id in filtered_tasks.index:
             if task_id not in current_tasks.values():
@@ -254,7 +272,8 @@ def log_sequence(page_name, action, done_field, filter_conditions):
                 update_task_history(tasks, task_id, page_name, employee_name, action)
                 save_to_file(tasks, tasks_cash)
                 logging.debug(f"Назначаем новую задачу сотруднику {employee_id}: {task.to_dict()}")
-                return jsonify({'sequence': employee_name, 'task_data': task.to_dict()})
+                transformed_task = transform_task_data(task)
+                return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
         return jsonify({'sequence': employee_name, 'task_data': {'error': 'Нет доступных задач'}})
 
@@ -266,6 +285,7 @@ def log_sequence(page_name, action, done_field, filter_conditions):
         logging.debug(f"Текущий ввод: {sequence_buffer[request.endpoint]}")
 
     return jsonify({'status': 'ok'})
+
 
 
 def complete_task(page_name, action, done_field):
