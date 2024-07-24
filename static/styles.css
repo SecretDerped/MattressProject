@@ -7,12 +7,13 @@
 body {
     font-family: 'Source Sans Pro', sans-serif;
     margin: 0;
-    height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start; /* изменено с center */
     align-items: center;
     position: relative;
+    overflow-y: auto; /* добавлено */
 }
 
 .form-column {
@@ -61,13 +62,24 @@ body {
 .btn-sm {
     width: 25px;
     height: 25px;
-    padding: 0.25rem 0.5rem;
+    padding: 0;
     font-size: 0.875rem;
     line-height: 1.5;
-    border-radius: 10px;
+    border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    margin: 0 2px; /* уменьшить отступы между кнопками */
+}
+
+.quantity-col {
+    display: flex;
+    align-items: center;
+}
+
+.quantity {
+    width: 30px; /* ширина для текста количества */
+    text-align: center;
 }
 
 .custom-file-input-wrapper {
@@ -122,20 +134,18 @@ h1 {
     color: #31333f;
 }
 
+.new-request-heading {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-top: 10px; /* Добавьте отступ сверху */
+    margin-bottom: 2px; /* Отступ снизу для разделения от формы */
+    position: static; /* Убедитесь, что заголовок не фиксирован */
+}
+
 @media (min-width: 768px) {
     .form-column {
         width: 49%;
     }
-}
-
-h1 {
-    font-size: 2.5rem;
-    color: #31333f;
-    position: absolute;
-    top: 20px;
-    width: 100%;
-    text-align: center;
-    margin: 0;
 }
 
 .main-container {

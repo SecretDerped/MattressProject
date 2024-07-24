@@ -2,14 +2,14 @@ console.log("index.js загружен и выполняется");
 
 document.querySelector('.file-input').addEventListener('change', function(event) {
     var file = event.target.files[0];
-    var fileName = file ? file.name : '📁 Выбрать файл | Перетащите файл сюда ☁️';
+    var fileName = file ? file.name : '📁 Прикрепить файл ☁️';
     var fileError = document.getElementById('file-error');
     fileError.style.display = 'none';
 
     if (file && file.size <= 20 * 1024 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/png')) {
         updateFileButton(fileName, 'btn-primary', 'btn-danger');
     } else {
-        updateFileButton('📁 Выбрать файл | Перетащите файл сюда ☁️', 'btn-danger', 'btn-primary');
+        updateFileButton('📁 Прикрепить файл ☁️', 'btn-danger', 'btn-primary');
         fileError.style.display = 'block';
         event.target.value = '';
     }
@@ -116,30 +116,30 @@ function initializePositionsAutocomplete() {
     }
 
     function updatePositionsTable() {
-        var tableBody = $('#positionsTable tbody');
-        tableBody.empty();
-        positions.forEach(function (position, index) {
-            var row = $('<tr></tr>');
-            row.append($('<td></td>').text(position.article));
+    var tableBody = $('#positionsTable tbody');
+    tableBody.empty();
+    positions.forEach(function (position, index) {
+        var row = $('<tr></tr>');
+        row.append($('<td></td>').text(position.article));
 
-            var quantityCell = $('<td class="quantity-col"></td>');
-            var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
-                updateQuantity(index, -1);
-            });
-            var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
-                updateQuantity(index, parseInt($(this).text(), 10));
-            });
-            var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
-                updateQuantity(index, 1);
-            });
-            quantityCell.append(minusButton, quantityInput, plusButton);
-            row.append(quantityCell);
-
-            tableBody.append(row);
+        var quantityCell = $('<td class="quantity-col"></td>');
+        var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
+            updateQuantity(index, -1);
         });
+        var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
+            updateQuantity(index, parseInt($(this).text(), 10));
+        });
+        var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
+            updateQuantity(index, 1);
+        });
+        quantityCell.append(minusButton, quantityInput, plusButton);
+        row.append(quantityCell);
 
-        $('#positionsTable').toggle(positions.length > 0);
-    }
+        tableBody.append(row);
+    });
+
+    $('#positionsTable').toggle(positions.length > 0);
+}
 
     function updateQuantity(index, delta) {
         var quantity = positions[index].quantity + delta;
@@ -153,6 +153,7 @@ function initializePositionsAutocomplete() {
             updatePositionsInput();
         }
     }
+
 
     $('#newArticle').autocomplete({
         source: function (request, response) {
