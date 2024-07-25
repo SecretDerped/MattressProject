@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log(data); // Логирование ответа сервера
             if (data.sequence) {
                 console.log(`Считанная последовательность: ${data.sequence}`);
-                document.getElementById('message').innerText = `Сотрудник: ${data.sequence}`;
+                document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
             }
             if (data.task_data) {
                 if (data.task_data.error) {

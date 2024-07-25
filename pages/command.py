@@ -62,8 +62,6 @@ class BrigadierPage(Page):
                 dataframe = read_file(self.task_cash)
                 cashing(dataframe, state)
 
-            print(column for column in columns.keys())
-
             edited_df = get_cash(state)
             editor = st.data_editor(
                 data=edited_df,

@@ -1,3 +1,5 @@
+import os
+import sys
 from datetime import datetime as dt
 import json
 import time
@@ -7,13 +9,13 @@ import subprocess
 
 from flask import Flask, render_template, request, abort, jsonify
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf, create_message_str, append_to_dataframe, read_file, save_to_file, load_tasks, \
+from utils.tools import load_conf, create_message_str, append_to_dataframe,save_to_file, load_tasks, \
     get_employee_name, time_now, get_filtered_tasks, get_date_str
 from barcode import Code128
 from io import BytesIO
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
-                    level=logging.DEBUG,
+                    level=logging.WARNING,
                     encoding='utf-8')
 
 config = load_conf()
@@ -32,17 +34,16 @@ employees_cash = site_config.get('employees_cash_filepath')
 
 tg_token = config.get('telegram').get('token')
 
-high_priority = False
-# Глобальный словарь для отслеживания текущих задач
-sequence_buffer = {}
-current_tasks = {}
-
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Необходимо для использования session
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
+
+sequence_buffer = {}
+current_tasks = {}
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -78,7 +79,7 @@ def index():
                     continue
 
                 task_data = {
-                    "high_priority": high_priority,
+                    "high_priority": False,
                     "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
                     "article": item['article'],
                     "size": item['size'],
@@ -103,7 +104,6 @@ def index():
                     # В этом методе данные будут заполняться из этого словаря построчно.
                     # При добавлении нового поля, или перемещении, нужно это учитывать.
                     # Порядок task_data должен быть как в tasks_columns_config на странице бригадира
-                    # TODO: привязать pydantic
                     append_to_dataframe(task_data, tasks_cash)
 
             sbis.write_implementation(order_data)
@@ -173,7 +173,7 @@ def log_sequence_sewing():
             'Размер': task['size'],
             'Ткань (Верх / Низ)': task['base_fabric'],
             'Ткань (Боковина)': task['side_fabric'],
-            'deadline': get_date_str(task['deadline'])
+            'Срок': get_date_str(task['deadline'])
         }
     return log_sequence('Шитье', 'Отметка', filter_conditions, transform_task_data)
 
@@ -239,15 +239,19 @@ def get_barcode(employee_id: str = ''):
 
 
 def log_sequence(page_name, action, filter_conditions, transform_task_data):
-    global sequence_buffer, current_tasks
+    global current_tasks, sequence_buffer
+    endpoint = request.endpoint.replace('log_sequence_', '')
+    if endpoint not in sequence_buffer:
+        sequence_buffer[endpoint] = []
+
     data = request.json
     key = data['key']
 
     if key == '(':
-        sequence_buffer[request.endpoint] = []
+        sequence_buffer[endpoint] = []
         logging.debug(f"Получен символ начала считывания. Инициализация приёма последовательности...")
     elif key == ')':
-        employee_id = ''.join(sequence_buffer[request.endpoint]).replace('Shift', '')
+        employee_id = ''.join(sequence_buffer[endpoint]).replace('Shift', '')
         logging.debug(f"Завершенная последовательность: {employee_id}")
 
         employee_name = get_employee_name(employee_id)
@@ -258,7 +262,10 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
 
         filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
 
-        task_id = current_tasks.get(employee_id)
+        if endpoint not in current_tasks:
+            current_tasks[endpoint] = {}
+
+        task_id = current_tasks[endpoint].get(employee_id)
         if task_id is not None:
             task = filtered_tasks.loc[task_id]
             logging.debug(f"Возвращаем задачу для сотрудника {employee_id}: {task.to_dict()}")
@@ -266,8 +273,8 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
             return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
         for task_id in filtered_tasks.index:
-            if task_id not in current_tasks.values():
-                current_tasks[employee_id] = task_id
+            if task_id not in current_tasks[endpoint].values():
+                current_tasks[endpoint][employee_id] = task_id
                 task = filtered_tasks.loc[task_id]
                 update_task_history(tasks, task_id, page_name, employee_name, action)
                 save_to_file(tasks, tasks_cash)
@@ -275,28 +282,26 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
                 transformed_task = transform_task_data(task)
                 return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
-        return jsonify({'sequence': employee_name, 'task_data': {'error': 'Нет доступных задач'}})
+        return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nЗадач для тебя пока нет.\nПриходи позже.'}})
 
     else:
-        if request.endpoint in sequence_buffer:
-            sequence_buffer[request.endpoint].append(key)
-        else:
-            sequence_buffer[request.endpoint] = [key]
-        logging.debug(f"Текущий ввод: {sequence_buffer[request.endpoint]}")
+        sequence_buffer[endpoint].append(key)
+        logging.debug(f"Текущий ввод: {sequence_buffer[endpoint]}")
 
     return jsonify({'status': 'ok'})
-
 
 
 def complete_task(page_name, action, done_field):
     global current_tasks
     data = request.json
     employee_id = data['employee_sequence'].replace('Shift', '')
+    endpoint = request.endpoint.replace('complete_task_', '')
 
     logging.debug(f"Получен запрос на завершение задачи. employee_id: {employee_id}")
 
     # Получаем task_id из глобального словаря current_tasks
-    task_id = current_tasks.get(employee_id)
+    print(current_tasks)
+    task_id = current_tasks[endpoint].get(employee_id)
 
     if task_id is None:
         logging.error(f"Задача не найдена для сотрудника: {employee_id}")
@@ -314,7 +319,7 @@ def complete_task(page_name, action, done_field):
     save_to_file(tasks, tasks_cash)
 
     # Удаляем задачу из текущих задач сотрудника
-    current_tasks.pop(employee_id, None)
+    current_tasks[endpoint].pop(employee_id, None)
 
     logging.debug(f"Задача {task_id} завершена сотрудником {employee_id}. Статус обновлен.")
 
@@ -342,7 +347,9 @@ def send_telegram_message(text, chat_id):
 
 
 def start_ngrok():
-    process = subprocess.Popen(['utils/ngrok.exe', 'http', flask_port])
+    base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    ngrok_path = os.path.join(base_dir, 'utils', 'utils/ngrok.exe')
+    process = subprocess.Popen([ngrok_path, 'http', str(flask_port)])
     url = None
 
     while url is None:
@@ -353,7 +360,7 @@ def start_ngrok():
         except:
             time.sleep(1)
 
-    logging.info(f'Сайт доступен через ngrok: {url}')
+    logging.warning(f'Сайт доступен через ngrok: {url}')
     return process, url
 
 

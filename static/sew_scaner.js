@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.log(data); // Логирование ответа сервера
             if (data.sequence) {
                 console.log(`Считанная последовательность: ${data.sequence}`);
-                document.getElementById('message').innerText = `Сотрудник: ${data.sequence}`;
+                document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
             }
             if (data.task_data) {
                 if (data.task_data.error) {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         console.log(`Завершение задачи для сотрудника: ${employeeSequence}`); // Логирование перед отправкой запроса
 
-        fetch('/log_sequence_sewing', { // Меняем на '/complete_task_sewing' для страницы сшивания
+        fetch('/complete_task_sewing', { // Меняем на '/complete_task_sewing' для страницы сшивания
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

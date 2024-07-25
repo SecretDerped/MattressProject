@@ -28,6 +28,7 @@ streamlit_port = '8501'
 flask_port = '5000'
 tasks_cash_filepath = "cash/tasks.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
 employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
+backup_path = "backup"
 
 [sbis]
 # Данные от аккаунта СБИС. От его имени будут формироваться заявки

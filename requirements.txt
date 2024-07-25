@@ -5,3 +5,4 @@ aiogram~=3.4.1
 httpx~=0.26.0
 flask~=3.0.2
 requests~=2.31.0
+APScheduler~=3.10.4

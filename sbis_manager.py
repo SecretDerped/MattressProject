@@ -1,4 +1,5 @@
 import base64
+import os
 from datetime import datetime
 import json
 import requests
@@ -9,11 +10,11 @@ from utils.tools import load_conf
 config = load_conf()
 imp_filepath = config.get('sbis').get('implementation_filepath')
 
-console_out = logging.StreamHandler()
-file_log = logging.FileHandler(f"cash/application.log", mode="w")
-logging.basicConfig(level=logging.DEBUG,
-                    format='[%(asctime)s | %(name)s - %(levelname)s]: %(message)s',
-                    handlers=(file_log, console_out),
+#console_out = logging.StreamHandler()
+#file_log = logging.FileHandler(f"cash/application.log", mode="w")
+logging.basicConfig(level=logging.WARNING,
+                    format='[%(asctime)s | %(name)s]: %(message)s',
+                    #handlers=(file_log, console_out),
                     encoding='utf-8')
 
 
@@ -27,6 +28,8 @@ class SBISManager:
             'Content-Type': 'application/json-rpc; charset=utf-8',
             'Accept': 'application/json-rpc'
         }
+        if not os.path.exists('cash'):
+            os.makedirs('cash')
 
     def auth(self):
         payload = {

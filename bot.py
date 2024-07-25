@@ -2,12 +2,14 @@ import asyncio
 import logging
 from utils.tools import config
 from aiogram import Bot, Dispatcher, Router
-from aiogram.types import Message, BotCommand, MenuButtonWebApp, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, \
+from aiogram.types import Message, BotCommand, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, \
     MenuButtonCommands
 from aiogram.filters.command import Command
 
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG, encoding='utf-8')
+logging.basicConfig(format='[%(asctime)s - %(name)s]: - %(message)s',
+                    level=logging.WARNING,
+                    encoding='utf-8')
 logger = logging.getLogger(__name__)
 
 

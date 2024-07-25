@@ -10,7 +10,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start; /* изменено с center */
+    justify-content: center; /* изменено на center */
     align-items: center;
     position: relative;
     overflow-y: auto; /* добавлено */
@@ -151,7 +151,7 @@ h1 {
 .main-container {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: center; /* Центрирование содержимого по вертикали */
     align-items: center;
     flex-grow: 1;
     width: 100%;
@@ -162,8 +162,9 @@ h1 {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: center; /* Центрирование содержимого по вертикали */
     width: 100%;
+    flex-grow: 1;
 }
 
 #task_data {
@@ -213,7 +214,7 @@ h1 {
 #message {
     font-size: 1.5rem;
     color: #31333f;
-    position: absolute;
+    position: fixed; /* изменено на fixed */
     bottom: 20px;
     width: 100%;
     text-align: center;

@@ -15,6 +15,6 @@ backgroundColor = "white"
 
 [logger]
 # Уровни: 'error', 'warning', 'info', 'debug'.
-level = "info"
+level = "warning"
 # По умолчанию: `%(asctime)s.%(msecs)03d %(message)s`
 messageFormat = "%(asctime)s %(message)s"

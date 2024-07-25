@@ -1,28 +1,45 @@
 import locale
+import logging
 import os
 import re
+import shutil
 import socket
+import sys
+
 import streamlit as st
 import pandas as pd
 import tomli
 from datetime import datetime
 
+
+def load_conf():
+    # Определяем путь к файлу конфигурации
+    if getattr(sys, 'frozen', False):
+        # Если приложение собрано в один файл
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+
+    config_path = os.path.join(base_path, "app_config.toml")
+
+    # Загрузка конфигурации
+    with open(config_path, 'rb') as f:
+        conf = tomli.load(f)
+
+    return conf
+
+
 locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
-hostname = socket.gethostname()
-
-
-def load_conf(path: str = "app_config.toml"):
-    with open(path, "rb") as f:
-        return tomli.load(f)
-
 
 config = load_conf()
 
+hostname = socket.gethostname()
 local_ip = socket.gethostbyname(hostname)
 
 site_conf = config.get('site')
 tasks_cash = site_conf.get('tasks_cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
+backup_folder = site_conf.get('backup_path')
 flask_port = site_conf.get('flask_port')
 
 
@@ -45,6 +62,21 @@ def load_tasks():
     data = read_file(tasks_cash)
     return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                             ascending=[False, True, True, False])
+
+
+def create_backup():
+    # Создание папки для бэкапов и excel, если она не существует
+    os.makedirs(backup_folder, exist_ok=True)
+
+    # Текущая дата в формате DD / MM / YYYY
+    current_date = datetime.now().strftime('%d_%m_%Y')
+
+    # Создание путей для бэкап файла и excel файла
+    backup_file_path = os.path.join(backup_folder, f'{current_date}.pkl')
+
+    # Копирование файла в папку для бэкапов
+    shutil.copy2(tasks_cash, backup_file_path)
+    logging.debug(f'Бэкап создан: {backup_file_path}')
 
 
 def get_filtered_tasks(tasks, conditions):
