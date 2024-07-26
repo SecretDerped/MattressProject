@@ -18,3 +18,7 @@ backgroundColor = "white"
 level = "warning"
 # По умолчанию: `%(asctime)s.%(msecs)03d %(message)s`
 messageFormat = "%(asctime)s %(message)s"
+
+[server]
+enableCORS = false
+enableXsrfProtection = false

@@ -1,21 +1,14 @@
 import base64
 import os
-from datetime import datetime
 import json
-import requests
 import logging
+import requests
+from datetime import datetime
 
 from utils.tools import load_conf
 
 config = load_conf()
 imp_filepath = config.get('sbis').get('implementation_filepath')
-
-#console_out = logging.StreamHandler()
-#file_log = logging.FileHandler(f"cash/application.log", mode="w")
-logging.basicConfig(level=logging.WARNING,
-                    format='[%(asctime)s | %(name)s]: %(message)s',
-                    #handlers=(file_log, console_out),
-                    encoding='utf-8')
 
 
 class SBISManager:
@@ -160,7 +153,7 @@ class SBISWebApp(SBISApiManager):
     def __init__(self, login: str, password: str, sale_point_name: str, price_list_name: str):
         super().__init__(login, password)
         self.doc_manager = SBISManager(self.login, self.password)
-        self.reg_id = config.get('sbis').get('reglament_id_list')
+        self.reg_id = config.get('sbis').get('regalement_id_list')
         self.sale_point_name = sale_point_name
         self.price_list_name = price_list_name
         self.nomenclatures_list = {}
@@ -175,9 +168,9 @@ class SBISWebApp(SBISApiManager):
         params = {'pointId': point_id,
                   'actualDate': '2024-03-18'}
         res = self.main_query('/nomenclature/price-list?', params)
-        for list in res['priceLists']:
-            if list['name'] == self.price_list_name:
-                return list['id']
+        for price_list in res['priceLists']:
+            if price_list['name'] == self.price_list_name:
+                return price_list['id']
 
     def get_nomenclature_list(self, point_id: str, price_list_id: str, page: int):
         """
@@ -186,9 +179,9 @@ class SBISWebApp(SBISApiManager):
             article: str  # Артикул наименования
             attributes: [{...}]  # Массив с характеристиками товара
             balance: str  # Остаток товара с учетом открытых смен. Остаток передается по складу точки продаж
-            barcodes: [{...}]  # Массив штрихкодов
+            barcodes: [{...}]  # Массив штрих-кодов
                 code: str  # Штрихкод
-                codetype: str  # Тип штрихкода (EAN-13, EAN-8)
+                codetype: str  # Тип штрих-кода (EAN-13, EAN-8)
             cost: integer  # Цена товара из прайса
             description: str  # Поле «Описание» из карточки товара
             externalId: str  # Идентификатор товара в формате UUID
@@ -300,7 +293,8 @@ class SBISWebApp(SBISApiManager):
         customer_name = data.get('party', None).replace('"', '&quot;')
 
         # Если поле "Компания" оставить пустым при создании заявки, счёт оформится как розница,
-        # а если нет, то в счёте будет юр.лицо
+        # а если нет, то в счёте будет юрлицо
+        customer_inn, customer_kpp, company_address = None, None, None
         wholesale = False
         if data['party_data']:
             wholesale = True
@@ -480,33 +474,3 @@ class SBISWebApp(SBISApiManager):
                                    "Адрес": order_address}}}
 
         return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)
-
-    # Не актуален
-    """def create_task(self, data):
-        attributes = data.get('info', {'attributes': None}).get('attributes')
-        materials = '\n'.join(f'{key}: {value}' for key, value in attributes.items())
-        params = {"Документ": {
-            "Тип": "СлужЗап",
-            "Регламент": {"Идентификатор": self.reg_id['task']},
-            "Срок": data.get("delivery_date"),
-            "Примечание": f"{data.get('item_name')}. {data.get('comment')}",
-            "Автор": {"Имя": "Александр",
-                      "Отчество": "Максимович",
-                      "Фамилия": "Харьковский"},
-            "ДополнительныеПоля": {"Заказчик": data.get('customer_name'),
-                                   "Позиция": f"{data.get('item_name')} ({data.get('code')})",
-                                   "Материалы": materials,
-                                   "Адрес": data.get("order_address"),
-                                   "Комментарий": data.get('comment')}}}
-
-        return self.doc_manager.main_query('СБИС.ЗаписатьДокумент', params)"""
-
-
-if __name__ == '__main__':
-    LOGIN = 'Харьковский_Гас_РС'
-    PASSWORD = 'Харьковский_Гас_РС4342'
-    SALE_POINT_NAME = 'Гаспарян Роман Славикович, ИП'
-    PRICE_LIST_NAME = 'Позиции для Telegram-бота'
-    # sbis = SBISWebApp(LOGIN, PASSWORD, SALE_POINT_NAME, PRICE_LIST_NAME)
-    # sbis = SBISManager(LOGIN, PASSWORD)
-    # sbis.main_query('СБИС.')

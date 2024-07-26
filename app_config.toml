@@ -28,6 +28,7 @@ streamlit_port = '8501'
 flask_port = '5000'
 tasks_cash_filepath = "cash/tasks.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
 employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
+log_filepath = "cash/application.log"
 backup_path = "backup"
 
 [sbis]
@@ -56,7 +57,7 @@ mattress_group_id = 2  # Товары с hierarchicalParent равным mattres
 fabrics_group_id = 285  # Эти товары - ткани. Показываются при выборе ткани из окна заявок.
 springs_group_id = 294 # Пружинные блоки.
 
-[sbis.reglament_id_list]
+[sbis.regalement_id_list]
 # ID регламента СБИС.
 wholesale = "3b9ac7d9-8ace-47c8-85b6-cf45888bab05" # Реализация матрасов
 direct_sell = "f67256dd-8674-4a75-91d0-22d3494e4c13" # Розница

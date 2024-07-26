@@ -1,16 +1,9 @@
-import asyncio
-import logging
-from utils.tools import config
 from aiogram import Bot, Dispatcher, Router
+from aiogram.filters.command import Command
 from aiogram.types import Message, BotCommand, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, \
     MenuButtonCommands
-from aiogram.filters.command import Command
 
-
-logging.basicConfig(format='[%(asctime)s - %(name)s]: - %(message)s',
-                    level=logging.WARNING,
-                    encoding='utf-8')
-logger = logging.getLogger(__name__)
+from utils.tools import config
 
 
 class Tg:
@@ -38,7 +31,7 @@ class Tg:
 
     async def on_startup(self):
         await self.set_menu_button()
-        await self.bot.set_my_commands([BotCommand("start", "Начать")])
+        await self.bot.set_my_commands([BotCommand(command="start", description="Начать")])
 
     async def send_message(self, chat_id, text):
         await self.bot.send_message(chat_id, text)
@@ -47,8 +40,3 @@ class Tg:
         dp = Dispatcher()
         dp.include_router(self.router)
         await dp.start_polling(self.bot, on_startup=self.on_startup)
-
-
-if __name__ == "__main__":
-    bot = Tg("https://5ac5-46-29-13-252.ngrok-free.app")
-    asyncio.run(bot.main())

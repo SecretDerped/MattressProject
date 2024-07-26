@@ -1,8 +1,8 @@
 import datetime
 import streamlit as st
+
 from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty, \
     load_tasks
-
 
 class Page:
     def __init__(self, page_name, icon):

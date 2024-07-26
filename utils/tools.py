@@ -1,15 +1,25 @@
-import locale
-import logging
 import os
 import re
+import sys
+import tomli
 import shutil
 import socket
-import sys
-
-import streamlit as st
+import locale
 import pandas as pd
-import tomli
+import streamlit as st
 from datetime import datetime
+import logging
+from logging import basicConfig, StreamHandler, FileHandler, INFO
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+# Создание директории cash, если она не существует
+if not os.path.exists('cash'):
+    os.makedirs('cash')
+
+hostname = socket.gethostname()
+local_ip = socket.gethostbyname(hostname)
+locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
 
 
 def load_conf():
@@ -29,18 +39,22 @@ def load_conf():
     return conf
 
 
-locale.setlocale(locale.LC_ALL, ('ru_RU', 'UTF-8'))
-
 config = load_conf()
 
-hostname = socket.gethostname()
-local_ip = socket.gethostbyname(hostname)
-
 site_conf = config.get('site')
+flask_port = site_conf.get('flask_port')
 tasks_cash = site_conf.get('tasks_cash_filepath')
 employees_cash = site_conf.get('employees_cash_filepath')
 backup_folder = site_conf.get('backup_path')
-flask_port = site_conf.get('flask_port')
+log_path = site_conf.get('log_filepath')
+
+log_format = '[%(asctime)s | %(name)s]: %(message)s'
+log_level = INFO
+basicConfig(level=log_level,
+            format=log_format,
+            handlers=(StreamHandler(),
+                      FileHandler(log_path, mode="w")),
+            encoding='utf-8')
 
 
 def save_to_file(data: pd.DataFrame, filepath: str):
@@ -119,28 +133,28 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
         save_to_file(empty_dataframe, cash_filepath)
 
 
-def get_employee_name(index):
+def get_employee_column_data(index, column):
     """
-    Загружает DataFrame из файла кэша сотрудников и возвращает значение из колонки 'name' по заданному индексу.
+    Загружает DataFrame из файла кэша сотрудников и возвращает значение из колонки по заданному индексу.
 
     :param index: ID сотрудника, он же индекс строки
-    :return: Значение из колонки 'name' по заданному индексу
+    :return: Значение из колонки по заданному индексу
     """
     try:
         # Загружаем DataFrame из файла .pkl
         df = pd.read_pickle(employees_cash)
         # Проверяем, что DataFrame содержит колонку 'name'
-        if 'name' not in df.columns:
-            raise KeyError("Column 'name' does not exist in the DataFrame.")
+        if column not in df.columns:
+            raise Exception(f"Column {column} does not exist in the DataFrame.")
 
-        # Получаем значение из колонки 'name' по заданному индексу
-        name_value = df['name'].get(int(index), 'Неизвестен')
-        return name_value
+        # Получаем значение из колонки по заданному индексу
+        value = df[column].get(int(index))
+        return value
 
     except FileNotFoundError:
         return f"Нет доступа к файлу '{employees_cash}'."
     except KeyError as e:
-        return str(e)
+        return f"Ошибка номера сотрудника: {str(e)}"
     except Exception as e:
         return f"Системная ошибка: {str(e)}"
 
@@ -240,9 +254,9 @@ def create_message_str(data):
     to_reserve = data['amount_to_receive']
     comment = data['comment']
     order_message = (f"Заявка от клиента: {data['party']}\n\n"
-                     
+
                      f"Позиции:\n{positions}\n\n"
-                     
+
                      f"Дата получения: {date}\n"
                      f"Тип доставки: {type}\n"
                      f"Регион: {region}\n")
@@ -260,11 +274,20 @@ def create_message_str(data):
     return order_message
 
 
-if __name__ == "__main__":
-    # Пример использования
-    input_string_1 = "Размеры: 10x20 см"
-    input_string_2 = "20 10"
-    dimensions_1 = get_size_int(input_string_1)
-    dimensions_2 = get_size_int(input_string_2)
-    print(dimensions_1)  # Вывод: {'length': 10, 'width': 20, 'height': None}
-    print(dimensions_2)  # Вывод: {'length': 10, 'width': 20, 'height': 30}
+def start_scheduler(hour: int = 0, minute: int = 0) -> None:
+    scheduler = BackgroundScheduler()
+    trigger = CronTrigger(hour=hour, minute=minute)  # Запуск каждый день. По умолчанию в полночь
+    scheduler.add_job(create_backup, trigger)
+    scheduler.start()
+    logging.info(f"Планировщик задач запущен. Каждый день в {hour} часов {minute} минут будет создаваться копия "
+                 f"данных нарядов.")
+
+
+def ensure_ngrok():
+    # Создание директории utils, если она не существует
+    if not os.path.exists('utils'):
+        os.makedirs('utils')
+    # Копирование ngrok.exe в директорию utils, если его там нет
+    if not os.path.isfile('utils/ngrok.exe'):
+        ngrok_path = os.path.join(os.path.dirname(__file__), 'utils/ngrok.exe')
+        shutil.copy(ngrok_path, 'utils/ngrok.exe')

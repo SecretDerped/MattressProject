@@ -1,22 +1,18 @@
 import os
 import sys
-from datetime import datetime as dt
 import json
 import time
 import httpx
 import logging
 import subprocess
-
-from flask import Flask, render_template, request, abort, jsonify
-from sbis_manager import SBISWebApp
-from utils.tools import load_conf, create_message_str, append_to_dataframe,save_to_file, load_tasks, \
-    get_employee_name, time_now, get_filtered_tasks, get_date_str
-from barcode import Code128
 from io import BytesIO
+from barcode import Code128
+from datetime import datetime as dt
+from flask import Flask, render_template, request, abort, jsonify
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(message)s',
-                    level=logging.WARNING,
-                    encoding='utf-8')
+from sbis_manager import SBISWebApp
+from utils.tools import load_conf, create_message_str, append_to_dataframe, save_to_file, load_tasks, \
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str
 
 config = load_conf()
 
@@ -35,7 +31,6 @@ employees_cash = site_config.get('employees_cash_filepath')
 tg_token = config.get('telegram').get('token')
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Необходимо для использования session
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
@@ -217,7 +212,7 @@ def get_barcode(employee_id: str = ''):
     """
 
     employee_id = int(employee_id)
-    employee_name = get_employee_name(employee_id)
+    employee_name = get_employee_column_data(employee_id, 'name')
     # Создаем BytesIO для хранения SVG-кода штрих-кода
     barcode_bites = BytesIO()
 
@@ -254,11 +249,14 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
         employee_id = ''.join(sequence_buffer[endpoint]).replace('Shift', '')
         logging.debug(f"Завершенная последовательность: {employee_id}")
 
-        employee_name = get_employee_name(employee_id)
+        employee_name = get_employee_column_data(employee_id, 'name')
 
         tasks = load_tasks()
         if tasks.empty:
-            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Нет данных'}})
+            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСейчас пока нет задач.'}})
+
+        if not get_employee_column_data(employee_id, 'is_on_shift'):
+            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСначала нужно открыть смену.'}})
 
         filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
 
@@ -314,7 +312,7 @@ def complete_task(page_name, action, done_field):
 
     # Обновляем статус задачи
     tasks.at[task_id, done_field] = True
-    employee_name = get_employee_name(employee_id)
+    employee_name = get_employee_column_data(employee_id, 'name')
     update_task_history(tasks, task_id, page_name, employee_name, action)
     save_to_file(tasks, tasks_cash)
 
@@ -348,8 +346,8 @@ def send_telegram_message(text, chat_id):
 
 def start_ngrok():
     base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
-    ngrok_path = os.path.join(base_dir, 'utils', 'utils/ngrok.exe')
-    process = subprocess.Popen([ngrok_path, 'http', str(flask_port)])
+    ngrok_path = os.path.join(base_dir, 'utils', 'ngrok.exe')
+    process = subprocess.Popen(['start', 'cmd', '/k', ngrok_path, 'http', str(flask_port)], shell=True)
     url = None
 
     while url is None:
