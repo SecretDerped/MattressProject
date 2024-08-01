@@ -7,8 +7,11 @@ from utils.tools import clear_cash, read_file, cashing, \
 
 def show_and_hide_button(table_state, show_state):
     # Кнопка для отображения/скрытия таблицы с изменением текста
-    button_text = '**Перейти в режим редактирования**' if not st.session_state[
-        show_state] else ":red[**Сохранить и вернуть режим просмотра**]"
+    if not st.session_state[show_state]:
+        button_text = '**Перейти в режим редактирования**'
+    else:
+        button_text = ":red[**Сохранить и вернуть режим просмотра**]"
+
     if st.button(button_text, key=f'{table_state}_mode_button'):
         # Очистить данные, если таблица скрывается
         clear_cash(table_state)
@@ -21,9 +24,10 @@ class BrigadierPage(Page):
         super().__init__(page_name, icon)
 
         self.TASK_STATE = 'task_dataframe'
-        self.TASK_ACTIVE_MODE = 'task_active_mode'
-
         self.EMPLOYEE_STATE = 'employee_dataframe'
+
+        self.TASK_ACTIVE_MODE = 'task_active_mode'
+        self.TASK_FULL_MODE = 'task_full_mode'
         self.EMPLOYEE_ACTIVE_MODE = 'employee_active_mode'
 
         # В TASK_ACTIVE_MODE хранится название для переменной session_state,
@@ -31,8 +35,10 @@ class BrigadierPage(Page):
         # Тут происходит инициализация переменной. По умолчанию show_table = False
         if self.TASK_ACTIVE_MODE not in st.session_state:
             st.session_state[self.TASK_ACTIVE_MODE] = False
+            # Аналогично и для...
+        if self.TASK_FULL_MODE not in st.session_state:
+            st.session_state[self.TASK_FULL_MODE] = False
 
-        # Аналогично и для...
         if self.EMPLOYEE_ACTIVE_MODE not in st.session_state:
             st.session_state[self.EMPLOYEE_ACTIVE_MODE] = False
 
@@ -40,7 +46,22 @@ class BrigadierPage(Page):
     def tasks_table(self):
         """Показывает нередактируемую таблицу данных без индексов."""
         columns = self.tasks_columns_config
-        st.dataframe(data=read_file(self.task_cash),
+        data = read_file(self.task_cash)
+
+        # Так сделано, чтобы настройка была только тут, чтобы
+        # нельзя было менять таблицу во время режима редактирования
+        if st.checkbox('Показывать завершённые наряды'):
+            st.session_state[Page.TASK_FULL_MODE] = True
+        else:
+            st.session_state[Page.TASK_FULL_MODE] = False
+
+        if not st.session_state[self.TASK_FULL_MODE]:
+            data = data[(data['fabric_is_done'] == False) |
+                        (data['gluing_is_done'] == False) |
+                        (data['sewing_is_done'] == False) |
+                        (data['packing_is_done'] == False)]
+
+        st.dataframe(data=data,
                      column_config=columns,
                      column_order=(column for column in columns.keys()),
                      hide_index=True)
@@ -48,35 +69,55 @@ class BrigadierPage(Page):
     def tasks_editor(self):
         """База данных в этом проекте представляет собой файл pkl с датафреймом библиотеки pandas.
         Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
-        а кэш делается из session_state - текущего состояния таблицы. Каждое изменение таблицы
+        а кэш пишется в session_state текущего состояния таблицы. Каждое изменение таблицы
         провоцируют on_change методы, а потом обновление всей страницы. Поэтому система
         такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
         Как только какое-то поле было изменено, то изменения записываются в кэш,
         потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
         сохраняется в базу."""
+        state = self.TASK_STATE
+        columns = self.tasks_columns_config
+
         try:
-            state = self.TASK_STATE
-            columns = self.tasks_columns_config
-
+            # Если функция редактирования не открывалась, значит нет кэша.
+            # Грузим данные из базы и копируем в кэш.
             if state not in st.session_state:
-                dataframe = read_file(self.task_cash)
-                cashing(dataframe, state)
+                data = read_file(self.task_cash)
+                cashing(data, state)
+            # Если функция была открыта, значит после изменения на странице остался кэш,
+            # то есть загружаем данные из кэша.
+            else:
+                data = get_cash(state)
 
-            edited_df = get_cash(state)
+            # Стейт галочки "Показать все наряды". Декларирована вне объекта там, внизу
+            if st.session_state[self.TASK_FULL_MODE]:
+                filtered_df = data
+            else:
+                filtered_df = data[(data['fabric_is_done'] == False) |
+                                   (data['gluing_is_done'] == False) |
+                                   (data['sewing_is_done'] == False) |
+                                   (data['packing_is_done'] == False)]
+
             editor = st.data_editor(
-                data=edited_df,
+                data=filtered_df,
                 column_config=columns,
-                column_order=(column for column in columns.keys()),
+                column_order=(column for column in columns.keys()),  # Порядок получается такой же, как в конфиге колонн
                 hide_index=True,
                 num_rows="fixed",
-                on_change=cashing, args=(edited_df, state),
+                on_change=self.update_cache_and_save, args=(data, filtered_df, state),
                 key=f"{state}_editor",
                 height=420
             )
-            save_to_file(editor, self.task_cash)
 
         except RuntimeError:
             st.rerun()
+
+    def update_cache_and_save(self, cached_df, edited_df, state):
+        """Обновляет кэш и сохраняет изменения в базу данных."""
+        for index, row in edited_df.iterrows():
+            cached_df.loc[index] = row
+        cashing(cached_df, state)
+        save_to_file(cached_df, self.task_cash)
 
     def employees_editor(self, dynamic_mode: bool = False):
         # Если кэша нет, загружаем туда данные
@@ -117,12 +158,13 @@ Page = BrigadierPage('Производственный терминал', '🛠�
 tasks_tab, employee_tab = st.tabs(['Наряды', 'Сотрудники'])
 
 with tasks_tab:
-
     col1, col2 = st.columns([1, 2])
 
     with col1:
         st.title("🏭 Все наряды")
+
         show_and_hide_button(Page.TASK_STATE, Page.TASK_ACTIVE_MODE)
+
     with col2:
         st.write(' ')
 
@@ -131,8 +173,8 @@ with tasks_tab:
             st.error('''##### Внимание, включён режим редактирования.  
             \nПока он активен, изменения других рабочих не сохраняются!''', icon="🚧")
         else:
-            st.info('''Чтобы поправить любой наряд, включите режим редактирования.
-            Он обладает высшим приоритетом - пока активен режим редактирования,
+            st.info('''На этом экране показываются данные о нарядах в режиме реального времени. Чтобы поправить любой
+            наряд, включите режим редактирования. Он обладает высшим приоритетом - пока активен режим редактирования,
             изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
 
     # Отображение таблицы в зависимости от состояния
@@ -142,7 +184,6 @@ with tasks_tab:
         Page.tasks_table()
 
 with employee_tab:
-
     col1, col2 = st.columns([1, 2])
 
     with col1:

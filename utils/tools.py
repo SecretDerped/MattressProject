@@ -111,8 +111,8 @@ def append_to_dataframe(data: dict, filepath: str):
     save_to_file(df, filepath)
 
 
-def cashing(dataframe, state):
-    st.session_state[state] = dataframe
+def cashing(data, state):
+    st.session_state[state] = data
 
 
 def get_cash(state):
