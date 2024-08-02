@@ -5,7 +5,7 @@ from utils.tools import clear_cash, read_file, cashing, \
     get_cash, save_to_file, barcode_link
 
 
-def show_and_hide_button(table_state, show_state):
+def show_and_hide_button(table_state, show_state, edited_df=None, original_df=None, file_path=None):
     # Кнопка для отображения/скрытия таблицы с изменением текста
     if not st.session_state[show_state]:
         button_text = '**Перейти в режим редактирования**'
@@ -14,6 +14,11 @@ def show_and_hide_button(table_state, show_state):
 
     if st.button(button_text, key=f'{table_state}_mode_button'):
         # Очистить данные, если таблица скрывается
+        if st.session_state[show_state]:
+            if edited_df is not None and original_df is not None:
+                for index, row in edited_df.iterrows():
+                    original_df.loc[index] = row
+                save_to_file(original_df, file_path)
         clear_cash(table_state)
         st.session_state[show_state] = not st.session_state[show_state]
         st.rerun()
@@ -104,20 +109,14 @@ class BrigadierPage(Page):
                 column_order=(column for column in columns.keys()),  # Порядок получается такой же, как в конфиге колонн
                 hide_index=True,
                 num_rows="fixed",
-                on_change=self.update_cache_and_save, args=(data, filtered_df, state),
                 key=f"{state}_editor",
                 height=420
             )
 
+            return editor, data
+
         except RuntimeError:
             st.rerun()
-
-    def update_cache_and_save(self, cached_df, edited_df, state):
-        """Обновляет кэш и сохраняет изменения в базу данных."""
-        for index, row in edited_df.iterrows():
-            cached_df.loc[index] = row
-        cashing(cached_df, state)
-        save_to_file(cached_df, self.task_cash)
 
     def employees_editor(self, dynamic_mode: bool = False):
         # Если кэша нет, загружаем туда данные
@@ -161,9 +160,8 @@ with tasks_tab:
     col1, col2 = st.columns([1, 2])
 
     with col1:
+        st.write('')
         st.title("🏭 Все наряды")
-
-        show_and_hide_button(Page.TASK_STATE, Page.TASK_ACTIVE_MODE)
 
     with col2:
         st.write(' ')
@@ -177,11 +175,13 @@ with tasks_tab:
             наряд, включите режим редактирования. Он обладает высшим приоритетом - пока активен режим редактирования,
             изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
 
-    # Отображение таблицы в зависимости от состояния
     if st.session_state[Page.TASK_ACTIVE_MODE]:
-        Page.tasks_editor()
+        editor, original_data = Page.tasks_editor()
+        show_and_hide_button(Page.TASK_STATE, Page.TASK_ACTIVE_MODE, editor, original_data, Page.task_cash)
     else:
+        show_and_hide_button(Page.TASK_STATE, Page.TASK_ACTIVE_MODE)
         Page.tasks_table()
+
 
 with employee_tab:
     col1, col2 = st.columns([1, 2])
