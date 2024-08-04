@@ -7,7 +7,7 @@ import socket
 import locale
 import pandas as pd
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -91,6 +91,16 @@ def create_backup():
     # Копирование файла в папку для бэкапов
     shutil.copy2(tasks_cash, backup_file_path)
     logging.debug(f'Бэкап создан: {backup_file_path}')
+
+    # Удаление записей старше 31 дня
+    data = read_file(tasks_cash)
+    cutoff_date = datetime.now() - timedelta(days=31)
+    data['created'] = pd.to_datetime(data['created'])
+    filtered_data = data[data['created'] > cutoff_date]
+
+    # Сохранение обновленного DataFrame
+    save_to_file(filtered_data, tasks_cash)
+    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')
 
 
 def get_filtered_tasks(tasks, conditions):

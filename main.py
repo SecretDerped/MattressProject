@@ -19,6 +19,7 @@ if __name__ == '__main__':
 
     flask_thread = threading.Thread(target=run_flask, args=())
     flask_thread.start()
+    start_scheduler(17, 35)  # Запуск планировщика задач
 
     ensure_ngrok()
     ngrok_process, ngrok_url = start_ngrok()
@@ -29,6 +30,5 @@ if __name__ == '__main__':
 
     flask_thread.join()  # Дожидаемся потока Flask-приложения
     bot_thread.join()  # Дожидаемся потока бота
-    start_scheduler(9, 10)  # Запуск планировщика задач
 
     ngrok_process.wait()
