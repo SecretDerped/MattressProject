@@ -12,7 +12,7 @@ from flask import Flask, render_template, request, abort, jsonify
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, create_message_str, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type
 
 config = load_conf()
 
@@ -136,9 +136,12 @@ def log_sequence_gluing():
         return {
             'Артикул': task['article'],
             'Состав': task['attributes'],
+            'Тип ткани (Верх / Низ)': fabric_type(task['base_fabric']),
+            'Тип ткани (Боковина)': fabric_type(task['side_fabric']),
             'Размер': task['size'],
             'Срок': get_date_str(task['deadline'])
         }
+
     return log_sequence('Сборка', 'Отметка', filter_conditions, transform_task_data)
 
 

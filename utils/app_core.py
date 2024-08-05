@@ -1,8 +1,11 @@
 import datetime
-import streamlit as st
+from io import BytesIO
 
+import streamlit as st
+from fpdf import FPDF
 from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty, \
     load_tasks
+
 
 class Page:
     def __init__(self, page_name, icon):
@@ -87,7 +90,7 @@ class Page:
 class ManufacturePage(Page):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
-        self.reserve_button_text = 'Взять'
+        self.print_button_text = 'Талон'
         self.done_button_text = 'Готово'
         self.header()
 
@@ -134,21 +137,43 @@ class ManufacturePage(Page):
                      key=self.page_name,
                      on_change=save_employee, args=(self.page_name,))
 
-    # Функция для проверки состояния кнопки бронирования
-    def reserve_check(self, index):
-        return st.session_state.get(f'{self.page_name}_reserved_{index}', False)
+    @staticmethod
+    def export_to_pdf(row):
+        """Экспорт строки из main_data в PDF и отображение в Streamlit."""
+        pdf = FPDF()
+        pdf.add_page()
 
-    # Функция для установки состояния кнопки бронирования
-    def set_reserved_state(self, index, state):
-        st.session_state[f'{self.page_name}_reserved_{index}'] = state
+        # Используем шрифт, поддерживающий Unicode
+        pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
+        pdf.set_font("DejaVu", size=12)
 
-    # Функция для получения имени пользователя, который забронировал
-    def get_reserver(self, index):
-        return st.session_state.get(f'{self.page_name}_reserver_{index}', '')
+        pdf.cell(200, 10, txt="Информация о задаче", ln=True, align="C")
+        pdf.cell(200, 10, txt=f"Артикул: {row['article']}", ln=True)
+        pdf.cell(200, 10, txt=f"Ткань (Верх / Низ): {row['base_fabric']}", ln=True)
+        pdf.cell(200, 10, txt=f"Ткань (Бок): {row['side_fabric']}", ln=True)
+        pdf.cell(200, 10, txt=f"Тип доставки: {row['delivery_type']}", ln=True)
+        pdf.cell(200, 10, txt=f"Адрес: {row['address']}", ln=True)
+        pdf.cell(200, 10, txt=f"Клиент: {row['client']}", ln=True)
+        pdf.cell(200, 10, txt=f"Состав: {row['attributes']}", ln=True)
+        pdf.cell(200, 10, txt=f"Размер: {row['size']}", ln=True)
+        pdf.cell(200, 10, txt=f"Срок: {row['deadline'].strftime('%d.%m.%Y')}", ln=True)
 
-    # Функция для установки имени пользователя, который забронировал
-    def set_reserver(self, index, name):
-        st.session_state[f'{self.page_name}_reserver_{index}'] = name
+        # Добавление комментария, если он есть
+        if row['comment']:
+            pdf.cell(200, 10, txt=f"Комментарий: {row['comment']}", ln=True)
+
+        # Экспорт в BytesIO объект
+        pdf_output = BytesIO()
+        pdf.output(pdf_output)
+        pdf_output.seek(0)
+
+        # Отображение в Streamlit
+        st.download_button(
+            label="Скачать PDF",
+            data=pdf_output,
+            file_name="task_info.pdf",
+            mime="application/pdf"
+        )
 
     @staticmethod
     def inner_box_text(row):
@@ -167,13 +192,9 @@ class ManufacturePage(Page):
     def _form_box_text(self, index, row):
         # Текст контейнера красится в красный, когда у наряда приоритет
         text_color = 'red' if row['high_priority'] else 'gray'
-        box_text = ''
 
-        # Проверка на бронирование
-        if self.reserve_check(index):
-            reserver = self.get_reserver(index)
-            box_text += f":orange[**Взято - {reserver}**]  \n"
-        box_text += f':{text_color}[{self.inner_box_text(row)}'
+        box_text = f':{text_color}[{self.inner_box_text(row)}'
+
         if row['comment']:
             box_text += f"**Комментарий**: {row['comment']}  "
 
@@ -212,20 +233,14 @@ class ManufacturePage(Page):
                     if page in st.session_state and st.session_state[page]:
                         employee = st.session_state[page]
 
-                        if self.reserve_check(index):
-                            if st.button(f":green[**{self.done_button_text}**]", key=f'{page}_done_{index}'):
-                                history_note = f'({time_now()}) {page} [ {employee} ] -> {self.done_button_text}; \n'
-                                main_data.at[index, stage_to_done] = True
-                                main_data.at[index, 'history'] += history_note
-                                save_to_file(main_data, self.task_cash)
-                                st.rerun()
-                        else:
-                            if st.button(f":blue[**{self.reserve_button_text}**]", key=f'{page}_reserve_{index}'):
-                                history_note = f'({time_now()}) {page} [ {employee} ] -> {self.reserve_button_text}; \n'
-                                self.set_reserver(index, employee)
-                                self.set_reserved_state(index, True)
-                                main_data.at[index, 'history'] += history_note
-                                save_to_file(main_data, self.task_cash)
-                                st.rerun()
+                        if st.button(f":green[**{self.done_button_text}**]", key=f'{page}_done_{index}'):
+                            history_note = f'({time_now()}) {page} [ {employee} ] -> {self.done_button_text}; \n'
+                            main_data.at[index, stage_to_done] = True
+                            main_data.at[index, 'history'] += history_note
+                            save_to_file(main_data, self.task_cash)
+                            st.rerun()
+
+                        if st.button(f":blue[**{self.print_button_text}**]", key=f'{page}_print_{index}'):
+                            self.export_to_pdf(row)  # Передача строчки данных в функцию
             count += 1
         return True

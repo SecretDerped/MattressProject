@@ -232,6 +232,17 @@ def side_eval(size: str, fabric: str = None) -> str:
         return "Ошибка в вычислении размера"
 
 
+def fabric_type(fabric: str = None):
+    """Даёт тип ткани, основываясь на названии"""
+    if fabric is None:
+        return "Новый тип ткани"
+
+    fabrics = config.get('fabric_corrections', {'Текстиль': 0})
+    # Если ни один ткань не найдётся, next вернет второе значение
+    value = next((key for key in fabrics.keys() if re.search(key, fabric, re.IGNORECASE)), fabric)
+    return value
+
+
 def get_date_str(dataframe_row: pd.Series) -> str:
     """
     Принимает дату из датафрейма и преобразует в строку: 08 мая, среда

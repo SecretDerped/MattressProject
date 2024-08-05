@@ -4,7 +4,7 @@ import subprocess
 import threading
 
 from bot import Tg
-from utils.tools import ensure_ngrok, start_scheduler
+from utils.tools import ensure_ngrok, start_scheduler, fabric_type
 from web_app import run_flask, start_ngrok
 
 
@@ -14,6 +14,7 @@ def run_streamlit_app():
 
 
 if __name__ == '__main__':
+
     streamlit_thread = threading.Thread(target=run_streamlit_app)
     streamlit_thread.start()
 
