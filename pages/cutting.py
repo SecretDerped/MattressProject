@@ -70,7 +70,6 @@ class CuttingPage(ManufacturePage):
                                 history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
                                 tasks.at[index, 'history'] += history_note
                                 tasks.at[index, 'fabric_is_done'] = True
-                        tasks.drop('side', axis=1)
                         save_to_file(tasks, self.task_cash)
                         st.rerun()
 
