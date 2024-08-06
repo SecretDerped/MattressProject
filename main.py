@@ -4,13 +4,13 @@ import subprocess
 import threading
 
 from bot import Tg
-from utils.tools import ensure_ngrok, start_scheduler, fabric_type
+from utils.tools import ensure_ngrok, start_scheduler
 from web_app import run_flask, start_ngrok
 
 
 def run_streamlit_app():
     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'start_page.py')
-    subprocess.run(["streamlit", "run", script_path, "--server.port=8501"], check=True)
+    subprocess.run(["streamlit", "run", script_path, "--server.port=8501", "--server.headless=true"], check=True)
 
 
 if __name__ == '__main__':

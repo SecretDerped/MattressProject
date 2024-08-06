@@ -2,7 +2,8 @@ import datetime
 from io import BytesIO
 
 import streamlit as st
-from fpdf import FPDF
+from openpyxl.reader.excel import load_workbook
+
 from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty, \
     load_tasks
 
@@ -137,43 +138,39 @@ class ManufacturePage(Page):
                      key=self.page_name,
                      on_change=save_employee, args=(self.page_name,))
 
-    @staticmethod
-    def export_to_pdf(row):
-        """Экспорт строки из main_data в PDF и отображение в Streamlit."""
-        pdf = FPDF()
-        pdf.add_page()
+    # Только на руинах прошлого можно построить империю будущего. Этот костыль стал надстройкой над когда-то славным
+    # классом, от которого остался лишь скелет
+    def talon_button(self, row, index):
+        # Загрузка шаблона
+        template_path = 'static/guarantee.xlsx'
+        unic_file_name = f'{self.page_name}_talon_{index}.xlsx'
+        wb = load_workbook(template_path)
+        ws = wb.active
 
-        # Используем шрифт, поддерживающий Unicode
-        pdf.add_font('DejaVu', '', 'DejaVuSans.ttf', uni=True)
-        pdf.set_font("DejaVu", size=12)
+        # Заполнение шаблона
+        ws['B4'] = "Матрас АРТ.№ " + row['article'] + '  |  ПБ: ' + row['springs']
 
-        pdf.cell(200, 10, txt="Информация о задаче", ln=True, align="C")
-        pdf.cell(200, 10, txt=f"Артикул: {row['article']}", ln=True)
-        pdf.cell(200, 10, txt=f"Ткань (Верх / Низ): {row['base_fabric']}", ln=True)
-        pdf.cell(200, 10, txt=f"Ткань (Бок): {row['side_fabric']}", ln=True)
-        pdf.cell(200, 10, txt=f"Тип доставки: {row['delivery_type']}", ln=True)
-        pdf.cell(200, 10, txt=f"Адрес: {row['address']}", ln=True)
-        pdf.cell(200, 10, txt=f"Клиент: {row['client']}", ln=True)
-        pdf.cell(200, 10, txt=f"Состав: {row['attributes']}", ln=True)
-        pdf.cell(200, 10, txt=f"Размер: {row['size']}", ln=True)
-        pdf.cell(200, 10, txt=f"Срок: {row['deadline'].strftime('%d.%m.%Y')}", ln=True)
+        ws['B6'] = row['size']
 
-        # Добавление комментария, если он есть
-        if row['comment']:
-            pdf.cell(200, 10, txt=f"Комментарий: {row['comment']}", ln=True)
+        ws['B8'] = row['deadline'].strftime('%d.%m.%Y')
 
-        # Экспорт в BytesIO объект
-        pdf_output = BytesIO()
-        pdf.output(pdf_output)
-        pdf_output.seek(0)
+        ws['B16'] = f"{row['client']}  {row['address']}" if row['address'] else 'Краснодар, ул. Демуса 6А'
 
-        # Отображение в Streamlit
-        st.download_button(
-            label="Скачать PDF",
-            data=pdf_output,
-            file_name="task_info.pdf",
-            mime="application/pdf"
-        )
+        # Сохранение в BytesIO
+        xlsx_output = BytesIO()
+        wb.save(xlsx_output)
+        xlsx_output.seek(0)
+
+        # Кнопка для скачивания
+        if st.download_button(
+            label=f":blue[**{self.print_button_text}**]",
+            data=xlsx_output,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            file_name=unic_file_name,
+            key=unic_file_name,
+        ):
+            # Ждёт, когда файл скачается в папку загрузок, а потом отправляет его на печать
+            pass
 
     @staticmethod
     def inner_box_text(row):
@@ -240,7 +237,6 @@ class ManufacturePage(Page):
                             save_to_file(main_data, self.task_cash)
                             st.rerun()
 
-                        if st.button(f":blue[**{self.print_button_text}**]", key=f'{page}_print_{index}'):
-                            self.export_to_pdf(row)  # Передача строчки данных в функцию
+                        self.talon_button(row, index)
             count += 1
         return True

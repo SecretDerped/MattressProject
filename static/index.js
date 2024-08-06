@@ -113,33 +113,34 @@ function initializePositionsAutocomplete() {
         }
         updatePositionsTable();
         updatePositionsInput();
+        toggleUniqueMattressSize();
     }
 
     function updatePositionsTable() {
-    var tableBody = $('#positionsTable tbody');
-    tableBody.empty();
-    positions.forEach(function (position, index) {
-        var row = $('<tr></tr>');
-        row.append($('<td></td>').text(position.article));
+        var tableBody = $('#positionsTable tbody');
+        tableBody.empty();
+        positions.forEach(function (position, index) {
+            var row = $('<tr></tr>');
+            row.append($('<td></td>').text(position.article));
 
-        var quantityCell = $('<td class="quantity-col"></td>');
-        var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
-            updateQuantity(index, -1);
-        });
-        var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
-            updateQuantity(index, parseInt($(this).text(), 10));
-        });
-        var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
-            updateQuantity(index, 1);
-        });
-        quantityCell.append(minusButton, quantityInput, plusButton);
-        row.append(quantityCell);
+            var quantityCell = $('<td class="quantity-col"></td>');
+            var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
+                updateQuantity(index, -1);
+            });
+            var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
+                updateQuantity(index, parseInt($(this).text(), 10));
+            });
+            var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
+                updateQuantity(index, 1);
+            });
+            quantityCell.append(minusButton, quantityInput, plusButton);
+            row.append(quantityCell);
 
-        tableBody.append(row);
-    });
+            tableBody.append(row);
+        });
 
-    $('#positionsTable').toggle(positions.length > 0);
-}
+        $('#positionsTable').toggle(positions.length > 0);
+    }
 
     function updateQuantity(index, delta) {
         var quantity = positions[index].quantity + delta;
@@ -152,8 +153,17 @@ function initializePositionsAutocomplete() {
             updatePositionsTable();
             updatePositionsInput();
         }
+        toggleUniqueMattressSize();
     }
 
+    function toggleUniqueMattressSize() {
+        var uniqueMattress = positions.some(position => position.article === 'Уникальный матрас');
+        if (uniqueMattress) {
+            $('#uniqueMattressSize').show();
+        } else {
+            $('#uniqueMattressSize').hide();
+        }
+    }
 
     $('#newArticle').autocomplete({
         source: function (request, response) {
@@ -165,7 +175,7 @@ function initializePositionsAutocomplete() {
         minLength: 0,
         select: function (event, ui) {
             addPosition(ui.item.value, 1);
-            $('#newArticle').val('');
+            $('#newArticle').val('').autocomplete("close");
             return false;
         }
     }).focus(function () {
@@ -183,7 +193,7 @@ function initializeAutocomplete(selector, apiUrl) {
         },
         minLength: 0,
         select: function (event, ui) {
-            $(selector).val(ui.item.value);
+            $(selector).val(ui.item.value).autocomplete("close");
             return false;
         }
     }).focus(function () {

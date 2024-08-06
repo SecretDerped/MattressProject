@@ -77,9 +77,9 @@ def index():
                     "high_priority": False,
                     "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
                     "article": item['article'],
-                    "size": item['size'],
+                    "size": item['size'] if item['article'] != '000' else order_data.get('size', "0/0/0"),
                     "base_fabric": order_data['base_fabric'],
-                    "side_fabric": order_data['side_fabric'],
+                    "side_fabric": order_data['side_fabric'] if order_data['side_fabric'] else order_data['base_fabric'],
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
                     "springs": order_data['springs'],
@@ -102,7 +102,7 @@ def index():
                     append_to_dataframe(task_data, tasks_cash)
 
             sbis.write_implementation(order_data)
-            return "   Заказ принят. Реализация записана. Задания созданы."
+            return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
         except KeyError as e:
             logging.error(f"Отсутствует обязательное поле {str(e)}, ", exc_info=True)
@@ -173,7 +173,7 @@ def log_sequence_sewing():
             'Ткань (Боковина)': task['side_fabric'],
             'Срок': get_date_str(task['deadline'])
         }
-    return log_sequence('Шитье', 'Отметка', filter_conditions, transform_task_data)
+    return log_sequence('Шитьё', 'Отметка', filter_conditions, transform_task_data)
 
 
 @app.route('/complete_task_sewing', methods=['POST'])
@@ -254,12 +254,15 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
 
         employee_name = get_employee_column_data(employee_id, 'name')
 
+        if not get_employee_column_data(employee_id, 'is_on_shift'):
+            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСначала нужно открыть смену.'}})
+
+        if page_name.lower() not in get_employee_column_data(employee_id, 'position').lower():
+            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nНет доступа.\nУточните свою должность.'}})
+
         tasks = load_tasks()
         if tasks.empty:
             return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСейчас пока нет задач.'}})
-
-        if not get_employee_column_data(employee_id, 'is_on_shift'):
-            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСначала нужно открыть смену.'}})
 
         filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
 
