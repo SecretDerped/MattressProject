@@ -1,11 +1,12 @@
 import datetime
-from io import BytesIO
+import os
+import time
 
 import streamlit as st
 from openpyxl.reader.excel import load_workbook
 
 from utils.tools import config, read_file, side_eval, get_date_str, save_to_file, time_now, create_cashfile_if_empty, \
-    load_tasks
+    load_tasks, print_file
 
 
 class Page:
@@ -79,7 +80,7 @@ class Page:
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
                            layout="wide")
-        
+
     def header(self):
         st.title(f'{self.icon} {self.page_name}')
 
@@ -91,8 +92,10 @@ class Page:
 class ManufacturePage(Page):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
-        self.print_button_text = 'Талон'
+        self.talon_button_text = 'Талон'
+        self.label_button_text = 'Этик.'
         self.done_button_text = 'Готово'
+        self.label_printer_name = 'Microsoft Print to PDF'
         self.header()
 
     def header(self):
@@ -141,36 +144,39 @@ class ManufacturePage(Page):
     # Только на руинах прошлого можно построить империю будущего. Этот костыль стал надстройкой над когда-то славным
     # классом, от которого остался лишь скелет
     def talon_button(self, row, index):
-        # Загрузка шаблона
-        template_path = 'static/guarantee.xlsx'
-        unic_file_name = f'{self.page_name}_talon_{index}.xlsx'
-        wb = load_workbook(template_path)
-        ws = wb.active
+        file_name = f'{self.page_name}_talon_{index}.xlsx'
+        # Кнопка для печати талона
 
-        # Заполнение шаблона
-        ws['B4'] = "Матрас АРТ.№ " + row['article'] + '  |  ПБ: ' + row['springs']
+        if st.button(label=f":blue[**{self.talon_button_text}**]", key=file_name):
+            template_path = 'static/guarantee.xlsx'
+            wb = load_workbook(template_path)
+            ws = wb.active
 
-        ws['B6'] = row['size']
+            # Заполнение шаблона
+            ws['B4'] = "Матрас АРТ.№ " + row['article'] + '  |  ПБ: ' + row['springs']
 
-        ws['B8'] = row['deadline'].strftime('%d.%m.%Y')
+            ws['B6'] = row['size']
 
-        ws['B16'] = f"{row['client']}  {row['address']}" if row['address'] else 'Краснодар, ул. Демуса 6А'
+            ws['B8'] = row['deadline'].strftime('%d.%m.%Y')
 
-        # Сохранение в BytesIO
-        xlsx_output = BytesIO()
-        wb.save(xlsx_output)
-        xlsx_output.seek(0)
+            ws['B16'] = f"{row['client']}  {row['address']}" if row['address'] else 'Краснодар, ул. Демуса 6А'
 
-        # Кнопка для скачивания
-        if st.download_button(
-            label=f":blue[**{self.print_button_text}**]",
-            data=xlsx_output,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            file_name=unic_file_name,
-            key=unic_file_name,
-        ):
-            # Ждёт, когда файл скачается в папку загрузок, а потом отправляет его на печать
-            pass
+            file_path = fr'cash\{file_name}'
+            wb.save(file_path)
+            print_file(file_path)
+            st.toast("Сейчас распечатается талон...", icon='🖨️')
+            time.sleep(1)
+            try:
+                os.remove(file_path)
+            except Exception:
+                time.sleep(0.5)
+
+    def label_button(self, row, index):
+        article = row['article']
+        if st.button(label=f":orange[**{self.label_button_text}**]", key=f"{article}_{index}"):
+            print(article)
+            template_path = fr"static\labels\{article}.pdf"
+            print_file(template_path)
 
     @staticmethod
     def inner_box_text(row):
@@ -238,5 +244,6 @@ class ManufacturePage(Page):
                             st.rerun()
 
                         self.talon_button(row, index)
+                        self.label_button(row, index)
             count += 1
         return True

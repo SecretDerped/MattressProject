@@ -1,10 +1,13 @@
 import os
+import platform
 import re
 import sys
 import tomli
 import shutil
 import socket
 import locale
+import win32print
+import win32api
 import pandas as pd
 import streamlit as st
 from datetime import datetime, timedelta
@@ -293,6 +296,39 @@ def create_message_str(data):
         order_message += f"\n\nКомментарий: {comment}"
 
     return order_message
+
+
+def get_printers():
+    """Функция для получения списка принтеров в зависимости от операционной системы."""
+    printers = []
+    if platform.system() == "Windows":
+        printers = [printer[2] for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
+    elif platform.system() == "Darwin" or platform.system() == "Linux":
+        import cups
+        conn = cups.Connection()
+        printers = list(conn.getPrinters().keys())
+    return printers
+
+
+def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
+    """Функция для печати файла в зависимости от операционной системы."""
+    if platform.system() == "Windows":
+        print(get_printers())
+        win32api.ShellExecute(
+            0,
+            "print",
+            file_path,
+            f'/d:"{printer_name}"',
+            ".",
+            0
+        )
+
+    else:
+        import cups
+        conn = cups.Connection()
+        printers = conn.getPrinters()
+        printer_name = list(printers.keys())[0]
+        conn.printFile(printer_name, file_path, "Print Job", {})
 
 
 def start_scheduler(hour: int = 0, minute: int = 0) -> None:
