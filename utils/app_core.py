@@ -93,9 +93,9 @@ class ManufacturePage(Page):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
         self.talon_button_text = 'Талон'
-        self.label_button_text = 'Этик.'
+        self.label_button_text = 'Этикетка'
         self.done_button_text = 'Готово'
-        self.label_printer_name = 'Microsoft Print to PDF'
+        self.label_printer_name = 'Pantum-M6500W-Series FFFFFF'
         self.header()
 
     def header(self):
@@ -135,8 +135,8 @@ class ManufacturePage(Page):
             st.session_state[position] = st.session_state[position]
 
         st.selectbox('Ответственный',
-                     options=self.employees_on_shift(self.page_name),
                      placeholder="Выберите сотрудника",
+                     options=self.employees_on_shift(self.page_name),
                      index=None,
                      key=self.page_name,
                      on_change=save_employee, args=(self.page_name,))
@@ -174,9 +174,8 @@ class ManufacturePage(Page):
     def label_button(self, row, index):
         article = row['article']
         if st.button(label=f":orange[**{self.label_button_text}**]", key=f"{article}_{index}"):
-            print(article)
-            template_path = fr"static\labels\{article}.pdf"
-            print_file(template_path)
+            file_path = fr"static\labels\{article}.pdf"
+            print_file(file_path)
 
     @staticmethod
     def inner_box_text(row):

@@ -1,20 +1,24 @@
 import os
-import platform
 import re
 import sys
 import tomli
 import shutil
 import socket
 import locale
+import platform
+
 import win32print
 import win32api
+
 import pandas as pd
 import streamlit as st
-from datetime import datetime, timedelta
+import aspose.pdf as ap
+
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from datetime import datetime, timedelta
 
 # Создание директории cash, если она не существует
 if not os.path.exists('cash'):
@@ -299,36 +303,31 @@ def create_message_str(data):
 
 
 def get_printers():
-    """Функция для получения списка принтеров в зависимости от операционной системы."""
-    printers = []
-    if platform.system() == "Windows":
-        printers = [printer[2] for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
-    elif platform.system() == "Darwin" or platform.system() == "Linux":
-        import cups
-        conn = cups.Connection()
-        printers = list(conn.getPrinters().keys())
-    return printers
+    """Функция для получения списка принтеров в Windows."""
+    return [printer[2] for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL)]
 
 
 def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
-    """Функция для печати файла в зависимости от операционной системы."""
-    if platform.system() == "Windows":
-        print(get_printers())
+    """Функция для печати файла в системе Windows."""
+    print(get_printers())
+    file_name, file_extension = os.path.splitext(file_path)
+
+    if file_extension.lower() == '.pdf':
+
+        viewer = ap.facades.PdfViewer()  # Создать объект PDFViewer
+        viewer.bind_pdf(file_path)  # Открыть входной PDF-файл
+        viewer.print_document()  # Распечатать PDF-документ
+        viewer.close()  # Закрыть PDF-файл
+
+    else:
+        #
         win32api.ShellExecute(
             0,
             "print",
             file_path,
             f'/d:"{printer_name}"',
             ".",
-            0
-        )
-
-    else:
-        import cups
-        conn = cups.Connection()
-        printers = conn.getPrinters()
-        printer_name = list(printers.keys())[0]
-        conn.printFile(printer_name, file_path, "Print Job", {})
+            0)
 
 
 def start_scheduler(hour: int = 0, minute: int = 0) -> None:
