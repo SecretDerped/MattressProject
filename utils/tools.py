@@ -5,7 +5,6 @@ import tomli
 import shutil
 import socket
 import locale
-import platform
 
 import win32print
 import win32api
@@ -13,6 +12,7 @@ import win32api
 import pandas as pd
 import streamlit as st
 import aspose.pdf as ap
+import aspose.pydrawing as drawing
 
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
@@ -309,10 +309,14 @@ def get_printers():
 
 def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
     """Функция для печати файла в системе Windows."""
-    print(get_printers())
     file_name, file_extension = os.path.splitext(file_path)
+    logging.debug(f"Available printers: {get_printers()}")
+    logging.debug(f"Selected printer: {printer_name}")
 
     if file_extension.lower() == '.pdf':
+        # Устанавливаем дефолтный принтер
+        win32print.SetDefaultPrinterW(printer_name)
+        win32print.SetDefaultPrinter(printer_name)
 
         viewer = ap.facades.PdfViewer()  # Создать объект PDFViewer
         viewer.bind_pdf(file_path)  # Открыть входной PDF-файл
@@ -320,7 +324,10 @@ def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
         viewer.close()  # Закрыть PDF-файл
 
     else:
-        #
+        # Устанавливаем дефолтный принтер
+        win32print.SetDefaultPrinterW(printer_name)
+        win32print.SetDefaultPrinter(printer_name)
+
         win32api.ShellExecute(
             0,
             "print",

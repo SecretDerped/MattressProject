@@ -95,7 +95,7 @@ class ManufacturePage(Page):
         self.talon_button_text = 'Талон'
         self.label_button_text = 'Этикетка'
         self.done_button_text = 'Готово'
-        self.label_printer_name = 'Pantum-M6500W-Series FFFFFF'
+        self.label_printer_name = 'Xprinter xp-370b'
         self.header()
 
     def header(self):
@@ -174,8 +174,11 @@ class ManufacturePage(Page):
     def label_button(self, row, index):
         article = row['article']
         if st.button(label=f":orange[**{self.label_button_text}**]", key=f"{article}_{index}"):
-            file_path = fr"static\labels\{article}.pdf"
-            print_file(file_path)
+            try:
+                file_path = fr"static\labels\{article}.pdf"
+                print_file(file_path, self.label_printer_name)
+            except FileNotFoundError:
+                print_file("static\labels\800.pdf")
 
     @staticmethod
     def inner_box_text(row):
