@@ -287,8 +287,7 @@ class SBISWebApp(SBISApiManager):
     def create_implementation_xml(self, data):
         today = datetime.today().strftime('%d.%m.%Y')
 
-        delivery_date_str = data.get('delivery_date', None)
-        delivery_date = datetime.strptime(delivery_date_str, '%Y-%m-%d').strftime('%d.%m.%Y')
+        delivery_date = datetime.strptime(data.get('delivery_date', '2000-01-01'), '%Y-%m-%d').strftime('%d.%m.%Y')
         # Заменяем двойные кавычки на &quot;, иначе XML посчитает эти кавычки за конец строки и разметка сломается.
         customer_name = data.get('party', None).replace('"', '&quot;')
 
@@ -306,9 +305,6 @@ class SBISWebApp(SBISApiManager):
             company_address = customer_info.get('address_data', {}).get('value', None)
 
         comment = data.get('comment', None).replace('"', '&quot;')
-        items = data.get('positionsData', '[]')
-
-        full_price = round(float(data.get('price', None)), 2)
 
         xml_content = f'''<?xml version="1.0" encoding="WINDOWS-1251" ?>
 <Файл ВерсФорм="5.02">
@@ -398,16 +394,21 @@ class SBISWebApp(SBISApiManager):
         item_num = 1
         total_quantity = 0
         total_price = 0
-        for item in items:
-            item_name = item['article'].replace('"', '&quot;')
-            quantity = int(item.get('quantity', '1'))
-            total_quantity += quantity
-            info = self.nomenclatures_list[item['article']]
+        positions = data.get('positionsData', '[]')
+        for position in positions:
+            position_price = position['price']
+            item_name = position['article'].replace('"', '&quot;')
+            item_quantity = int(position.get('quantity', '1'))
+            total_quantity += item_quantity
+            item_price = position_price / item_quantity
+
+            info = self.nomenclatures_list[position['article']]
             code = info.get("code")
-            price = info.get('price')
-            total_price += price
+
+            total_price += position_price
+            #  НаимЕдИзм="шт"
             xml_content += f'''
-        <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
+        <СвТов КодТов="{code}" НаимТов="{item_name}" НалСт="без НДС" НеттоПередано="{item_quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{position_price}" СтУчНДС="{position_price}" Цена="{item_price}">
           <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
           <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
           <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
@@ -415,11 +416,8 @@ class SBISWebApp(SBISApiManager):
         </СвТов>'''
             item_num += 1
 
-        if not full_price:
-            full_price = total_price
-
         xml_content += f'''
-        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
+        <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{total_price}" СтУчНДСВс="{total_price}"/>
       </СодФХЖ2>
     </СвДокПТПрКроме>
     <СодФХЖ3 СодОпер="Перечисленные в документе ценности переданы"/>
@@ -448,9 +446,12 @@ class SBISWebApp(SBISApiManager):
         comment = order_data.get('comment', None).replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
 
-        prepayment = round(float(order_data.get('prepayment', None)), 2)
-        amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
-
+        prepayment = order_data['prepayment']
+        positions_data = order_data['positionsData']
+        total_price = 0
+        for position in positions_data:
+            total_price += position['price']
+        amount_to_receive = total_price - prepayment
         self.create_implementation_xml(order_data)
 
         with open(imp_filepath, "rb") as file:

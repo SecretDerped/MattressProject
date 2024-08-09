@@ -118,6 +118,18 @@ body {
     background-color: #0056b3;
 }
 
+/* Стили для отображения цены под количеством */
+.quantity-price-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+ }
+
+.price-input {
+    margin-top: 5px;
+    width: 100%;
+}
+
 /* Переопределяем стиль контейнера подсказок */
 .ui-autocomplete {
     max-height: 200px; /* Максимальная высота списка */

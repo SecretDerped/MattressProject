@@ -1,6 +1,8 @@
 import os
 import re
 import sys
+
+import httpx
 import tomli
 import shutil
 import socket
@@ -49,6 +51,9 @@ config = load_conf()
 
 site_conf = config.get('site')
 flask_port = site_conf.get('flask_port')
+
+tg_conf = config.get('telegram')
+tg_token = tg_conf.get('token')
 
 hardware = site_conf.get('hardware')
 tasks_cash = hardware.get('tasks_cash_filepath')
@@ -273,19 +278,22 @@ def time_now():
 
 def create_message_str(data):
     positions_data = data['positionsData']
-    positions = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
-    date = data['delivery_date']
+    positions = '\n'
+    total_price = 0
+    for item in positions_data:
+        positions += f"{item['article']} - {item['quantity']} шт. за {item['price']} р.\n"
+        total_price += item['price']
     contact = data['contact']
+    date = data['delivery_date']
     type = data['delivery_type']
     region = data['region_select']
     address = data['delivery_address']
-    price = data.get('price', 'Не указано')
     prepay = data['prepayment']
-    to_reserve = data['amount_to_receive']
+    to_reserve = total_price - prepay
     comment = data['comment']
     order_message = (f"Заявка от клиента: {data['party']}\n\n"
 
-                     f"Позиции:\n{positions}\n\n"
+                     f"Позиции:\n{positions}\n"
 
                      f"Контакт: {contact}\n"
                      f"Дата получения: {date}\n"
@@ -294,7 +302,7 @@ def create_message_str(data):
     if address != '':
         order_message += f"Адрес:\n {address}\n\n"
 
-    order_message += f"Цена: {price}\n"
+    order_message += f"Цена: {total_price}\n"
     if prepay != '0':
         order_message += f"Предоплата: {prepay}\n"
     order_message += f"Нужно получить: {to_reserve}"
@@ -303,6 +311,20 @@ def create_message_str(data):
         order_message += f"\n\nКомментарий: {comment}"
 
     return order_message
+
+
+def send_telegram_message(text, chat_id: str = tg_conf.get('group_chat_id')):
+    """Отправляет текстовое сообщение ботом в telegram в указанный chat_id. Если не указывать, перешлёт в группу
+    telegram по заявкам. Её id прописывается в app_config"""
+
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+
+    data = {"chat_id": chat_id, "text": text}
+    logging.info(f"Отправка сообщения в Telegram. URL: {url}, данные: {data}")
+
+    response = httpx.post(url, data=data)
+    logging.debug(f"Получен ответ от Telegram API: {response.json()}")
+    return response.json()
 
 
 def get_printers():

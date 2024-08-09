@@ -12,7 +12,7 @@
 </head>
 
 <body>
-    <h1 class="mb-4 font-weight-bold new-request-heading">📜 Новая заявка</h1>
+    <h1 class="mb-4 font-weight-bold new-request-heading">📋 Новая заявка</h1>
     <div class="container mt-3">
         <form method="POST">
             <!-- Первая колонка формы -->
@@ -27,7 +27,7 @@
                     <table class="table" id="positionsTable">
                         <thead>
                             <tr>
-                                <th>Выбранные позиции</th>
+                                <th>Позиции</th>
                                 <th>Количество</th>
                             </tr>
                         </thead>
@@ -41,21 +41,40 @@
                     <label for="size" class="form-label">Размер уникального матраса</label>
                     <input type="text" id="size" name="size" class="form-control" placeholder="Запишите тремя числами: Длина/Ширина/Высота">
                 </div>
-                <!-- Ткань (база) -->
-                <div class="form-group">
-                    <label for="base_fabric" class="form-label">Ткань (верху и внизу)</label>
-                    <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
+
+                <div class="form-group row">
+                    <div class="col-12 col-md-6">
+                        <label for="base_fabric" class="form-label">Ткань (верху и внизу)</label>
+                        <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="base_fabric_price" class="form-label">Цена ткани на матрас</label>
+                        <input type="number" id="base_fabric_price" name="base_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
+                    </div>
                 </div>
-                <!-- Ткань (бочина) -->
-                <div class="form-group">
-                    <label for="side_fabric" class="form-label">Ткань (сбоку)</label>
-                    <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань такая же.">
+
+                <div class="form-group row">
+                    <div class="col-12 col-md-6">
+                        <label for="side_fabric" class="form-label">Ткань (сбоку)</label>
+                        <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань, как выше">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="side_fabric_price" class="form-label">Цена ткани на матрас</label>
+                        <input type="number" id="side_fabric_price" name="side_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
+                    </div>
                 </div>
-                <!-- Пружины -->
-                <div class="form-group">
-                    <label for="springs" class="form-label">Пружинный блок</label>
-                    <input type="text" id="springs" name="springs" class="form-control" placeholder="Введите название пружин...">
+
+                <div class="form-group row">
+                    <div class="col-12 col-md-6">
+                        <label for="springs" class="form-label">Пружинный блок</label>
+                        <input type="text" id="springs" name="springs" class="form-control" placeholder="Если требуется, введите название...">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="springs_price" class="form-label">Цена ПБ</label>
+                        <input type="number" id="springs_price" name="springs_price" class="form-control" step="0.01" placeholder="Цена БП для одного матраса">
+                    </div>
                 </div>
+
                 <!-- Комментарий -->
                 <div class="form-group">
                     <label for="comment" class="form-label">Комментарий ко всему заказу</label>
@@ -88,24 +107,19 @@
                         <label for="delivery_date" class="form-label">Срок до:</label>
                         <input type="date" id="delivery_date" name="delivery_date" class="form-control">
                     </div>
-                    <!-- Контакт -->
-                    <div class="form-group">
-                        <label for="contact" class="form-label">Контакты</label>
-                        <input type="text" id="contact" name="contact" class="form-control">
-                    </div>
                 </div>
                 <!-- Вторая внутренняя колонка формы -->
                 <div class="form-column">
-                    <!-- Цена -->
-                    <div class="form-group">
-                        <label for="price" class="form-label">Цена</label>
-                        <input type="number" id="price" name="price" class="form-control" step="0.01">
-                    </div>
                     <!-- Предоплата -->
                     <div class="form-group">
                         <label for="prepayment" class="form-label">Предоплата</label>
                         <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
                     </div>
+                </div>
+                <!-- Контакт -->
+                <div class="form-group">
+                    <label for="contact" class="form-label">Контакты</label>
+                    <input type="text" id="contact" name="contact" class="form-control">
                 </div>
                 <!-- Тип доставки и адрес -->
                 <div class="form-group delivery-type-group">

@@ -125,7 +125,7 @@ function initializePositionsAutocomplete() {
         if (existingPosition) {
             existingPosition.quantity += quantity;
         } else {
-            positions.push({ article: article, quantity: quantity, price: 0 });
+            positions.push({ article: article, quantity: quantity, price: '' }); // То, что и заносится в таблицу позиций
         }
         updatePositionsTable();
         updatePositionsInput();
@@ -139,7 +139,8 @@ function initializePositionsAutocomplete() {
             var row = $('<tr></tr>');
             row.append($('<td></td>').text(position.article));
 
-            var quantityCell = $('<td class="quantity-col"></td>');
+            var quantityPriceGroup = $('<td class="quantity-price-group"></td>');
+            var quantityCell = $('<div class="quantity-cell"></div>');
             var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
                 updateQuantity(index, -1);
             });
@@ -150,22 +151,22 @@ function initializePositionsAutocomplete() {
                 updateQuantity(index, 1);
             });
             quantityCell.append(minusButton, quantityInput, plusButton);
-            row.append(quantityCell);
 
-            // Новая колонка для цены
-            var priceCell = $('<td></td>');
             var priceInput = $('<input type="number" class="form-control price-input" min="0" step="0.01" placeholder="Цена">')
                 .val(position.price)
                 .on('input', function () {
                     updatePrice(index, parseFloat($(this).val()));
                 });
-            priceCell.append(priceInput);
-            row.append(priceCell);
+
+            quantityPriceGroup.append(quantityCell, priceInput);
+            row.append(quantityPriceGroup);
 
             tableBody.append(row);
         });
 
-        $('#positionsTable').toggle(positions.length > 0);
+        if (positions.length > 0) {
+            $('#positionsTable').show();
+        }
     }
 
     function updateQuantity(index, delta) {

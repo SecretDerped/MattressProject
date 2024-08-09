@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import time
-import httpx
 import logging
 import subprocess
 from io import BytesIO
@@ -12,7 +11,7 @@ from flask import Flask, render_template, request, abort, jsonify
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, create_message_str, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message
 
 config = load_conf()
 
@@ -25,12 +24,10 @@ price_list_name = sbis_config.get('price_list_name')
 site_config = config.get('site')
 regions = site_config.get('regions')
 flask_port = site_config.get('flask_port')
-tasks_cash = site_config.get('tasks_cash_filepath')
-employees_cash = site_config.get('employees_cash_filepath')
 
-tg_conf = config.get('telegram')
-tg_token = tg_conf.get('token')
-tg_chat_id = tg_conf.get('group_chat_id')
+hardware = site_config.get('hardware')
+tasks_cash = hardware.get('tasks_cash_filepath')
+employees_cash = hardware.get('employees_cash_filepath')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -41,6 +38,13 @@ springs = {key: value for key, value in nomenclatures.items() if value['is_sprin
 
 sequence_buffer = {}
 current_tasks = {}
+
+
+def str_num_to_float(string: str):
+    try:
+        return round(float(string), 2)
+    except (ValueError, TypeError):
+        return 0
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -57,22 +61,20 @@ def index():
 
             order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
 
-            # Не трогай, это на новый год
-            order_data['price'] = float(order_data.get('price')) if order_data.get('price') != '' else 0
-            order_data['prepayment'] = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
-            order_data['amount_to_receive'] = order_data['price'] - order_data['prepayment']
-
-            tg_message = create_message_str(order_data)
-            logging.info(f"Сформировано сообщение для заказа: {tg_message}")
-
-            send_telegram_message(tg_message, tg_chat_id)
-            logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {tg_chat_id}")
+            order_data['prepayment'] = str_num_to_float(order_data['prepayment'])
 
             mattress_quantity = 0
+            total_price = 0
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
             for position in order_data['positionsData']:
                 item = nomenclatures[position['article']]
+                item_quantity = int(position['quantity'])
+
+                position['price'] = str_num_to_float(position['price'])
+
+                total_price += position['price']
+
                 # Позиции не в группе "Матрасы" пропускаются
                 if not item['is_mattress']:
                     continue
@@ -100,31 +102,34 @@ def index():
                     "region": order_data['region_select'],
                     "created": dt.now(),
                 }
-                for _ in range(int(position['quantity'])):
-                    # В этом методе данные будут заполняться из этого словаря построчно.
-                    # При добавлении нового поля, или перемещении, нужно это учитывать.
-                    # Порядок task_data должен быть как в tasks_columns_config на странице бригадира
+                for _ in range(item_quantity):
+                    # Порядок task_data должен быть как в tasks_columns_config в app_core
                     append_to_dataframe(task_data, tasks_cash)
 
             # Вносим в реализацию ткани и пружины
             if order_data['base_fabric']:
                 order_data['positionsData'].append({
                     'article': order_data['base_fabric'],
-                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1)
+                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
+                    'price': str_num_to_float(order_data['base_fabric_price'])
                 })
                 if order_data['side_fabric']:
                     order_data['positionsData'].append({
                         'article': order_data['side_fabric'],
-                        'quantity': mattress_quantity
+                        'quantity': mattress_quantity,
+                        'price': str_num_to_float(order_data['side_fabric_price'])
                     })
 
             if order_data['springs']:
                 order_data['positionsData'].append({
                     'article': order_data['springs'],
-                    'quantity': mattress_quantity
+                    'quantity': mattress_quantity,
+                    'price': str_num_to_float(order_data['springs_price'])
                 })
 
             sbis.write_implementation(order_data)
+            tg_message = create_message_str(order_data)
+            send_telegram_message(tg_message)
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
         except KeyError as e:
@@ -156,15 +161,19 @@ def log_sequence_gluing():
     ]
 
     def transform_task_data(task):
-        return {
+        message = {
             'Артикул': task['article'],
             'Состав': task['attributes'],
-            'Тип ткани (Верх / Низ)': fabric_type(task['base_fabric']),
-            'Тип ткани (Боковина)': fabric_type(task['side_fabric']),
+            'Ткань (Верх / низ)': fabric_type(task['base_fabric']),
+            'Ткань (Боковина)': fabric_type(task['side_fabric']),
             'Пружины': task['springs'],
             'Размер': task['size'],
             'Срок': get_date_str(task['deadline'])
         }
+
+        if task['comment']:
+            message['Комментарий'] = f"<strong>{task['comment']}</strong>"
+        return message
 
     return log_sequence('Сборка', 'Отметка', filter_conditions, transform_task_data)
 
@@ -190,13 +199,17 @@ def log_sequence_sewing():
     ]
 
     def transform_task_data(task):
-        return {
+        message = {
             'Артикул': task['article'],
             'Размер': task['size'],
             'Ткань (Верх / Низ)': task['base_fabric'],
             'Ткань (Боковина)': task['side_fabric'],
             'Срок': get_date_str(task['deadline'])
         }
+        if task['comment']:
+            message['Комментарий'] = f"<strong>{task['comment']}</strong>"
+        return message
+
     return log_sequence('Шитьё', 'Отметка', filter_conditions, transform_task_data)
 
 
@@ -361,17 +374,6 @@ def update_task_history(tasks, task_id, page_name, employee_name, action):
     else:
         tasks.at[task_id, 'history'] = history_note
     logging.debug(f"История задачи {task_id} обновлена: {history_note}")
-
-
-def send_telegram_message(text, chat_id):
-    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
-
-    data = {"chat_id": chat_id, "text": text}
-    logging.info(f"Отправка сообщения в Telegram. URL: {url}, данные: {data}")
-
-    response = httpx.post(url, data=data)
-    logging.debug(f"Получен ответ от Telegram API: {response.json()}")
-    return response.json()
 
 
 def start_ngrok():
