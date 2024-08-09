@@ -7,9 +7,10 @@ from utils.tools import config
 
 
 class Tg:
-    def __init__(self, webapp_url):
+    def __init__(self, webapp_url, group_chat_id=None):
         self.app_url = webapp_url
         self.bot_token = config.get('telegram').get('token')
+        self.group_chat_id = group_chat_id  # ID группы, куда будут отправляться сообщения
         self.bot = Bot(token=self.bot_token)
         self.router = Router()
 

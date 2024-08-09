@@ -77,6 +77,22 @@ $(document).ready(function () {
     initializePositionsAutocomplete();
 });
 
+$(document).ready(function () {
+    // Скролл к инпуту при фокусе на нем
+    $('input[type="text"], textarea').focus(function () {
+        // Определение текущего элемента
+        var inputField = $(this);
+
+        // Небольшая задержка, чтобы клавиатура успела появиться
+        setTimeout(function () {
+            var elementTop = inputField.offset().top;
+            $('html, body').animate({
+                scrollTop: elementTop - 20 // Смещение на 20px выше
+            }, 300); // Анимация скролла на 300 мс
+        }, 250);
+    });
+});
+
 function setInitialDateAndRegion() {
     var today = new Date();
     var dd = String(today.getDate()).padStart(2, '0');
@@ -109,7 +125,7 @@ function initializePositionsAutocomplete() {
         if (existingPosition) {
             existingPosition.quantity += quantity;
         } else {
-            positions.push({ article: article, quantity: quantity });
+            positions.push({ article: article, quantity: quantity, price: 0 });
         }
         updatePositionsTable();
         updatePositionsInput();
@@ -136,6 +152,16 @@ function initializePositionsAutocomplete() {
             quantityCell.append(minusButton, quantityInput, plusButton);
             row.append(quantityCell);
 
+            // Новая колонка для цены
+            var priceCell = $('<td></td>');
+            var priceInput = $('<input type="number" class="form-control price-input" min="0" step="0.01" placeholder="Цена">')
+                .val(position.price)
+                .on('input', function () {
+                    updatePrice(index, parseFloat($(this).val()));
+                });
+            priceCell.append(priceInput);
+            row.append(priceCell);
+
             tableBody.append(row);
         });
 
@@ -156,6 +182,13 @@ function initializePositionsAutocomplete() {
         toggleUniqueMattressSize();
     }
 
+    function updatePrice(index, price) {
+        if (!isNaN(price)) {
+            positions[index].price = price;
+            updatePositionsInput();
+        }
+    }
+
     function toggleUniqueMattressSize() {
         var uniqueMattress = positions.some(position => position.article === 'Уникальный матрас');
         if (uniqueMattress) {
@@ -169,7 +202,7 @@ function initializePositionsAutocomplete() {
         source: function (request, response) {
             $.getJSON('/api/nomenclatures', function (data) {
                 var results = $.ui.autocomplete.filter(data, request.term);
-                response(results.slice(0, 5));
+                response(results.slice(0, 30)); // Ограничиваем количество результатов до 30
             });
         },
         minLength: 0,
@@ -188,15 +221,40 @@ function initializeAutocomplete(selector, apiUrl) {
         source: function (request, response) {
             $.getJSON(apiUrl, function (data) {
                 var results = $.ui.autocomplete.filter(data, request.term);
-                response(results.slice(0, 5));
+                response(results.slice(0, 50)); // Ограничиваем количество результатов до 30
             });
         },
         minLength: 0,
         select: function (event, ui) {
             $(selector).val(ui.item.value).autocomplete("close");
             return false;
-        }
+        },
     }).focus(function () {
         $(this).autocomplete("search", "");
     });
 }
+
+$(document).ready(function () {
+    $('form').on('submit', function (event) {
+        event.preventDefault(); // Останавливаем стандартное поведение формы
+
+        var form = $(this);
+
+        $.ajax({
+            type: form.attr('method'),
+            url: form.attr('action'),
+            data: form.serialize(),
+            success: function (response) {
+                if (response.includes("Заявка принята")) {
+                    alert(response.trim()); // Показываем сообщение с результатом
+                    window.location.reload(); // Перезагружаем страницу
+                } else {
+                    alert("Что-то пошло не так. Пожалуйста, попробуйте еще раз.");
+                }
+            },
+            error: function () {
+                alert("Ошибка при отправке формы. Пожалуйста, попробуйте еще раз.");
+            }
+        });
+    });
+});

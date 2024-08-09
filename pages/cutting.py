@@ -15,9 +15,9 @@ class CuttingPage(ManufacturePage):
                     (data['sewing_is_done'] == False) &
                     (data['packing_is_done'] == False)]
 
-    @st.experimental_fragment(run_every="1s")
-    def cutting_tiles(self):
-        super().show_tasks_tiles(self.cutting_tasks(), 'fabric_is_done', 3)
+    # @st.experimental_fragment(run_every="1s")
+    # def cutting_tiles(self):
+    #    super().show_tasks_tiles(self.cutting_tasks(), 'fabric_is_done', 3)
 
     @st.experimental_fragment(run_every="1s")
     def cutting_frame(self):

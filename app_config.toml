@@ -26,10 +26,14 @@ delivery_types = [
 ]
 streamlit_port = '8501'
 flask_port = '5000'
+
+[site.hardware]
+default_printer = 'HP Ink Tank 110 series'  # Название стандартного принтера для печати гарантийных талонов
+label_printer = 'Xprinter xp-370b'  # Название термопринтера для печати наклеек
+backup_path = "backup"  # В эту папку будут складываться бэкапы
+log_filepath = "cash/application.log"  # В этот файл будут записываться логи
 tasks_cash_filepath = "cash/tasks.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
 employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
-log_filepath = "cash/application.log"
-backup_path = "backup"
 
 [sbis]
 # Данные от аккаунта СБИС. От его имени будут формироваться заявки
@@ -67,3 +71,4 @@ direct_sell = "f67256dd-8674-4a75-91d0-22d3494e4c13" # Розница
 
 [telegram]
 token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"
+group_chat_id = '-1002167954426'

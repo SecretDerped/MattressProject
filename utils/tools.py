@@ -12,7 +12,6 @@ import win32api
 import pandas as pd
 import streamlit as st
 import aspose.pdf as ap
-import aspose.pydrawing as drawing
 
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
@@ -50,10 +49,12 @@ config = load_conf()
 
 site_conf = config.get('site')
 flask_port = site_conf.get('flask_port')
-tasks_cash = site_conf.get('tasks_cash_filepath')
-employees_cash = site_conf.get('employees_cash_filepath')
-backup_folder = site_conf.get('backup_path')
-log_path = site_conf.get('log_filepath')
+
+hardware = site_conf.get('hardware')
+tasks_cash = hardware.get('tasks_cash_filepath')
+employees_cash = hardware.get('employees_cash_filepath')
+backup_folder = hardware.get('backup_path')
+log_path = hardware.get('log_filepath')
 
 log_format = '[%(asctime)s | %(name)s]: %(message)s'
 log_level = INFO
@@ -274,6 +275,7 @@ def create_message_str(data):
     positions_data = data['positionsData']
     positions = "\n".join([f"{item['article']} - {item['quantity']} шт." for item in positions_data])
     date = data['delivery_date']
+    contact = data['contact']
     type = data['delivery_type']
     region = data['region_select']
     address = data['delivery_address']
@@ -285,6 +287,7 @@ def create_message_str(data):
 
                      f"Позиции:\n{positions}\n\n"
 
+                     f"Контакт: {contact}\n"
                      f"Дата получения: {date}\n"
                      f"Тип доставки: {type}\n"
                      f"Регион: {region}\n")

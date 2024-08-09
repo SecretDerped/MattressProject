@@ -28,7 +28,9 @@ flask_port = site_config.get('flask_port')
 tasks_cash = site_config.get('tasks_cash_filepath')
 employees_cash = site_config.get('employees_cash_filepath')
 
-tg_token = config.get('telegram').get('token')
+tg_conf = config.get('telegram')
+tg_token = tg_conf.get('token')
+tg_chat_id = tg_conf.get('group_chat_id')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -43,7 +45,7 @@ current_tasks = {}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    chat_id = request.args.get('chat_id')
+    #chat_id = request.args.get('chat_id')
     if request.method == 'POST':
         logging.info(f"Получен POST-запрос. Данные формы: {request.form}")
 
@@ -55,6 +57,7 @@ def index():
 
             order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
 
+            # Не трогай, это на новый год
             order_data['price'] = float(order_data.get('price')) if order_data.get('price') != '' else 0
             order_data['prepayment'] = float(order_data.get('prepayment')) if order_data.get('prepayment') != '' else 0
             order_data['amount_to_receive'] = order_data['price'] - order_data['prepayment']
@@ -62,9 +65,10 @@ def index():
             tg_message = create_message_str(order_data)
             logging.info(f"Сформировано сообщение для заказа: {tg_message}")
 
-            send_telegram_message(tg_message, chat_id)
-            logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {chat_id}")
+            send_telegram_message(tg_message, tg_chat_id)
+            logging.debug(f"Сообщение отправлено в Telegram. Chat ID: {tg_chat_id}")
 
+            mattress_quantity = 0
             # В positionsData находится только название позиции и количество.
             # По названию будут подтягиваться данные из словаря номенклатуры.
             for position in order_data['positionsData']:
@@ -72,6 +76,7 @@ def index():
                 # Позиции не в группе "Матрасы" пропускаются
                 if not item['is_mattress']:
                     continue
+                mattress_quantity += 1
 
                 task_data = {
                     "high_priority": False,
@@ -79,10 +84,10 @@ def index():
                     "article": item['article'],
                     "size": item['size'] if item['article'] != '000' else order_data.get('size', "0/0/0"),
                     "base_fabric": order_data['base_fabric'],
-                    "side_fabric": order_data['side_fabric'] if order_data['side_fabric'] else order_data['base_fabric'],
+                    "side_fabric": order_data['side_fabric'] or order_data['base_fabric'],
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
-                    "springs": order_data['springs'],
+                    "springs": order_data["springs"] or 'нет',
                     "attributes": item['structure'],
                     "fabric_is_done": False,
                     "gluing_is_done": False,
@@ -100,6 +105,24 @@ def index():
                     # При добавлении нового поля, или перемещении, нужно это учитывать.
                     # Порядок task_data должен быть как в tasks_columns_config на странице бригадира
                     append_to_dataframe(task_data, tasks_cash)
+
+            # Вносим в реализацию ткани и пружины
+            if order_data['base_fabric']:
+                order_data['positionsData'].append({
+                    'article': order_data['base_fabric'],
+                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1)
+                })
+                if order_data['side_fabric']:
+                    order_data['positionsData'].append({
+                        'article': order_data['side_fabric'],
+                        'quantity': mattress_quantity
+                    })
+
+            if order_data['springs']:
+                order_data['positionsData'].append({
+                    'article': order_data['springs'],
+                    'quantity': mattress_quantity
+                })
 
             sbis.write_implementation(order_data)
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
@@ -138,6 +161,7 @@ def log_sequence_gluing():
             'Состав': task['attributes'],
             'Тип ткани (Верх / Низ)': fabric_type(task['base_fabric']),
             'Тип ткани (Боковина)': fabric_type(task['side_fabric']),
+            'Пружины': task['springs'],
             'Размер': task['size'],
             'Срок': get_date_str(task['deadline'])
         }

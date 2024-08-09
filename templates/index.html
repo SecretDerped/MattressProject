@@ -20,6 +20,10 @@
                 <!-- Позиции -->
                 <div class="form-group">
                     <label for="positionsTable" class="form-label"> </label>
+
+                    <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
+                    <input type="hidden" id="positionsData" name="positionsData" value="" required>
+
                     <table class="table" id="positionsTable">
                         <thead>
                             <tr>
@@ -31,8 +35,6 @@
                             <!-- Строки с позициями будут добавляться здесь -->
                         </tbody>
                     </table>
-                    <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
-                    <input type="hidden" id="positionsData" name="positionsData" value="" required>
                 </div>
                 <!-- Поле "Размер" -->
                 <div class="form-group" id="uniqueMattressSize" style="display: none;">
@@ -151,6 +153,7 @@
             <div class="form-group">
                 <button type="submit" id="submitBtn" class="btn btn-primary" disabled>Создать реализацию</button>
             </div>
+            <div id="keyboardSpacer"></div> <!-- Пустое пространство -->
         </form>
     </div>
 

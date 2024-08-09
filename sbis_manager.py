@@ -397,6 +397,7 @@ class SBISWebApp(SBISApiManager):
 
         item_num = 1
         total_quantity = 0
+        total_price = 0
         for item in items:
             item_name = item['article'].replace('"', '&quot;')
             quantity = int(item.get('quantity', '1'))
@@ -404,6 +405,7 @@ class SBISWebApp(SBISApiManager):
             info = self.nomenclatures_list[item['article']]
             code = info.get("code")
             price = info.get('price')
+            total_price += price
             xml_content += f'''
         <СвТов КодТов="{code}" НаимТов="{item_name}" НаимЕдИзм="шт" НалСт="без НДС" НеттоПередано="{quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{price}" СтУчНДС="{price}" Цена="{price}">
           <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
@@ -412,6 +414,9 @@ class SBISWebApp(SBISApiManager):
           <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
         </СвТов>'''
             item_num += 1
+
+        if not full_price:
+            full_price = total_price
 
         xml_content += f'''
         <Всего НеттоВс="{total_quantity}" СтБезНДСВс="{full_price}" СтУчНДСВс="{full_price}"/>
@@ -431,10 +436,9 @@ class SBISWebApp(SBISApiManager):
             return file.write(xml_content)
 
     def write_implementation(self, order_data: dict):
-        logging.info("Order data:")
-        logging.info(order_data)
+        logging.info(f"Order data:\n{order_data}")
 
-        # Такая конструкция вернёт пустой словарь, вместо None, если данных нет
+        # Такая конструкция вернёт пустой словарь, вместо None, если данных нет.
         customer_info = json.loads(order_data.get('party_data', {}) or '{}')
         logging.debug(customer_info)
 
@@ -444,7 +448,6 @@ class SBISWebApp(SBISApiManager):
         comment = order_data.get('comment', None).replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
 
-        # full_price = round(float(order_data.get('price', None)), 2)
         prepayment = round(float(order_data.get('prepayment', None)), 2)
         amount_to_receive = round(float(order_data.get('amount_to_receive', None)), 2)
 
