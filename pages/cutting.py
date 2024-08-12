@@ -8,6 +8,16 @@ class CuttingPage(ManufacturePage):
     def __init__(self, name, icon, columns_order):
         super().__init__(name, icon)
         self.columns_order = columns_order
+        self.cutting_columns_config = {
+            'fabric_is_done': st.column_config.CheckboxColumn("Готово"),
+            'base_fabric': st.column_config.TextColumn("Ткань (Верх / Низ)", disabled=True),
+            'side_fabric': st.column_config.TextColumn("Ткань (Бочина)", disabled=True),
+            'size': st.column_config.TextColumn("Размер", disabled=True),
+            'side': st.column_config.TextColumn("Бочина", disabled=True),
+            'article': st.column_config.TextColumn("Артикул", disabled=True),
+            'deadline': st.column_config.DateColumn("Срок", format="DD.MM", disabled=True),
+            'comment': st.column_config.TextColumn("Комментарий", disabled=True),
+        }
 
     def cutting_tasks(self):
         data = super().load_tasks()
@@ -15,37 +25,13 @@ class CuttingPage(ManufacturePage):
                     (data['sewing_is_done'] == False) &
                     (data['packing_is_done'] == False)]
 
-    # @st.experimental_fragment(run_every="1s")
-    # def cutting_tiles(self):
-    #    super().show_tasks_tiles(self.cutting_tasks(), 'fabric_is_done', 3)
-
     @st.experimental_fragment(run_every="1s")
     def cutting_frame(self):
         tasks = self.cutting_tasks()
         # Вычисляемое поле размера бочины.
         tasks['side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
         return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
-                              column_config={
-                                  'fabric_is_done': st.column_config.CheckboxColumn(
-                                      "Готово"),
-                                  'base_fabric': st.column_config.TextColumn(
-                                      "Ткань (Верх / Низ)",
-                                      disabled=True),
-                                  'side_fabric': st.column_config.TextColumn(
-                                      "Ткань (Бочина)",
-                                      disabled=True),
-                                  'size': st.column_config.TextColumn("Размер",
-                                                                      disabled=True),
-                                  'side': st.column_config.TextColumn("Бочина",
-                                                                      disabled=True),
-                                  'article': st.column_config.TextColumn("Артикул",
-                                                                         disabled=True),
-                                  'deadline': st.column_config.DateColumn("Срок",
-                                                                          format="DD.MM",
-                                                                          disabled=True),
-                                  'comment': st.column_config.TextColumn("Комментарий",
-                                                                         disabled=True),
-                              },
+                              column_config=self.cutting_columns_config,
                               hide_index=True)
 
     def cutting_table(self):
@@ -95,4 +81,3 @@ with col_table:
 with col_info:
     st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
             'Попробуйте отсортировать по размеру!', icon="ℹ️")
-

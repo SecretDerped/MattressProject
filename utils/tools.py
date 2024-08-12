@@ -276,43 +276,6 @@ def time_now():
     return datetime.now().strftime("%H:%M")
 
 
-def create_message_str(data):
-    positions_data = data['positionsData']
-    positions = '\n'
-    total_price = 0
-    for item in positions_data:
-        positions += f"{item['article']} - {item['quantity']} шт. за {item['price']} р.\n"
-        total_price += item['price']
-    contact = data['contact']
-    date = data['delivery_date']
-    type = data['delivery_type']
-    region = data['region_select']
-    address = data['delivery_address']
-    prepay = data['prepayment']
-    to_reserve = total_price - prepay
-    comment = data['comment']
-    order_message = (f"Заявка от клиента: {data['party']}\n\n"
-
-                     f"Позиции:\n{positions}\n"
-
-                     f"Контакт: {contact}\n"
-                     f"Дата получения: {date}\n"
-                     f"Тип доставки: {type}\n"
-                     f"Регион: {region}\n")
-    if address != '':
-        order_message += f"Адрес:\n {address}\n\n"
-
-    order_message += f"Цена: {total_price}\n"
-    if prepay != '0':
-        order_message += f"Предоплата: {prepay}\n"
-    order_message += f"Нужно получить: {to_reserve}"
-
-    if comment != '':
-        order_message += f"\n\nКомментарий: {comment}"
-
-    return order_message
-
-
 def send_telegram_message(text, chat_id: str = tg_conf.get('group_chat_id')):
     """Отправляет текстовое сообщение ботом в telegram в указанный chat_id. Если не указывать, перешлёт в группу
     telegram по заявкам. Её id прописывается в app_config"""

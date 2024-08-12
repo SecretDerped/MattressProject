@@ -36,49 +36,57 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- Поле "Размер" -->
-                <div class="form-group" id="uniqueMattressSize" style="display: none;">
-                    <label for="size" class="form-label">Размер уникального матраса</label>
-                    <input type="text" id="size" name="size" class="form-control" placeholder="Запишите тремя числами: Длина/Ширина/Высота">
-                </div>
 
                 <div class="form-group row">
+                    <!-- Поле "Размер" -->
                     <div class="col-12 col-md-6">
-                        <label for="base_fabric" class="form-label">Ткань (верху и внизу)</label>
+                        <label for="base_fabric" class="form-label">Ткань - основа      </label>
                         <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
                     </div>
+                    <!-- Поле "Размер" -->
+                    <div class="col-12 col-md-6">
+                        <label for="side_fabric" class="form-label">Ткань - бочина (необязательно)</label>
+                        <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань как основная">
+                    </div>
+                    <!-- Цена ткани на матрас
                     <div class="col-12 col-md-6">
                         <label for="base_fabric_price" class="form-label">Цена ткани на матрас</label>
                         <input type="number" id="base_fabric_price" name="base_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
-                    </div>
+                    </div> -->
                 </div>
 
                 <div class="form-group row">
+                    <!-- Поле "Размер" -->
                     <div class="col-12 col-md-6">
-                        <label for="side_fabric" class="form-label">Ткань (сбоку)</label>
-                        <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань, как выше">
+                        <label for="springs" class="form-label">Пружинный блок (необязательно)</label>
+                        <input type="text" id="springs" name="springs" class="form-control" placeholder="Введите название ПБ...">
                     </div>
+                    <!-- Поле "Размер" -->
+                    <div class="col-12 col-md-6" id="uniqueMattressSize">
+                        <label for="size" class="form-label">Ручное указание размера (необ.)</label>
+                        <input type="text" id="size" name="size" class="form-control" placeholder="Длина / Ширина / Высота">
+                    </div>
+
+
+                    <!-- Цена ткани на матрас
                     <div class="col-12 col-md-6">
                         <label for="side_fabric_price" class="form-label">Цена ткани на матрас</label>
                         <input type="number" id="side_fabric_price" name="side_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
-                    </div>
+                    </div> -->
                 </div>
 
+                <!-- Цена ПБ
                 <div class="form-group row">
-                    <div class="col-12 col-md-6">
-                        <label for="springs" class="form-label">Пружинный блок</label>
-                        <input type="text" id="springs" name="springs" class="form-control" placeholder="Если требуется, введите название...">
-                    </div>
                     <div class="col-12 col-md-6">
                         <label for="springs_price" class="form-label">Цена ПБ</label>
                         <input type="number" id="springs_price" name="springs_price" class="form-control" step="0.01" placeholder="Цена БП для одного матраса">
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Комментарий -->
                 <div class="form-group">
-                    <label for="comment" class="form-label">Комментарий ко всему заказу</label>
-                    <textarea id="comment" name="comment" class="form-control" style="height: 152px;" placeholder="Оставьте пустым, если не требуется."></textarea>
+                    <label for="comment" class="form-label">Комментарий ко всему заказу (необязательно)</label>
+                    <textarea id="comment" name="comment" class="form-control" style="height: 72px;" placeholder=""></textarea>
                 </div>
                 <!-- Компания -->
                 <div class="form-group">

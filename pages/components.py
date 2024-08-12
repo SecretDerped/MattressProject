@@ -14,32 +14,35 @@ class ComponentsPage(Page):
             'comment': st.column_config.TextColumn("Комментарий", width='large'),
             'photo': st.column_config.ImageColumn("Фото"),
         }
+        self.showed_articles = [
+            '000', '807', '808', '809', '901', '902', '903', '904', '905', '906', '907', '908', '909', '911', '912'
+        ]
+
+    def components_tasks(self):
+        data = super().load_tasks()
+        return data[(data['article'] in self.showed_articles) |
+                    (data['components_is_done'] == False) &
+                    (data['sewing_is_done'] == False) &
+                    (data['gluing_is_done'] == False) &
+                    (data['packing_is_done'] == False)]
 
     @st.experimental_fragment(run_every="1s")
-    def show_materials_tasks(self, tasks):
+    def components_table(self, tasks):
         st.dataframe(data=tasks[self.columns_order],
                      column_config=self.components_columns_config,
                      hide_index=True)
-
-################################################ Page ###################################################
 
 
 Page = ComponentsPage(page_name='Заготовка',
                       icon="🧱",
                       columns_order=['deadline', 'article', 'size', 'attributes', 'comment', 'photo'])
 
-data = Page.load_tasks()
+col_table, col_info = st.columns([2, 1])
 
-components_tasks = data[(data['sewing_is_done'] == False) &
-                        (data['gluing_is_done'] == False) &
-                        (data['packing_is_done'] == False) &
-                        (data['comment'] != '')]
-
-half_screen_1, half_screen_2 = st.columns([2, 1])
-with half_screen_1:
+with col_table:
     Page.header()
-with half_screen_2:
-    st.info('Вы можете сортировать наряды, нажимая на поля таблицы. '
-            'Заявка исчезнет, когда для неё соберут основу матраса. ', icon="ℹ️")
+
+with col_info:
+    st.info('Вы можете сортировать наряды, нажимая на поля таблицы. ', icon="ℹ️")
 
 Page.show_materials_tasks(components_tasks)
