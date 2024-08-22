@@ -11,7 +11,8 @@ from flask import Flask, render_template, request, abort, jsonify
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
+    get_size_str
 
 config = load_conf()
 
@@ -35,6 +36,7 @@ sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
+components_page_articles = config.get('components', {}).get('showed_articles', [])
 
 sequence_buffer = {}
 current_tasks = {}
@@ -82,7 +84,16 @@ def index():
                     position_str += f"{position['article']}\n"
                     continue
 
-                size = order_data['size'] or item['size']
+                comment_size = get_size_str(order_data['comment'])
+                if comment_size:
+                    size = comment_size
+                else:
+                    size = order_data['size'] or item['size']
+
+                if item['article'] in components_page_articles:
+                    components_is_done_field = False
+                else:
+                    components_is_done_field = True
 
                 mattress_quantity += 1
                 task_data = {
@@ -96,7 +107,7 @@ def index():
                     "comment": order_data['comment'],
                     "springs": order_data["springs"] or 'нет',
                     "attributes": item['structure'],
-                    "components_is_done": False,
+                    "components_is_done": components_is_done_field,
                     "fabric_is_done": False,
                     "gluing_is_done": False,
                     "sewing_is_done": False,
@@ -187,6 +198,7 @@ def gluing():
 @app.route('/log_sequence_gluing', endpoint="log_sequence_gluing", methods=['POST'])
 def log_sequence_gluing():
     filter_conditions = [
+        "components_is_done == True",
         "gluing_is_done == False",
         "sewing_is_done == False",
         "packing_is_done == False"
@@ -205,6 +217,10 @@ def log_sequence_gluing():
 
         if task['comment']:
             message['Комментарий'] = f"<strong>{task['comment']}</strong>"
+
+        if task['photo']:
+            message['Фото'] = task['photo']  # Фото в формате JPEG
+
         return message
 
     return log_sequence('Сборка', 'Отметка', filter_conditions, transform_task_data)
@@ -224,9 +240,10 @@ def sewing():
 @app.route('/log_sequence_sewing', endpoint="log_sequence_sewing", methods=['POST'])
 def log_sequence_sewing():
     filter_conditions = [
+        "components_is_done == True",
         "gluing_is_done == True",
-        "sewing_is_done == False",
         "fabric_is_done == True",
+        "sewing_is_done == False",
         "packing_is_done == False"
     ]
 
@@ -240,6 +257,9 @@ def log_sequence_sewing():
         }
         if task['comment']:
             message['Комментарий'] = f"<strong>{task['comment']}</strong>"
+
+        if task['photo']:
+            message['Фото'] = task['photo']  # Фото в формате JPEG
         return message
 
     return log_sequence('Шитьё', 'Отметка', filter_conditions, transform_task_data)

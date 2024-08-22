@@ -61,7 +61,8 @@ class BrigadierPage(Page):
             st.session_state[Page.TASK_FULL_MODE] = False
 
         if not st.session_state[self.TASK_FULL_MODE]:
-            data = data[(data['fabric_is_done'] == False) |
+            data = data[(data['components_is_done'] == False) |
+                        (data['fabric_is_done'] == False) |
                         (data['gluing_is_done'] == False) |
                         (data['sewing_is_done'] == False) |
                         (data['packing_is_done'] == False)]
@@ -98,7 +99,8 @@ class BrigadierPage(Page):
             if st.session_state[self.TASK_FULL_MODE]:
                 filtered_df = data
             else:
-                filtered_df = data[(data['fabric_is_done'] == False) |
+                filtered_df = data[(data['components_is_done'] == False) |
+                                   (data['fabric_is_done'] == False) |
                                    (data['gluing_is_done'] == False) |
                                    (data['sewing_is_done'] == False) |
                                    (data['packing_is_done'] == False)]
@@ -191,9 +193,10 @@ with employee_tab:
         show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE)
 
     with col2:
+        # Должность аналогична свойству page_name на файлах страниц
         st.info('Выставляйте рабочих на смену. Они будут активны при выборе ответственного на нужном экране. В поле'
                 '"Роли" пропишите рабочее место сотруднику. Можно вписать несколько.  \n'
-                'Доступно: сборка, нарезка, шитьё, упаковка',
+                'Доступно: заготовка, сборка, нарезка, шитьё, упаковка',
                 icon="ℹ️")
 
     col1, col2 = st.columns([1, 1])

@@ -1,24 +1,36 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1faa1.png" type="image/png">
-    <title>Экран швейного стола</title>
-    <link rel="stylesheet" href="/static/styles.css">
-</head>
-<body>
-    <h1 class="mb-4 font-weight-bold">🧵 Экран швейного стола</h1>
-    <div class="main-container">
-        <div id="center-container">
-            <div id="task_data" class="task-box">Жду штрих-код...</div>
-            <div id="buttons" style="display: none;">
-                <button id="hide_button" class="btn btn-hide">Скрыть</button>
-                <button id="complete_button" class="btn btn-complete">Завершено</button>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1faa1.png" type="image/png">
+        <title>Экран швейного стола</title>
+        <link rel="stylesheet" href="/static/styles.css">
+        <style>
+            .task-box img {
+                max-height: 300px;
+                transition: max-height 0.01s ease;
+                cursor: pointer;
+            }
+
+            .task-box img.expanded {
+                max-height: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <h1 class="mb-4 font-weight-bold">🧵 Экран швейного стола</h1>
+        <div class="main-container">
+            <div id="center-container">
+                <div id="task_data" class="task-box">Жду штрих-код...</div>
+                <div id="buttons" style="display: none;">
+                    <button id="hide_button" class="btn btn-hide">Скрыть</button>
+                    <button id="complete_button" class="btn btn-complete">Завершено</button>
+                </div>
             </div>
         </div>
-    </div>
-    <div id="message"></div>
-    <script src="/static/sew_scaner.js"></script>
-</body>
+        <div id="message"></div>
+        <div id="keyboardSpacer"></div> <!-- Пустое пространство -->
+        <script src="/static/sew_scaner.js"></script>
+    </body>
 </html>

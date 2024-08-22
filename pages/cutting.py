@@ -1,12 +1,12 @@
 import streamlit as st
 
 from utils.app_core import ManufacturePage
-from utils.tools import side_eval, save_to_file, get_date_str, time_now
+from utils.tools import config, side_eval, save_to_file, time_now
 
 
 class CuttingPage(ManufacturePage):
-    def __init__(self, name, icon, columns_order):
-        super().__init__(name, icon)
+    def __init__(self, page_name, icon, columns_order):
+        super().__init__(page_name, icon)
         self.columns_order = columns_order
         self.cutting_columns_config = {
             'fabric_is_done': st.column_config.CheckboxColumn("Готово"),
@@ -18,10 +18,12 @@ class CuttingPage(ManufacturePage):
             'deadline': st.column_config.DateColumn("Срок", format="DD.MM", disabled=True),
             'comment': st.column_config.TextColumn("Комментарий", disabled=True),
         }
+        self.showed_articles = config['components']['showed_articles']
 
     def cutting_tasks(self):
         data = super().load_tasks()
-        return data[(data['fabric_is_done'] == False) &
+        return data[(data['components_is_done'] == True) &
+                    (data['fabric_is_done'] == False) &
                     (data['sewing_is_done'] == False) &
                     (data['packing_is_done'] == False)]
 
@@ -37,7 +39,7 @@ class CuttingPage(ManufacturePage):
     def cutting_table(self):
         tasks = super().load_tasks()
         # Создаем форму для обработки изменений в таблице
-        with st.form(key='tasks_form'):
+        with st.form(key='tasks_cutting_form'):
             inner_col_1, inner_col_2 = st.columns([4, 1])
             with inner_col_1:
                 edited_tasks_df = self.cutting_frame()
@@ -59,16 +61,8 @@ class CuttingPage(ManufacturePage):
                         save_to_file(tasks, self.task_cash)
                         st.rerun()
 
-    @staticmethod
-    def inner_box_text(row):
-        return (f"**Артикул:** {row.get('article')}  \n"
-                f"**Ткань (верх/низ)**: {row.get('base_fabric')}  \n"
-                f"**Ткань (бочина)**: {row.get('base_fabric')}  \n"
-                f"**Размер:** {row.get('size')} ({side_eval(row.get('size'), row.get('side_fabric'))})  \n"
-                f"**Срок**: {get_date_str(row.get('deadline'))}  \n")
 
-
-Page = CuttingPage(name='Нарезка',
+Page = CuttingPage(page_name='Нарезка',
                    icon="✂️",
                    columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline',
                                   'comment'])

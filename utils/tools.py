@@ -220,6 +220,27 @@ def get_size_int(size: str):
     return {'length': length, 'width': width, 'height': height}
 
 
+def get_size_str(size: str):
+    """
+    Принимает строку и ищет в ней подстроку размера матраса типа "180х200" или 70*190.
+    Ищет первые два или три числа, разделенных любым символом.
+    Если не находит никаких размеров, возвращает False.
+    Если не находит число, ставит '/0'.
+    :return: Строка с размерами:
+    'Длина/Ширина/Высота'
+    """
+
+    pattern = r'(\d+)\D(\d+)(?:\D(\d+))?'
+
+    match = re.search(pattern, size)
+    if not match:
+        return False
+
+    size_str = f'{match.group(1)}/{match.group(2)}'
+    size_str += f'/{match.group(3)}' if match.group(3) else '/0'
+    return size_str
+
+
 def side_eval(size: str, fabric: str = None) -> str:
     """
     Вычисляет сколько нужно отрезать боковины, используя размер из функции get_size_int.

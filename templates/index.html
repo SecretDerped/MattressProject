@@ -38,7 +38,7 @@
                 </div>
 
                 <div class="form-group row">
-                    <!-- Поле "Размер" -->
+                    <!-- Поле "Размер", с небольшим отступом из невидимых символов  -->
                     <div class="col-12 col-md-6">
                         <label for="base_fabric" class="form-label">Ткань - основа      </label>
                         <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
@@ -86,7 +86,7 @@
                 <!-- Комментарий -->
                 <div class="form-group">
                     <label for="comment" class="form-label">Комментарий ко всему заказу (необязательно)</label>
-                    <textarea id="comment" name="comment" class="form-control" style="height: 72px;" placeholder=""></textarea>
+                    <textarea id="comment" name="comment" class="form-control" style="height: 72px;" placeholder="Помимо комментария, можно вручную указать размер, разделив несколько чисел любым символом, например: '90*170' или 200/190/33"></textarea>
                 </div>
                 <!-- Компания -->
                 <div class="form-group">
@@ -96,12 +96,12 @@
                 </div>
                 <!-- Фото -->
                 <div class="form-group">
-                    <label for="photo" class="form-label">Прикрепить фото (PNG, JPEG, JPG • Не больше 20 Мб)</label>
+                    <label for="photo" class="form-label">Прикрепить фото (JPEG, JPG • Не больше 20 Мб)</label>
                     <div class="custom-file-input-wrapper">
-                        <input type="file" id="photo" name="photo" class="file-input" accept=".jpg, .jpeg, .png">
+                        <input type="file" id="photo" name="photo" class="file-input" accept=".jpg">
                         <button type="button" class="custom-file-input-button">📁 Прикрепить файл ☁️</button>
                     </div>
-                    <div id="file-error" class="text-danger mt-2" style="display: none;">Файл должен быть изображением (JPEG, PNG) и весить не более 20 Мб.</div>
+                    <div id="file-error" class="text-danger mt-2" style="display: none;">Файл должен быть изображением (JPG, JPEG) и весить не более 20 Мб.</div>
                     <input type="hidden" id="photo_data" name="photo_data">
                 </div>
             </div>

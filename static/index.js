@@ -6,7 +6,7 @@ document.querySelector('.file-input').addEventListener('change', function(event)
     var fileError = document.getElementById('file-error');
     fileError.style.display = 'none';
 
-    if (file && file.size <= 20 * 1024 * 1024 && (file.type === 'image/jpeg' || file.type === 'image/png')) {
+    if (file && file.size <= 20 * 1024 * 1024 && (file.type === 'image/jpeg')) {
         updateFileButton(fileName, 'btn-primary', 'btn-danger');
     } else {
         updateFileButton('📁 Прикрепить файл ☁️', 'btn-danger', 'btn-primary');
@@ -235,11 +235,16 @@ function initializeAutocomplete(selector, apiUrl) {
     });
 }
 
+//Кнопка становится неактивной при нажатии, чтобы юзверь не успел несколько раз создать реализацию
 $(document).ready(function () {
     $('form').on('submit', function (event) {
         event.preventDefault(); // Останавливаем стандартное поведение формы
 
         var form = $(this);
+        var submitBtn = $('#submitBtn');
+
+        // Делаем кнопку неактивной и меняем текст
+        submitBtn.prop('disabled', true).text('Отправка...');
 
         $.ajax({
             type: form.attr('method'),
@@ -251,6 +256,8 @@ $(document).ready(function () {
                     window.location.reload(); // Перезагружаем страницу
                 } else {
                     alert("Что-то пошло не так. Пожалуйста, попробуйте еще раз.");
+                    // Одна ошибка и ты ошибся... Активируем кнопку снова при ошибке
+                    submitBtn.prop('disabled', false).text('Создать реализацию');
                 }
             },
             error: function () {

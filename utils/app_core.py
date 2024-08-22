@@ -41,6 +41,8 @@ class Page:
             "attributes": st.column_config.TextColumn("Состав начинки",
                                                       default='',
                                                       width='medium'),
+            "components_is_done": st.column_config.CheckboxColumn("Материалы",
+                                                                  default=False),
             "fabric_is_done": st.column_config.CheckboxColumn("Нарезано",
                                                               default=False),
             "gluing_is_done": st.column_config.CheckboxColumn("Собран",

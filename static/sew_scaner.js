@@ -37,10 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.task_data.error) {
                     document.getElementById('task_data').innerText = data.task_data.error;
                 } else {
-                    let firstRecordHtml = Object.entries(data.task_data)
-                        .map(([key, value]) => `<div>${key}: ${value}</div>`)
-                        .join('');
-                    document.getElementById('task_data').innerHTML = firstRecordHtml;
+                    displayTaskData(data.task_data);
                     document.getElementById('buttons').style.display = 'block';
                     document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
                 }
@@ -85,5 +82,32 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('message').innerText = '';
         document.getElementById('task_data').innerHTML = 'Жду штрих-код...';
         document.getElementById('buttons').style.display = 'none';
+    }
+
+        function displayTaskData(taskData) {
+        var taskContainer = document.getElementById('task_data');
+        taskContainer.innerHTML = ''; // Очищаем контейнер перед заполнением
+
+        // Добавляем основные данные
+        for (var key in taskData) {
+            if (key !== 'Фото' && taskData[key]) {
+                taskContainer.innerHTML += `<p><strong>${key}:</strong> ${taskData[key]}</p>`;
+            }
+        }
+
+        // Если есть фото, добавляем его в конец
+        if (taskData['Фото']) {
+            var imgElement = document.createElement('img');
+            imgElement.src = taskData['Фото'];
+            imgElement.alt = 'Фото';
+            imgElement.classList.add('thumbnail');
+
+            // Добавляем обработчик клика
+            imgElement.addEventListener('click', function () {
+                imgElement.classList.toggle('expanded');
+            });
+
+            taskContainer.appendChild(imgElement);
+        }
     }
 });
