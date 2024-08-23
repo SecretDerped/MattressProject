@@ -277,11 +277,15 @@ def fabric_type(fabric: str = None):
     return value
 
 
-def get_date_str(dataframe_row: pd.Series) -> str:
+def get_date_str(dt_obj) -> str:
     """
     Принимает дату из датафрейма и преобразует в строку: 08 мая, среда
     """
-    date = pd.to_datetime(dataframe_row).strftime('%d.%m.%A')
+    date = ''
+    if type(dt_obj) == pd.Series:
+        date = pd.to_datetime(dt_obj).strftime('%d.%m.%A')
+    elif type(dt_obj) == datetime:
+        date = dt_obj.strftime('%d.%m.%A')
     months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
               'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
     day, month, weekday = date.split('.')
@@ -319,13 +323,20 @@ def get_printers():
 def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
     """Функция для печати файла в системе Windows."""
     file_name, file_extension = os.path.splitext(file_path)
-    logging.debug(f"Available printers: {get_printers()}")
-    logging.debug(f"Selected printer: {printer_name}")
+    logging.debug(f"Available printers: {get_printers()}\n Selected printer: {printer_name}")
 
     if file_extension.lower() == '.pdf':
         # Устанавливаем дефолтный принтер
         win32print.SetDefaultPrinterW(printer_name)
         win32print.SetDefaultPrinter(printer_name)
+
+        document = ap.Document(file_path)
+        strategy = ap.RgbToDeviceGrayConversionStrategy()
+
+        # Loop through all the pages
+        for page in document.pages:
+            # Convert the RGB colorspace image to GrayScale colorspace
+            strategy.convert(page)
 
         viewer = ap.facades.PdfViewer()  # Создать объект PDFViewer
         viewer.bind_pdf(file_path)  # Открыть входной PDF-файл

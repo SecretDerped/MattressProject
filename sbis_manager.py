@@ -472,8 +472,8 @@ class SBISWebApp(SBISApiManager):
             "Ответственный": {"Фамилия": "Харьковский",
                               "Имя": "Александр",
                               "Отчество": "Максимович"},
-            "ДополнительныеПоля": {"Предоплата": prepayment,
-                                   "НужноПолучить": amount_to_receive,
+            "ДополнительныеПоля": {"Предоплата": round(prepayment),
+                                   "НужноПолучить": round(amount_to_receive),
                                    "Контакт": order_contact,
                                    "Адрес": order_address}}}
 

@@ -16,9 +16,6 @@ class ComponentsPage(ManufacturePage):
             'comment': st.column_config.TextColumn("Комментарий", width='medium'),
             'photo': st.column_config.ImageColumn("Фото"),
         }
-        self.showed_articles = [
-            '0', '000', '807', '808', '809', '901', '902', '903', '904', '905', '906', '907', '908', '909', '911', '912'
-        ]
 
     def components_tasks(self):
         data = super().load_tasks()

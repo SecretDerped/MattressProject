@@ -20,7 +20,7 @@ if __name__ == '__main__':
 
     flask_thread = threading.Thread(target=run_flask, args=())
     flask_thread.start()
-    start_scheduler(17, 35)  # Запуск планировщика задач
+    start_scheduler(17, 30)  # Запуск планировщика задач
 
     ensure_ngrok()
     ngrok_process, ngrok_url = start_ngrok()

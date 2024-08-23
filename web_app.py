@@ -120,38 +120,44 @@ def index():
                     "created": dt.now(),
                 }
 
-                position_str += f"{item['article']}, {item_quantity} шт., {size}"
+                position_str += f"Арт. {item['article']}, {item_quantity} шт., {size}\n"
 
                 for _ in range(item_quantity):
                     # Порядок task_data должен быть как в tasks_columns_config в app_core
                     append_to_dataframe(task_data, tasks_cash)
 
-            # Вносим в реализацию ткани и пружины
-            if order_data['base_fabric']:
+                    # Вносим в реализацию ткани и пружины
+                    if order_data['base_fabric']:
+                        fabric_top_item = {
+                            'article': order_data['base_fabric'],
+                            'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
+                            'price': 0  # str_num_to_float(order_data['base_fabric_price'])
+                        }
+                        order_data['positionsData'].append(fabric_top_item)
+                        position_str += f"Топ: {fabric_top_item['article']}\n"
 
-                order_data['positionsData'].append({
-                    'article': order_data['base_fabric'],
-                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
-                    'price': 0  # str_num_to_float(order_data['base_fabric_price'])
-                })
-                if order_data['side_fabric']:
-                    order_data['positionsData'].append({
-                        'article': order_data['side_fabric'],
-                        'quantity': mattress_quantity,
-                        'price': 0  # str_num_to_float(order_data['side_fabric_price'])
-                    })
+                    if order_data['side_fabric']:
+                        fabric_bot_item = {
+                            'article': order_data['side_fabric'],
+                            'quantity': mattress_quantity,
+                            'price': 0  # str_num_to_float(order_data['side_fabric_price'])
+                        }
+                        order_data['positionsData'].append(fabric_bot_item)
+                        position_str += f"Бок: {fabric_bot_item['article']}\n"
 
-            if order_data['springs']:
-                order_data['positionsData'].append({
-                    'article': order_data['springs'],
-                    'quantity': mattress_quantity,
-                    'price': 0  # str_num_to_float(order_data['springs_price'])
-                })
+                    if order_data['springs']:
+                        springs_item = {
+                            'article': order_data['springs'],
+                            'quantity': mattress_quantity,
+                            'price': 0  # str_num_to_float(order_data['springs_price'])
+                        }
+                        order_data['positionsData'].append(springs_item)
+                        position_str += f"ПБ: {springs_item['article']}\n"
 
-            sbis.write_implementation(order_data)
+            # sbis.write_implementation(order_data)
 
             order_message += (f"{order_data['party']}\n"
-                              f"{dt.strftime(dt.strptime(order_data['delivery_date'], '%Y-%m-%d'), '%d.%m')}\n"
+                              f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%m.%d')}\n"
                               f"{position_str}\n"
                               f"{order_data['contact']}\n")
 
@@ -168,7 +174,7 @@ def index():
 
             send_telegram_message(order_message, chat_id)
             # Без указания chat_id сообщение отсылается в специальную группу. ID группы прописывается в app_config
-            #send_telegram_message(order_message)
+            # send_telegram_message(order_message)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
@@ -344,14 +350,17 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
         employee_name = get_employee_column_data(employee_id, 'name')
 
         if not get_employee_column_data(employee_id, 'is_on_shift'):
-            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСначала нужно открыть смену.'}})
+            return jsonify({'sequence': employee_name,
+                            'task_data': {'error': 'Жду штрих-код...\n\n\nСначала нужно открыть смену.'}})
 
         if page_name.lower() not in get_employee_column_data(employee_id, 'position').lower():
-            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nНет доступа.\nУточните свою должность.'}})
+            return jsonify({'sequence': employee_name,
+                            'task_data': {'error': 'Жду штрих-код...\n\n\nНет доступа.\nУточните свою должность.'}})
 
         tasks = load_tasks()
         if tasks.empty:
-            return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСейчас пока нет задач.'}})
+            return jsonify(
+                {'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nСейчас пока нет задач.'}})
 
         filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
 
@@ -375,7 +384,8 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
                 transformed_task = transform_task_data(task)
                 return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
-        return jsonify({'sequence': employee_name, 'task_data': {'error': 'Жду штрих-код...\n\n\nЗадач для тебя пока нет.\nПриходи позже.'}})
+        return jsonify({'sequence': employee_name,
+                        'task_data': {'error': 'Жду штрих-код...\n\n\nЗадач для тебя пока нет.\nПриходи позже.'}})
 
     else:
         sequence_buffer[endpoint].append(key)
@@ -393,7 +403,6 @@ def complete_task(page_name, action, done_field):
     logging.debug(f"Получен запрос на завершение задачи. employee_id: {employee_id}")
 
     # Получаем task_id из глобального словаря current_tasks
-    print(current_tasks)
     task_id = current_tasks[endpoint].get(employee_id)
 
     if task_id is None:
@@ -439,7 +448,7 @@ def start_ngrok():
             response = subprocess.check_output(['curl', '-s', 'http://localhost:4040/api/tunnels'])
             data = json.loads(response.decode('utf-8'))
             url = data['tunnels'][0]['public_url']
-        except:
+        except Exception:
             time.sleep(1)
 
     logging.warning(f'Сайт доступен через ngrok: {url}')

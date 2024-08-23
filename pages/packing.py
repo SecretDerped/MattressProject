@@ -67,8 +67,12 @@ class PackingPage(ManufacturePage):
             try:
                 file_path = fr"static\labels\{article}.pdf"
                 print_file(file_path, self.label_printer_name)
-            except Exception:
-                print_file("static\labels\800.pdf")
+                st.toast("Печать этикетки...", icon='🖨️')
+            except FileNotFoundError:
+                st.toast("Ошибка печати. Шаблон для этикетки не найден.", icon='❗')
+                #print_file("static\labels\800.pdf")
+            except Exception as e:
+                st.toast(f"Ошибка печати: {e}")
 
     def _form_box_text(self, row):
         # Текст контейнера красится в красный, когда у наряда приоритет
