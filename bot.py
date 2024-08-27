@@ -7,8 +7,10 @@ from utils.tools import config
 
 
 class Tg:
-    def __init__(self, webapp_url, group_chat_id=None):
-        self.app_url = webapp_url
+    def __init__(self, query_screen_url, foreman_screen_url, group_chat_id=None):
+        self.query_screen_url = query_screen_url
+        self.foreman_screen_url = foreman_screen_url + '/command'
+
         self.bot_token = config.get('telegram').get('token')
         self.group_chat_id = group_chat_id  # ID группы, куда будут отправляться сообщения
         self.bot = Bot(token=self.bot_token)
@@ -17,13 +19,19 @@ class Tg:
         @self.router.message(Command(commands=['start']))
         async def cmd_start(message: Message):
             user_chat_id = message.from_user.id
-            webapp_url_with_chat_id = f"{self.app_url}?chat_id={user_chat_id}"
-            webapp_button = InlineKeyboardButton(text="Создать заявку",
-                                                 web_app=WebAppInfo(url=webapp_url_with_chat_id))
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[webapp_button]])
+
+            query_button_url = f"{self.query_screen_url}?chat_id={user_chat_id}"
+            query_button = InlineKeyboardButton(text="Создание заявки",
+                                                web_app=WebAppInfo(url=query_button_url))
+
+            foreman_button_url = f"{self.foreman_screen_url}?chat_id={user_chat_id}"
+            foreman_button = InlineKeyboardButton(text="Показать экран бригадира",
+                                                  web_app=WebAppInfo(url=foreman_button_url))
+
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[query_button], [foreman_button]])
 
             await message.answer(
-                text="Создайте заявку кнопкой ниже:",
+                text="Соединение с сервером установлено.\nВыберите действие:",
                 reply_markup=keyboard
             )
 

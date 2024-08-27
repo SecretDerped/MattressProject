@@ -5,9 +5,11 @@ import time
 import logging
 import subprocess
 from io import BytesIO
+
+import requests
 from barcode import Code128
 from datetime import datetime as dt
-from flask import Flask, render_template, request, abort, jsonify
+from flask import Flask, render_template, request, abort, jsonify, redirect, Response
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
@@ -25,6 +27,7 @@ price_list_name = sbis_config.get('price_list_name')
 site_config = config.get('site')
 regions = site_config.get('regions')
 flask_port = site_config.get('flask_port')
+streamlit_port = site_config.get('streamlit_port')
 
 hardware = site_config.get('hardware')
 tasks_cash = hardware.get('tasks_cash_filepath')
@@ -440,19 +443,41 @@ def update_task_history(tasks, task_id, page_name, employee_name, action):
 def start_ngrok():
     base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     ngrok_path = os.path.join(base_dir, 'utils', 'ngrok.exe')
-    process = subprocess.Popen(['start', 'cmd', '/k', ngrok_path, 'http', str(flask_port)], shell=True)
-    url = None
+    config_path = os.path.join(base_dir, 'utils', 'ngrok.yml')
+    process = subprocess.Popen(['start', 'cmd', '/k', ngrok_path, 'start', '--all', '--config', config_path],
+                               shell=True)
 
-    while url is None:
+    urls = {}
+    while len(urls) < 2:
         try:
             response = subprocess.check_output(['curl', '-s', 'http://localhost:4040/api/tunnels'])
             data = json.loads(response.decode('utf-8'))
-            url = data['tunnels'][0]['public_url']
+            for tunnel in data['tunnels']:
+                urls[tunnel['name']] = tunnel['public_url']
         except Exception:
             time.sleep(1)
 
-    logging.warning(f'Сайт доступен через ngrok: {url}')
-    return process, url
+    logging.warning(f'Flask доступен через ngrok: {urls["flask"]}')
+    logging.warning(f'Streamlit доступен через ngrok: {urls["streamlit"]}')
+    return process, urls
+
+
+@app.route('/command')
+def mirror_command():
+    # URL, куда будет перенаправлен запрос
+    streamlit_url = 'http://localhost:8501/command'
+
+    # Получаем запрос, который пришел на /command
+    req = requests.Request(method=request.method, url=streamlit_url, headers=request.headers, data=request.data,
+                           params=request.args)
+    prepped = req.prepare()
+
+    # Отправляем запрос на Streamlit
+    session = requests.Session()
+    response = session.send(prepped)
+
+    # Возвращаем ответ от Streamlit в качестве ответа Flask
+    return Response(response.content, status=response.status_code, headers=dict(response.headers))
 
 
 def run_flask():
@@ -465,4 +490,4 @@ if __name__ == '__main__':
     ngrok_process, ngrok_url = start_ngrok()
     run_flask()
 
-    ngrok_process.wait()
+    #ngrok_process.wait()
