@@ -133,41 +133,57 @@ function initializePositionsAutocomplete() {
     }
 
     function updatePositionsTable() {
-        var tableBody = $('#positionsTable tbody');
-        tableBody.empty();
-        positions.forEach(function (position, index) {
-            var row = $('<tr></tr>');
-            row.append($('<td></td>').text(position.article));
+    var tableBody = $('#positionsTable tbody');
+    tableBody.empty();
+    positions.forEach(function (position, index) {
+        var row = $('<tr></tr>');
+        row.append($('<td></td>').text(position.article));
 
-            var quantityPriceGroup = $('<td class="quantity-price-group"></td>');
-            var quantityCell = $('<div class="quantity-cell"></div>');
-            var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
-                updateQuantity(index, -1);
+        var quantityPriceGroup = $('<td class="quantity-price-group"></td>');
+
+        // Поле ввода количества
+        var quantityInput = $('<input type="number" class="form-control quantity-input" min="1" max="999" step="1">')
+            .val(position.quantity)
+            .on('change', function () {
+                var value = parseInt($(this).val(), 10);
+                if (value > 0 && value <= 999) {
+                    updateQuantity(index, value - position.quantity);
+                } else {
+                    // Устанавливаем значение обратно, если оно выходит за пределы
+                    $(this).val(position.quantity);
+                }
             });
-            var quantityInput = $('<span class="quantity">' + position.quantity + '</span>').on('input', function () {
-                updateQuantity(index, parseInt($(this).text(), 10));
-            });
-            var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
-                updateQuantity(index, 1);
-            });
-            quantityCell.append(minusButton, quantityInput, plusButton);
 
-            var priceInput = $('<input type="number" class="form-control price-input" min="0" step="0.01" placeholder="Цена">')
-                .val(position.price)
-                .on('input', function () {
-                    updatePrice(index, parseFloat($(this).val()));
-                });
+        var quantityCell = $('<div class="quantity-cell"></div>');
 
-            quantityPriceGroup.append(quantityCell, priceInput);
-            row.append(quantityPriceGroup);
 
-            tableBody.append(row);
+        var minusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">-</button>').click(function () {
+            updateQuantity(index, -1);
+        });
+        var plusButton = $('<button type="button" class="btn btn-secondary btn-sm mx-1">+</button>').click(function () {
+            updateQuantity(index, 1);
         });
 
-        if (positions.length > 0) {
-            $('#positionsTable').show();
-        }
+        quantityCell.append(minusButton, plusButton, quantityInput);
+        quantityPriceGroup.append(quantityCell);
+
+        // Поле ввода цены
+        var priceInput = $('<input type="number" class="form-control price-input" min="0" step="0.01" placeholder="Цена">')
+            .val(position.price)
+            .on('input', function () {
+                updatePrice(index, parseFloat($(this).val()));
+            });
+
+        quantityPriceGroup.append(priceInput);
+        row.append(quantityPriceGroup);
+
+        tableBody.append(row);
+    });
+
+    if (positions.length > 0) {
+        $('#positionsTable').show();
     }
+}
 
     function updateQuantity(index, delta) {
         var quantity = positions[index].quantity + delta;
@@ -261,7 +277,7 @@ $(document).ready(function () {
                 }
             },
             error: function () {
-                alert("Ошибка при отправке формы. Пожалуйста, попробуйте еще раз.");
+                alert("Ошибка при отправке формы.");
             }
         });
     });

@@ -285,7 +285,7 @@ def get_date_str(dt_obj) -> str:
     if type(dt_obj) == pd.Series:
         date = pd.to_datetime(dt_obj).strftime('%d.%m.%A')
     elif type(dt_obj) == datetime:
-        date = dt_obj.strftime('%d.%m.%A')
+        date = datetime.strftime(dt_obj, '%d.%m.%A')
     months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
               'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
     day, month, weekday = date.split('.')
@@ -301,9 +301,9 @@ def time_now():
     return datetime.now().strftime("%H:%M")
 
 
-def send_telegram_message(text, chat_id: str = tg_conf.get('group_chat_id')):
-    """Отправляет текстовое сообщение ботом в telegram в указанный chat_id. Если не указывать, перешлёт в группу
-    telegram по заявкам. Её id прописывается в app_config"""
+def send_telegram_message(text, chat_id: str):
+    """Отправляет текстовое сообщение ботом в telegram в указанный chat_id.
+    Id группы по заявкам прописывается в app_config"""
 
     url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
 

@@ -9,7 +9,7 @@ from io import BytesIO
 import requests
 from barcode import Code128
 from datetime import datetime as dt
-from flask import Flask, render_template, request, abort, jsonify, redirect, Response
+from flask import Flask, render_template, request, abort, jsonify, Response
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
@@ -32,6 +32,7 @@ streamlit_port = site_config.get('streamlit_port')
 hardware = site_config.get('hardware')
 tasks_cash = hardware.get('tasks_cash_filepath')
 employees_cash = hardware.get('employees_cash_filepath')
+tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
 app = Flask(__name__)
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -54,7 +55,7 @@ def str_num_to_float(string: str):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    chat_id = request.args.get('chat_id')
+    tg_chat_id = request.args.get('chat_id')
     if request.method == 'POST':
         logging.info(f"Получен POST-запрос. Данные формы: {request.form}")
 
@@ -84,7 +85,7 @@ def index():
 
                 # Позиции не в группе "Матрасы" пропускаются
                 if not item['is_mattress']:
-                    position_str += f"{position['article']}\n"
+                    # position_str += f"{position['article']}\n"
                     continue
 
                 comment_size = get_size_str(order_data['comment'])
@@ -98,7 +99,6 @@ def index():
                 else:
                     components_is_done_field = True
 
-                mattress_quantity += 1
                 task_data = {
                     "high_priority": False,
                     "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
@@ -123,61 +123,70 @@ def index():
                     "created": dt.now(),
                 }
 
-                position_str += f"Арт. {item['article']}, {item_quantity} шт., {size}\n"
+                position_str += f"Арт. {item['article']}, {item_quantity} шт. {size}\n"
+                mattress_quantity += item_quantity
 
                 for _ in range(item_quantity):
                     # Порядок task_data должен быть как в tasks_columns_config в app_core
                     append_to_dataframe(task_data, tasks_cash)
 
-                    # Вносим в реализацию ткани и пружины
-                    if order_data['base_fabric']:
-                        fabric_top_item = {
-                            'article': order_data['base_fabric'],
-                            'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
-                            'price': 0  # str_num_to_float(order_data['base_fabric_price'])
-                        }
-                        order_data['positionsData'].append(fabric_top_item)
-                        position_str += f"Топ: {fabric_top_item['article']}\n"
+            # Вносим в реализацию ткани и пружины
+            if order_data['base_fabric']:
+                fabric_top_item = {
+                    'article': order_data['base_fabric'],
+                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
+                    'price': 0  # str_num_to_float(order_data['base_fabric_price'])
+                }
+                order_data['positionsData'].append(fabric_top_item)
 
-                    if order_data['side_fabric']:
-                        fabric_bot_item = {
-                            'article': order_data['side_fabric'],
-                            'quantity': mattress_quantity,
-                            'price': 0  # str_num_to_float(order_data['side_fabric_price'])
-                        }
-                        order_data['positionsData'].append(fabric_bot_item)
-                        position_str += f"Бок: {fabric_bot_item['article']}\n"
+            if order_data['side_fabric']:
+                fabric_bot_item = {
+                    'article': order_data['side_fabric'],
+                    'quantity': mattress_quantity,
+                    'price': 0  # str_num_to_float(order_data['side_fabric_price'])
+                }
+                order_data['positionsData'].append(fabric_bot_item)
 
-                    if order_data['springs']:
-                        springs_item = {
-                            'article': order_data['springs'],
-                            'quantity': mattress_quantity,
-                            'price': 0  # str_num_to_float(order_data['springs_price'])
-                        }
-                        order_data['positionsData'].append(springs_item)
-                        position_str += f"ПБ: {springs_item['article']}\n"
+            if order_data['springs']:
+                springs_item = {
+                    'article': order_data['springs'],
+                    'quantity': mattress_quantity,
+                    'price': 0  # str_num_to_float(order_data['springs_price'])
+                }
+                order_data['positionsData'].append(springs_item)
 
-            # sbis.write_implementation(order_data)
+            print(f"{order_data['positionsData']}")
+            sbis.write_implementation(order_data)
 
             order_message += (f"{order_data['party']}\n"
-                              f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%m.%d')}\n"
-                              f"{position_str}\n"
-                              f"{order_data['contact']}\n")
+                              f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%d.%m')}\n"
+                              f"{position_str}")
+
+            if order_data['base_fabric']:
+                order_message += f"Топ: {order_data['base_fabric']}\n"
+
+            if order_data['side_fabric']:
+                order_message += f"Бок: {order_data['side_fabric']}\n"
+
+            if order_data['springs']:
+                order_message += f"ПБ: {order_data['springs']}\n"
+
+            if order_data['contact']:
+                order_message += f"{order_data['contact']}\n"
 
             if order_data['delivery_address'] != '':
                 order_message += f"{order_data['delivery_address']}\n"
 
-            order_message += f"Итого {total_price} р.\n"
+            order_message += f"\nИтого {total_price} р.\n"
 
             if order_data['prepayment'] != 0:
                 order_message += f"Предоплата {order_data['prepayment']} р.\n"
 
             if order_data['comment'] != '':
-                order_message += f"\nКомм.: {order_data['comment']}"
+                order_message += f"\n{order_data['comment']}"
 
-            send_telegram_message(order_message, chat_id)
-            # Без указания chat_id сообщение отсылается в специальную группу. ID группы прописывается в app_config
-            # send_telegram_message(order_message)
+            send_telegram_message(order_message, tg_chat_id)
+            #send_telegram_message(order_message, tg_group_chat_id)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
@@ -490,4 +499,4 @@ if __name__ == '__main__':
     ngrok_process, ngrok_url = start_ngrok()
     run_flask()
 
-    #ngrok_process.wait()
+    # ngrok_process.wait()
