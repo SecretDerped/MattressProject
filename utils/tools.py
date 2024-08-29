@@ -279,7 +279,7 @@ def fabric_type(fabric: str = None):
 
 def get_date_str(dt_obj) -> str:
     """
-    Принимает дату из датафрейма и преобразует в строку: 08 мая, среда
+    Принимает дату и преобразует в строку: 08 мая, среда
     """
     date = ''
     if type(dt_obj) == pd.Series:
@@ -288,8 +288,13 @@ def get_date_str(dt_obj) -> str:
         date = datetime.strftime(dt_obj, '%d.%m.%A')
     months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
               'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
-    day, month, weekday = date.split('.')
-    return f'{day} {months[int(month) - 1]}, {weekday}'
+    try:
+        day, month, weekday = date.split('.')
+        return f'{day} {months[int(month) - 1]}, {weekday}'
+    except ValueError as e:
+        print(e)
+        print(type(dt_obj))
+        return '---'
 
 
 def barcode_link(id: str) -> str:

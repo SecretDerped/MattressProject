@@ -1,20 +1,29 @@
 import asyncio
+import logging
 import os
 import subprocess
+
 import threading
 
-from bot import Tg
-from utils.tools import config, ensure_ngrok, start_scheduler
-from web_app import run_flask, start_ngrok
+from waitress import serve
 
-site_config = config.get('site')
-flask_port = site_config.get('flask_port')
-streamlit_port = site_config.get('streamlit_port')
+from bot import Tg
+from utils.tools import ensure_ngrok, start_scheduler, config
+from web_app import start_ngrok, app
+
+streamlit_port = config['site']['streamlit_port']
+flask_port = config['site']['flask_port']
+
+
+def run_flask():
+    logging.info("Запуск Flask-приложения на Waitress")
+    serve(app, host='0.0.0.0', port=flask_port)
 
 
 def run_streamlit_app():
+    logging.info("Запуск Streamlit-приложения")
     script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'start_page.py')
-    subprocess.run(["streamlit", "run", script_path, "--server.port=8501", "--server.headless=true"], check=True)
+    subprocess.run(["streamlit", "run", script_path, f"--server.port={streamlit_port}", "--server.headless=true"], check=True)
 
 
 if __name__ == '__main__':
@@ -22,7 +31,7 @@ if __name__ == '__main__':
     streamlit_thread = threading.Thread(target=run_streamlit_app)
     streamlit_thread.start()
 
-    flask_thread = threading.Thread(target=run_flask, args=())
+    flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
     start_scheduler(17, 35)  # Запуск планировщика задач
 
@@ -30,7 +39,7 @@ if __name__ == '__main__':
     ngrok_process, ngrok_urls = start_ngrok()
 
     bot = Tg(ngrok_urls['flask'], ngrok_urls['streamlit'])
-    bot_thread = threading.Thread(target=lambda: asyncio.run(bot.main()), args=())
+    bot_thread = threading.Thread(target=lambda: asyncio.run(bot.main()))
     bot_thread.start()
 
     flask_thread.join()  # Дожидаемся потока Flask-приложения

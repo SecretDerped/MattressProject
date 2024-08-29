@@ -7,6 +7,7 @@ import subprocess
 from io import BytesIO
 
 import requests
+from waitress import serve
 from barcode import Code128
 from datetime import datetime as dt
 from flask import Flask, render_template, request, abort, jsonify, Response
@@ -155,7 +156,6 @@ def index():
                 }
                 order_data['positionsData'].append(springs_item)
 
-            print(f"{order_data['positionsData']}")
             sbis.write_implementation(order_data)
 
             order_message += (f"{order_data['party']}\n"
@@ -186,7 +186,7 @@ def index():
                 order_message += f"\n{order_data['comment']}"
 
             send_telegram_message(order_message, tg_chat_id)
-            #send_telegram_message(order_message, tg_group_chat_id)
+            send_telegram_message(order_message, tg_group_chat_id)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
@@ -205,6 +205,24 @@ def index():
 
     logging.debug("Рендеринг шаблона index.html")
     return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
+
+
+@app.route('/command')
+def mirror_command():
+    # URL, куда будет перенаправлен запрос
+    streamlit_url = 'http://localhost:8501/command'
+
+    # Получаем запрос, который пришел на /command
+    req = requests.Request(method=request.method, url=streamlit_url, headers=request.headers, data=request.data,
+                           params=request.args)
+    prepped = req.prepare()
+
+    # Отправляем запрос на Streamlit
+    session = requests.Session()
+    response = session.send(prepped)
+
+    # Возвращаем ответ от Streamlit в качестве ответа Flask
+    return Response(response.content, status=response.status_code, headers=dict(response.headers))
 
 
 @app.route('/gluing')
@@ -471,32 +489,9 @@ def start_ngrok():
     return process, urls
 
 
-@app.route('/command')
-def mirror_command():
-    # URL, куда будет перенаправлен запрос
-    streamlit_url = 'http://localhost:8501/command'
-
-    # Получаем запрос, который пришел на /command
-    req = requests.Request(method=request.method, url=streamlit_url, headers=request.headers, data=request.data,
-                           params=request.args)
-    prepped = req.prepare()
-
-    # Отправляем запрос на Streamlit
-    session = requests.Session()
-    response = session.send(prepped)
-
-    # Возвращаем ответ от Streamlit в качестве ответа Flask
-    return Response(response.content, status=response.status_code, headers=dict(response.headers))
-
-
-def run_flask():
-    logging.info("Запуск Flask-приложения")
-    app.run(host='0.0.0.0')
-
-
 if __name__ == '__main__':
-    logging.info("Запуск приложения")
     ngrok_process, ngrok_url = start_ngrok()
-    run_flask()
+    logging.info("Тестовый запуск Flask-приложения на Waitress")
+    serve(app, host='0.0.0.0', port=flask_port)
 
     # ngrok_process.wait()
