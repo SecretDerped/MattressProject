@@ -47,7 +47,7 @@ sequence_buffer = {}
 current_tasks = {}
 
 
-def str_num_to_float(string: str):
+def str_num_to_float(string):
     try:
         return round(float(string), 2)
     except (ValueError, TypeError):
@@ -57,48 +57,35 @@ def str_num_to_float(string: str):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     tg_chat_id = request.args.get('chat_id')
+
     if request.method == 'POST':
         logging.info(f"Получен POST-запрос. Данные формы: {request.form}")
 
         try:
-            # Запрос возвращает строки в качестве данных
             order_data = request.form.to_dict()
             for k, v in order_data.items():
                 logging.debug(f'index/ POST: {k} :: {v} ({type(v)})\n')
+
             order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
             order_data['prepayment'] = str_num_to_float(order_data['prepayment'])
 
             positions_data = order_data['positionsData']
-
             mattress_quantity = 0
             total_price = 0
-            order_message = ''
             position_str = ''
-            # В positionsData находится только название позиции и количество.
-            # По названию будут подтягиваться данные из словаря номенклатуры.
-            for position in positions_data:
 
+            for position in positions_data:
                 item = nomenclatures[position['article']]
                 item_quantity = int(position['quantity'])
 
                 position['price'] = str_num_to_float(position['price'])
                 total_price += position['price']
 
-                # Позиции не в группе "Матрасы" пропускаются
                 if not item['is_mattress']:
-                    # position_str += f"{position['article']}\n"
                     continue
 
-                comment_size = get_size_str(order_data['comment'])
-                if comment_size:
-                    size = comment_size
-                else:
-                    size = order_data['size'] or item['size']
-
-                if item['article'] in components_page_articles:
-                    components_is_done_field = False
-                else:
-                    components_is_done_field = True
+                size = get_size_str(order_data['comment']) or order_data['size'] or item['size']
+                components_is_done_field = item['article'] not in components_page_articles
 
                 task_data = {
                     "high_priority": False,
@@ -126,64 +113,40 @@ def index():
 
                 position_str += f"Арт. {item['article']}, {item_quantity} шт. {size}\n"
                 mattress_quantity += item_quantity
-
                 for _ in range(item_quantity):
-                    # Порядок task_data должен быть как в tasks_columns_config в app_core
                     append_to_dataframe(task_data, tasks_cash)
 
-            # Вносим в реализацию ткани и пружины
+            # Функция для добавления материала
+            def add_item(article, quantity):
+                return {'article': article, 'quantity': quantity, 'price': 0}
+
+            # Добавляем ткани и пружины
             if order_data['base_fabric']:
-                fabric_top_item = {
-                    'article': order_data['base_fabric'],
-                    'quantity': mattress_quantity * (2 if not order_data['side_fabric'] else 1),
-                    'price': 0  # str_num_to_float(order_data['base_fabric_price'])
-                }
-                order_data['positionsData'].append(fabric_top_item)
+                order_data['positionsData'].append(add_item(order_data['base_fabric'], mattress_quantity * (
+                    2 if not order_data['side_fabric'] else 1)))
 
             if order_data['side_fabric']:
-                fabric_bot_item = {
-                    'article': order_data['side_fabric'],
-                    'quantity': mattress_quantity,
-                    'price': 0  # str_num_to_float(order_data['side_fabric_price'])
-                }
-                order_data['positionsData'].append(fabric_bot_item)
+                order_data['positionsData'].append(add_item(order_data['side_fabric'], mattress_quantity))
 
             if order_data['springs']:
-                springs_item = {
-                    'article': order_data['springs'],
-                    'quantity': mattress_quantity,
-                    'price': 0  # str_num_to_float(order_data['springs_price'])
-                }
-                order_data['positionsData'].append(springs_item)
+                order_data['positionsData'].append(add_item(order_data['springs'], mattress_quantity))
 
             sbis.write_implementation(order_data)
 
-            order_message += (f"{order_data['party']}\n"
-                              f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%d.%m')}\n"
-                              f"{position_str}")
-
-            if order_data['base_fabric']:
-                order_message += f"Топ: {order_data['base_fabric']}\n"
-
-            if order_data['side_fabric']:
-                order_message += f"Бок: {order_data['side_fabric']}\n"
-
-            if order_data['springs']:
-                order_message += f"ПБ: {order_data['springs']}\n"
-
-            if order_data['contact']:
-                order_message += f"{order_data['contact']}\n"
-
-            if order_data['delivery_address'] != '':
-                order_message += f"{order_data['delivery_address']}\n"
-
-            order_message += f"\nИтого {total_price} р.\n"
-
-            if order_data['prepayment'] != 0:
-                order_message += f"Предоплата {order_data['prepayment']} р.\n"
-
-            if order_data['comment'] != '':
-                order_message += f"\n{order_data['comment']}"
+            # Формирование сообщения
+            order_message = (
+                    f"{order_data['party']}\n"
+                    f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%d.%m')}\n"
+                    f"{position_str}"
+                    + (f"Топ: {order_data['base_fabric']}\n" if order_data['base_fabric'] else '')
+                    + (f"Бок: {order_data['side_fabric']}\n" if order_data['side_fabric'] else '')
+                    + (f"ПБ: {order_data['springs']}\n" if order_data['springs'] else '')
+                    + (f"{order_data['contact']}\n" if order_data['contact'] else '')
+                    + (f"{order_data['delivery_address']}\n" if order_data['delivery_address'] != '' else '')
+                    + f"\nИтого {total_price} р.\n"
+                    + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
+                    + (f"\n{order_data['comment']}" if order_data['comment'] != '' else '')
+            )
 
             send_telegram_message(order_message, tg_chat_id)
             send_telegram_message(order_message, tg_group_chat_id)
@@ -191,14 +154,13 @@ def index():
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
         except KeyError as e:
-            logging.error(f"Отсутствует обязательное поле {str(e)}, ", exc_info=True)
+            logging.error(f"Отсутствует обязательное поле {str(e)}", exc_info=True)
             abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
 
         except ValueError as e:
             logging.error(f"Ошибка: неверный формат данных - {str(e)}", exc_info=True)
-            abort(400, description=f"Неверный формат данных: {str(e)}. Если ошибка возникла при добавлении нового "
-                                   f"поля в коде, проверьте порядок данных task_data в web_app.py. Он должен быть как "
-                                   f"в tasks_columns на странице бригадира.")
+            abort(400, description=f"Неверный формат данных: {str(e)}")
+
         except Exception as e:
             logging.error(f"Необработанная ошибка: - {str(e)}", exc_info=True)
             abort(400, description=f"Сообщите администратору: {str(e)}.")
