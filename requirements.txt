@@ -9,3 +9,4 @@ APScheduler~=3.10.4
 odfpy~=1.4.1
 openpyxl~=3.2.0b1
 pywin32~=306
+waitress~=3.0.0

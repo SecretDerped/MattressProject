@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import time
@@ -48,10 +49,16 @@ current_tasks = {}
 
 
 def str_num_to_float(string):
+    """Превращает число из строки в дробное с двумя знаками после запятой. Если не получается, возвращает 0."""
     try:
         return round(float(string), 2)
     except (ValueError, TypeError):
         return 0
+
+
+def remove_text_in_parentheses(text):
+    """Удаляет из строки все подстроки в скобках"""
+    return re.sub(r'\(.*?\)\s*', '', text)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -68,6 +75,8 @@ def index():
 
             order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
             order_data['prepayment'] = str_num_to_float(order_data['prepayment'])
+            base_fabric = remove_text_in_parentheses(order_data['base_fabric'])
+            side_fabric = remove_text_in_parentheses(order_data['side_fabric'])
 
             positions_data = order_data['positionsData']
             mattress_quantity = 0
@@ -92,8 +101,8 @@ def index():
                     "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
                     "article": item['article'],
                     "size": size,
-                    "base_fabric": order_data['base_fabric'],
-                    "side_fabric": order_data['side_fabric'] or order_data['base_fabric'],
+                    "base_fabric": base_fabric,
+                    "side_fabric": side_fabric or base_fabric,
                     "photo": order_data['photo_data'],
                     "comment": order_data['comment'],
                     "springs": order_data["springs"] or 'нет',
@@ -116,8 +125,8 @@ def index():
                 for _ in range(item_quantity):
                     append_to_dataframe(task_data, tasks_cash)
 
-            # Функция для добавления материала
             def add_item(article, quantity):
+                """Функция для добавления материала"""
                 return {'article': article, 'quantity': quantity, 'price': 0}
 
             # Добавляем ткани и пружины
@@ -138,8 +147,8 @@ def index():
                     f"{order_data['party']}\n"
                     f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%d.%m')}\n"
                     f"{position_str}"
-                    + (f"Топ: {order_data['base_fabric']}\n" if order_data['base_fabric'] else '')
-                    + (f"Бок: {order_data['side_fabric']}\n" if order_data['side_fabric'] else '')
+                    + (f"Топ: {base_fabric}\n" if base_fabric else '')
+                    + (f"Бок: {side_fabric}\n" if side_fabric else '')
                     + (f"ПБ: {order_data['springs']}\n" if order_data['springs'] else '')
                     + (f"{order_data['contact']}\n" if order_data['contact'] else '')
                     + (f"{order_data['delivery_address']}\n" if order_data['delivery_address'] != '' else '')

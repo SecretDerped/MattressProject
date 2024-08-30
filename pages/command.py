@@ -112,7 +112,7 @@ class BrigadierPage(Page):
                 hide_index=True,
                 num_rows="fixed",
                 key=f"{state}_editor",
-                height=420
+                height=520
             )
 
             return editor, data
