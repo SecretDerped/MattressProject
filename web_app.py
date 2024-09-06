@@ -34,6 +34,7 @@ streamlit_port = site_config.get('streamlit_port')
 hardware = site_config.get('hardware')
 tasks_cash = hardware.get('tasks_cash_filepath')
 employees_cash = hardware.get('employees_cash_filepath')
+current_tasks_cash = hardware.get('current_tasks_cash_filepath')
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
 app = Flask(__name__)
@@ -45,7 +46,6 @@ springs = {key: value for key, value in nomenclatures.items() if value['is_sprin
 components_page_articles = config.get('components', {}).get('showed_articles', [])
 
 sequence_buffer = {}
-current_tasks = {}
 
 
 def str_num_to_float(string):
@@ -57,8 +57,22 @@ def str_num_to_float(string):
 
 
 def remove_text_in_parentheses(text):
-    """Удаляет из строки все подстроки в скобках"""
+    """Удаляет из строки все подстроки в скобках."""
     return re.sub(r'\(.*?\)\s*', '', text)
+
+
+def load_json(filepath):
+    """Загружает текущие задачи из JSON-файла."""
+    if os.path.exists(filepath):
+        with open(filepath) as file:
+            return json.load(file)
+    return {}
+
+
+def save_to_json(data, filepath):
+    """Сохраняет текущие задачи в JSON-файл."""
+    with open(filepath, 'w') as file:
+        json.dump(data, file, indent=4)
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -333,7 +347,7 @@ def get_barcode(employee_id: str = ''):
 
 
 def log_sequence(page_name, action, filter_conditions, transform_task_data):
-    global current_tasks, sequence_buffer
+    global sequence_buffer
     endpoint = request.endpoint.replace('log_sequence_', '')
     if endpoint not in sequence_buffer:
         sequence_buffer[endpoint] = []
@@ -365,6 +379,7 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
 
         filtered_tasks = get_filtered_tasks(tasks, filter_conditions)
 
+        current_tasks = load_json(current_tasks_cash)  # Загрузка текущих задач
         if endpoint not in current_tasks:
             current_tasks[endpoint] = {}
 
@@ -381,7 +396,10 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
                 task = filtered_tasks.loc[task_id]
                 update_task_history(tasks, task_id, page_name, employee_name, action)
                 save_to_file(tasks, tasks_cash)
+
                 logging.debug(f"Назначаем новую задачу сотруднику {employee_id}: {task.to_dict()}")
+                save_to_json(current_tasks, current_tasks_cash)
+
                 transformed_task = transform_task_data(task)
                 return jsonify({'sequence': employee_name, 'task_data': transformed_task})
 
@@ -396,15 +414,15 @@ def log_sequence(page_name, action, filter_conditions, transform_task_data):
 
 
 def complete_task(page_name, action, done_field):
-    global current_tasks
     data = request.json
     employee_id = data['employee_sequence'].replace('Shift', '')
     endpoint = request.endpoint.replace('complete_task_', '')
 
     logging.debug(f"Получен запрос на завершение задачи. employee_id: {employee_id}")
 
-    # Получаем task_id из глобального словаря current_tasks
-    task_id = current_tasks[endpoint].get(employee_id)
+    current_tasks = load_json(current_tasks_cash)  # Загрузка текущих задач
+    # Получаем task_id из словаря current_tasks
+    task_id = current_tasks.get(endpoint, {}).get(employee_id)
 
     if task_id is None:
         logging.error(f"Задача не найдена для сотрудника: {employee_id}")
@@ -423,7 +441,7 @@ def complete_task(page_name, action, done_field):
 
     # Удаляем задачу из текущих задач сотрудника
     current_tasks[endpoint].pop(employee_id, None)
-
+    save_to_json(current_tasks, current_tasks_cash)
     logging.debug(f"Задача {task_id} завершена сотрудником {employee_id}. Статус обновлен.")
 
     return jsonify({'status': 'ok'})

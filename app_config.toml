@@ -56,6 +56,7 @@ backup_path = "backup"  # В эту папку будут складыватьс
 log_filepath = "cash/application.log"  # В этот файл будут записываться логи
 tasks_cash_filepath = "cash/tasks.pkl"  # Указание пути для данных с нарядами. Это pandas-датафрейм, упакованный в .pkl
 employees_cash_filepath = "cash/employees.pkl"  # Данные таблицы управления сотрудниками
+current_tasks_cash_filepath = "cash/current_tasks.json"  # Данные закреплённых нарядов
 
 [sbis]
 # Данные от аккаунта СБИС. От его имени будут формироваться заявки
