@@ -17,6 +17,15 @@
     <form method="POST">
         <!-- Первая колонка формы -->
         <div class="form-column">
+
+            <!-- Кнопка добавления позиции -->
+<div class="form-group">
+    <button type="button" id="addPositionBtn" class="btn btn-secondary">Добавить позицию</button>
+</div>
+
+<!-- Контейнер для позиций -->
+<div id="positionsContainer"></div>
+
             <!-- Позиции -->
             <div class="form-group">
                 <label for="positionsTable" class="form-label"> </label>
@@ -38,25 +47,20 @@
             </div>
 
             <div class="form-group row">
-                <!-- Поле "Размер", с небольшим отступом из невидимых символов  -->
+                <!-- Поле "Ткань - основа", с небольшим отступом из невидимых символов  -->
                 <div class="col-12 col-md-6">
                     <label for="base_fabric" class="form-label">Ткань - основа      </label>
                     <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
                 </div>
-                <!-- Поле "Размер" -->
+                <!-- Поле "Ткань - бочина" -->
                 <div class="col-12 col-md-6">
                     <label for="side_fabric" class="form-label">Ткань - бочина (необязательно)</label>
                     <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань как основная">
                 </div>
-                <!-- Цена ткани на матрас
-                    <div class="col-12 col-md-6">
-                        <label for="base_fabric_price" class="form-label">Цена ткани на матрас</label>
-                        <input type="number" id="base_fabric_price" name="base_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
-                    </div> -->
             </div>
 
             <div class="form-group row">
-                <!-- Поле "Размер" -->
+                <!-- Поле "Пружинный блок" -->
                 <div class="col-12 col-md-6">
                     <label for="springs" class="form-label">Пружинный блок (необязательно)</label>
                     <input type="text" id="springs" name="springs" class="form-control" placeholder="Введите название ПБ...">
@@ -66,22 +70,7 @@
                     <label for="size" class="form-label">Ручное указание размера (необ.)</label>
                     <input type="text" id="size" name="size" class="form-control" placeholder="Длина / Ширина / Высота">
                 </div>
-
-
-                <!-- Цена ткани на матрас
-                    <div class="col-12 col-md-6">
-                        <label for="side_fabric_price" class="form-label">Цена ткани на матрас</label>
-                        <input type="number" id="side_fabric_price" name="side_fabric_price" class="form-control" step="0.01" placeholder="Цена ткани для одного матраса">
-                    </div> -->
             </div>
-
-            <!-- Цена ПБ
-                <div class="form-group row">
-                    <div class="col-12 col-md-6">
-                        <label for="springs_price" class="form-label">Цена ПБ</label>
-                        <input type="number" id="springs_price" name="springs_price" class="form-control" step="0.01" placeholder="Цена БП для одного матраса">
-                    </div>
-                </div> -->
 
             <!-- Комментарий -->
             <div class="form-group">

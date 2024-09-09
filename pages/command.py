@@ -67,6 +67,14 @@ class BrigadierPage(Page):
                         (data['sewing_is_done'] == False) |
                         (data['packing_is_done'] == False)]
 
+        st.markdown("""
+            <style>
+                .stDataFrame tr {
+                    height: 50px; # use this to adjust the height
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
         st.dataframe(data=data,
                      column_config=columns,
                      column_order=(column for column in columns.keys()),

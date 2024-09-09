@@ -168,6 +168,7 @@ def index():
                     + (f"{order_data['delivery_address']}\n" if order_data['delivery_address'] != '' else '')
                     + f"\nИтого {total_price} р.\n"
                     + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
+                    + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data['prepayment'] != 0 else '')
                     + (f"\n{order_data['comment']}" if order_data['comment'] != '' else '')
             )
 
