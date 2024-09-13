@@ -1,4 +1,6 @@
 import datetime
+from pathlib import Path
+
 import streamlit as st
 
 from utils.tools import config, read_file, side_eval, get_date_str, create_cashfile_if_empty, \
@@ -19,7 +21,7 @@ class Page:
         }
         create_cashfile_if_empty(self.employee_columns_config, self.employees_cash)
 
-        self.task_cash = config.get('site').get('hardware').get('tasks_cash_filepath')
+        self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
             "deadline": st.column_config.DateColumn("Срок",
@@ -73,7 +75,7 @@ class Page:
                                                        format="D.MM.YYYY | HH:MM",
                                                        disabled=True),
         }
-        create_cashfile_if_empty(self.tasks_columns_config, self.task_cash)
+        #create_cashfile_if_empty(self.tasks_columns_config, self.task_cash)
 
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
@@ -83,8 +85,8 @@ class Page:
         st.title(f'{self.icon} {self.page_name}')
 
     @staticmethod
-    def load_tasks():
-        return load_tasks()
+    def load_tasks(file):
+        return load_tasks(file)
 
 
 class ManufacturePage(Page):

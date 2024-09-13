@@ -6,22 +6,57 @@
 
 body {
     font-family: 'Source Sans Pro', sans-serif;
-    margin: 0;
     height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center; /* изменено на center */
+    justify-content: center;
     align-items: center;
     position: relative;
-    overflow-y: auto; /* добавлено */
+    overflow-y: auto;
 }
 
-.form-column {
-    display: inline-block;
-    vertical-align: top;
-    width: 100%;
-    padding: 0 10px;
-    margin-bottom: 0.1rem;
+.grid-item {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ddd;
+    padding: 0.3rem;
+    border-radius: 10px;
+    margin: 1rem;
+}
+
+.grid-item label {
+    font-weight: bold;
+    margin-left: 0.5rem;
+}
+
+.grid-item input {
+    width: 100%; /* Занимает всю ширину родительского элемента */
+    margin-bottom: 0.5rem; /* Отступ снизу для каждой строки */
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap; /* Позволяет переносить элементы на следующую строку, если не помещаются */
+    gap: 0.5rem; /* Расстояние между полями */
+}
+
+.form-row label {
+    font-size: 0.65em;
+    color: #6c757d;
+    margin-left: 0.2rem;
+    margin-bottom: -0.3rem;
+}
+
+.form-group {
+    flex: 1 1 30%; /* Элементы занимают 30% от ширины контейнера, могут изменяться */
+    min-width: 200px; /* Минимальная ширина для обеспечения видимости */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input {
+    width: 100%; /* Занимает всю ширину родительского элемента */
 }
 
 .form-control {
@@ -29,25 +64,19 @@ body {
 }
 
 .form-group {
-    margin-bottom: 0.1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
 }
 
 .form-label {
     font-size: 0.85em;
     color: #6c757d;
     margin-bottom: 0.1rem;
-}
-
-.positions-separator {
-    margin-bottom: 2.5rem;
-}
-
-.positions-separator::after {
-    content: '';
-    display: block;
-    margin-top: 1rem;
-    border-bottom: 2px solid #6c757d;
-    border-radius: 5px;
 }
 
 .form-group + .form-group {
@@ -64,12 +93,10 @@ body {
     height: 25px;
     padding: 0;
     font-size: 0.875rem;
-    line-height: 1.5;
     border-radius: 5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    margin: 0 2px; /* уменьшить отступы между кнопками */
 }
 
 .quantity-col {
@@ -148,15 +175,13 @@ button[type="submit"] {
     display: block;
     margin: 0 auto;
     width: 75%;
-    margin-top: 20px;
-    margin-bottom: 20px;
     border-radius: 10px;
 }
 
 h1 {
     text-align: center;
     font-size: 2.5rem;
-    margin-top: 1rem;
+    margin: 1rem;
     color: #31333f;
 }
 
@@ -171,6 +196,7 @@ h1 {
 @media (min-width: 768px) {
     .form-column {
         width: 49%;
+        grid-template-columns: 1fr;
     }
 }
 

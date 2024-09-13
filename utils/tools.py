@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+from pathlib import Path
 
 import httpx
 import tomli
@@ -56,7 +57,7 @@ tg_conf = config.get('telegram')
 tg_token = tg_conf.get('token')
 
 hardware = site_conf.get('hardware')
-tasks_cash = hardware.get('tasks_cash_filepath')
+tasks_cash = Path(hardware.get('tasks_cash_filepath'))
 employees_cash = hardware.get('employees_cash_filepath')
 backup_folder = hardware.get('backup_path')
 log_path = hardware.get('log_filepath')
@@ -85,13 +86,13 @@ def read_file(filepath: str) -> pd.DataFrame:
         st.rerun()
 
 
-def load_tasks():
-    data = read_file(tasks_cash)
+def load_tasks(file):
+    data = read_file(file)
     return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                             ascending=[False, True, True, False])
 
 
-def create_backup():
+"""def create_backup():
     # Создание папки для бэкапов и excel, если она не существует
     os.makedirs(backup_folder, exist_ok=True)
 
@@ -113,7 +114,7 @@ def create_backup():
 
     # Сохранение обновленного DataFrame
     save_to_file(filtered_data, tasks_cash)
-    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')
+    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')"""
 
 
 def get_filtered_tasks(tasks, conditions):
@@ -153,7 +154,7 @@ def create_cashfile_if_empty(columns: dict, cash_filepath: str):
     if not os.path.exists(cash_filepath):
         base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
         empty_dataframe = pd.DataFrame(base_dict)
-        save_to_file(empty_dataframe, cash_filepath)
+        save_to_file(empty_dataframe, cash_filepath + "/task.pkl")
 
 
 def get_employee_column_data(index, column):
@@ -365,7 +366,7 @@ def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
 def start_scheduler(hour: int = 0, minute: int = 0) -> None:
     scheduler = BackgroundScheduler()
     trigger = CronTrigger(hour=hour, minute=minute)  # Запуск каждый день. По умолчанию в полночь
-    scheduler.add_job(create_backup, trigger)
+    #scheduler.add_job(create_backup, trigger)
     scheduler.start()
     logging.info(f"Планировщик задач запущен. Каждый день в {hour} часов {minute} минут будет создаваться копия "
                  f"данных нарядов.")

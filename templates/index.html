@@ -15,115 +15,59 @@
 <h1 class="mb-4 font-weight-bold new-request-heading">📋 Новая заявка</h1>
 <div class="container mt-3">
     <form method="POST">
-        <!-- Первая колонка формы -->
-        <div class="form-column">
+            <!-- Поле автозаполнения для матрасов -->
+            <div class="grid-item">
+                <label for="mattressArticle">Матрасы</label>
+                <input type="text" id="mattressArticle" name="mattressArticle" class="form-control" placeholder="Добавить матрас...">
+                <input type="hidden" id="mattressData" name="mattressData" value="" required>
 
-            <!-- Кнопка добавления позиции -->
-<div class="form-group">
-    <button type="button" id="addPositionBtn" class="btn btn-secondary">Добавить позицию</button>
-</div>
-
-<!-- Контейнер для позиций -->
-<div id="positionsContainer"></div>
-
-            <!-- Позиции -->
-            <div class="form-group">
-                <label for="positionsTable" class="form-label"> </label>
-
-                <input type="text" id="newArticle" name="newArticle" class="form-control" placeholder="Добавить позицию...">
-                <input type="hidden" id="positionsData" name="positionsData" value="" required>
-
-                <table class="table" id="positionsTable">
-                    <thead>
-                    <tr>
-                        <th>Позиции</th>
-                        <th>Количество</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <!-- Строки с позициями будут добавляться здесь -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="form-group row">
-                <!-- Поле "Ткань - основа", с небольшим отступом из невидимых символов  -->
-                <div class="col-12 col-md-6">
-                    <label for="base_fabric" class="form-label">Ткань - основа      </label>
-                    <input type="text" id="base_fabric" name="base_fabric" class="form-control" placeholder="Введите название ткани...">
-                </div>
-                <!-- Поле "Ткань - бочина" -->
-                <div class="col-12 col-md-6">
-                    <label for="side_fabric" class="form-label">Ткань - бочина (необязательно)</label>
-                    <input type="text" id="side_fabric" name="side_fabric" class="form-control" placeholder="Оставьте пустым, если ткань как основная">
+                <div id="mattressTable">
+                    <!-- Строки с матрасами будут добавляться здесь -->
                 </div>
             </div>
 
-            <div class="form-group row">
-                <!-- Поле "Пружинный блок" -->
-                <div class="col-12 col-md-6">
-                    <label for="springs" class="form-label">Пружинный блок (необязательно)</label>
-                    <input type="text" id="springs" name="springs" class="form-control" placeholder="Введите название ПБ...">
-                </div>
-                <!-- Поле "Размер" -->
-                <div class="col-12 col-md-6" id="uniqueMattressSize">
-                    <label for="size" class="form-label">Ручное указание размера (необ.)</label>
-                    <input type="text" id="size" name="size" class="form-control" placeholder="Длина / Ширина / Высота">
+            <!-- Поле автозаполнения для других позиций -->
+            <div class="grid-item">
+                <label for="additionalArticle">Дополнительно</label>
+                <input type="text" id="additionalArticle" name="additionalArticle" class="form-control" placeholder="Добавить позицию...">
+                <input type="hidden" id="additionalData" name="additionalData" value="" required>
+
+                <div id="additionalTable">
+                    <!-- Строки с дополнительными позициями будут добавляться здесь -->
                 </div>
             </div>
 
-            <!-- Комментарий -->
-            <div class="form-group">
-                <label for="comment" class="form-label">Комментарий ко всему заказу (необязательно)</label>
-                <textarea id="comment" name="comment" class="form-control" style="height: 72px;" placeholder="Помимо комментария, можно вручную указать размер, разделив несколько чисел любым символом, например: '90*170' или 200/190/33"></textarea>
+            <!-- Первая внутренняя колонка формы -->
+            <div class="grid-item">
+                <label for="delivery_date">Срок до:</label>
+                <input type="date" id="delivery_date" name="delivery_date" class="form-control">
             </div>
+
+            <!-- Вторая внутренняя колонка формы -->
+            <div class="grid-item">
+                <label for="prepayment">Предоплата</label>
+                <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
+            </div>
+
             <!-- Компания -->
-            <div class="form-group">
-                <label for="party" class="form-label">Организация</label>
+            <div class="grid-item">
+                <label for="party">Организация</label>
                 <input type="text" id="party" name="party" class="form-control" placeholder="Оставьте пустым, если покупатель - физ.лицо.">
                 <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
             </div>
-            <!-- Фото -->
-            <div class="form-group">
-                <label for="photo" class="form-label">Прикрепить фото (JPEG, JPG • Не больше 20 Мб)</label>
-                <div class="custom-file-input-wrapper">
-                    <input type="file" id="photo" name="photo" class="file-input" accept=".jpg">
-                    <button type="button" class="custom-file-input-button">📁 Прикрепить файл ☁️</button>
-                </div>
-                <div id="file-error" class="text-danger mt-2" style="display: none;">Файл должен быть изображением (JPG, JPEG) и весить не более 20 Мб.</div>
-                <input type="hidden" id="photo_data" name="photo_data">
-            </div>
-        </div>
 
-        <!-- Вторая колонка формы -->
-        <div class="form-column">
-            <!-- Первая внутренняя колонка формы -->
-            <div class="form-column">
-                <!-- Срок -->
-                <div class="form-group">
-                    <label for="delivery_date" class="form-label">Срок до:</label>
-                    <input type="date" id="delivery_date" name="delivery_date" class="form-control">
-                </div>
-            </div>
-            <!-- Вторая внутренняя колонка формы -->
-            <div class="form-column">
-                <!-- Предоплата -->
-                <div class="form-group">
-                    <label for="prepayment" class="form-label">Предоплата</label>
-                    <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
-                </div>
-            </div>
             <!-- Контакт -->
-            <div class="form-group">
-                <label for="contact" class="form-label">Контакты</label>
+            <div class="grid-item">
+                <label for="contact">Контакты</label>
                 <input type="text" id="contact" name="contact" class="form-control">
             </div>
+
             <!-- Тип доставки и адрес -->
-            <div class="form-group delivery-type-group">
+            <div class="delivery-type-group">
                 <label class="form-label">Тип доставки</label>
                 <div>
                     <input type="radio" id="pickup" name="delivery_type" value="Самовывоз" checked>
-                    <label for="pickup"> 📍 Самовывоз</label>
+                    <label for="pickup"> 📍  Самовывоз</label>
                 </div>
                 <div>
                     <input type="radio" id="city" name="delivery_type" value="Город">
@@ -142,14 +86,14 @@
                     </div>
                 </div>
                 <!-- Адрес доставки -->
-                <div class="form-group" id="address-group" style="display:none;">
-                    <label for="delivery_address" class="form-label">Адрес доставки</label>
+                <div class="grid-item" id="address-group" style="display:none;">
+                    <label for="delivery_address">Адрес доставки</label>
                     <input type="text" id="delivery_address" name="delivery_address" class="form-control">
                     <input type="hidden" id="address_data" name="address_data" class="form-control" value="">
                 </div>
                 <!-- Выбор региона доставки -->
-                <div class="form-group" id="region-group" style="display:none;">
-                    <label for="region_select" class="form-label">Регионы</label>
+                <div class="grid-item" id="region-group" style="display:none;">
+                    <label for="region_select">Регионы</label>
                     <select id="region_select" name="region_select" class="form-control">
                         <!-- Динамическое заполнение списка регионов -->
                         {% for region in regions %}
@@ -158,7 +102,6 @@
                     </select>
                 </div>
             </div>
-        </div>
 
         <!-- Кнопка отправки формы -->
         <div class="form-group">
@@ -174,5 +117,4 @@
 <script src="/static/index.js"></script>
 
 </body>
-
 </html>

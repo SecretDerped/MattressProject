@@ -1,50 +1,5 @@
 console.log("index.js загружен и выполняется");
 
-// Функция для создания нового элемента позиции
-function createPositionElement(index) {
-    var positionElement = $(`<div class="position-item" id="position-${index}">
-        <h5>Позиция ${index + 1}</h5>
-        <div class="form-group">
-            <label for="article-${index}">Позиция</label>
-            <input type="text" id="article-${index}" class="form-control position-article">
-        </div>
-        <div class="form-group">
-            <label for="quantity-${index}">Количество</label>
-            <input type="number" id="quantity-${index}" class="form-control position-quantity" min="1" value="1">
-        </div>
-        <div class="form-group">
-            <label for="base_fabric-${index}">Ткань - основа</label>
-            <input type="text" id="base_fabric-${index}" class="form-control position-base-fabric">
-        </div>
-        <div class="form-group">
-            <label for="side_fabric-${index}">Ткань - бочина</label>
-            <input type="text" id="side_fabric-${index}" class="form-control position-side-fabric">
-        </div>
-        <div class="form-group">
-            <label for="springs-${index}">Пружинный блок</label>
-            <input type="text" id="springs-${index}" class="form-control position-springs">
-        </div>
-        <div class="form-group">
-            <label for="size-${index}">Размер</label>
-            <input type="text" id="size-${index}" class="form-control position-size">
-        </div>
-        <div class="form-group">
-            <label for="comment-${index}">Комментарий</label>
-            <textarea id="comment-${index}" class="form-control position-comment"></textarea>
-        </div>
-    </div>`);
-    return positionElement;
-}
-
-let positionIndex = 0;
-
-// Добавляем позицию при нажатии на кнопку
-$('#addPositionBtn').click(function() {
-    let positionElement = createPositionElement(positionIndex);
-    $('#positionsContainer').append(positionElement);
-    positionIndex++;
-});
-
 document.querySelector('.file-input').addEventListener('change', function(event) {
     var file = event.target.files[0];
     var fileName = file ? file.name : '📁 Прикрепить файл ☁️';

@@ -43,6 +43,7 @@ sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
+mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
 components_page_articles = config.get('components', {}).get('showed_articles', [])
 
 sequence_buffer = {}
@@ -316,6 +317,15 @@ def get_springs():
     Символы строк в формате Unicode escape-последовательности"""
     logging.debug("Получен GET-запрос к /api/springs")
     return jsonify(list(springs))
+
+
+@app.route('/api/mattresses', methods=['GET'])
+def get_mattresses():
+    """Запрос почти как /api/nomenclatures, только выдаёт
+    не все товары, а список строк с названиями матрасов.
+    Символы строк в формате Unicode escape-последовательности"""
+    logging.debug("Получен GET-запрос к /api/mattresses")
+    return jsonify(list(mattresses))
 
 
 @app.route('/api/barcode/<employee_id>', methods=['GET'])
