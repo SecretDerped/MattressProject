@@ -19,7 +19,6 @@
             <div class="grid-item">
                 <label for="mattressArticle">Матрасы</label>
                 <input type="text" id="mattressArticle" name="mattressArticle" class="form-control" placeholder="Добавить матрас...">
-                <input type="hidden" id="mattressData" name="mattressData" value="" required>
 
                 <div id="mattressTable">
                     <!-- Строки с матрасами будут добавляться здесь -->
@@ -30,20 +29,19 @@
             <div class="grid-item">
                 <label for="additionalArticle">Дополнительно</label>
                 <input type="text" id="additionalArticle" name="additionalArticle" class="form-control" placeholder="Добавить позицию...">
-                <input type="hidden" id="additionalData" name="additionalData" value="" required>
 
                 <div id="additionalTable">
                     <!-- Строки с дополнительными позициями будут добавляться здесь -->
                 </div>
             </div>
 
-            <!-- Первая внутренняя колонка формы -->
+            <!-- Дата -->
             <div class="grid-item">
                 <label for="delivery_date">Срок до:</label>
                 <input type="date" id="delivery_date" name="delivery_date" class="form-control">
             </div>
 
-            <!-- Вторая внутренняя колонка формы -->
+            <!-- Предоплата -->
             <div class="grid-item">
                 <label for="prepayment">Предоплата</label>
                 <input type="number" id="prepayment" name="prepayment" class="form-control" step="0.01">
@@ -52,7 +50,7 @@
             <!-- Компания -->
             <div class="grid-item">
                 <label for="party">Организация</label>
-                <input type="text" id="party" name="party" class="form-control" placeholder="Оставьте пустым, если покупатель - физ.лицо.">
+                <input type="text" id="party" name="party" class="form-control" placeholder="Для ИП и ФЛ оставьте пустым">
                 <input type="hidden" id="party_data" name="party_data" class="form-control" value="">
             </div>
 
@@ -64,26 +62,15 @@
 
             <!-- Тип доставки и адрес -->
             <div class="delivery-type-group">
-                <label class="form-label">Тип доставки</label>
-                <div>
-                    <input type="radio" id="pickup" name="delivery_type" value="Самовывоз" checked>
-                    <label for="pickup"> 📍  Самовывоз</label>
-                </div>
-                <div>
-                    <input type="radio" id="city" name="delivery_type" value="Город">
-                    <label for="city"> 🏡 Город</label>
-                </div>
-                <div>
-                    <input type="radio" id="territory" name="delivery_type" value="Край">
-                    <label for="territory"> 🏞️ Край</label>
-                </div>
-                <div>
-                    <input type="radio" id="region" name="delivery_type" value="Регионы">
-                    <label for="region"> 🗺️ Регионы</label>
-                    <div>
-                        <input type="radio" id="country" name="delivery_type" value="Страны">
-                        <label for="country"> 🌍 Страны</label>
-                    </div>
+                <!-- Выбор региона доставки -->
+                <div class="grid-item" id="delivery_group">
+                    <label for="delivery_type">Тип доставки</label>
+                    <select id="delivery_type" name="delivery_type" class="form-control">
+                        <!-- Динамическое заполнение списка регионов -->
+                        {% for delivery_type in delivery_types %}
+                        <option value="{{ delivery_type }}">{{ delivery_type }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <!-- Адрес доставки -->
                 <div class="grid-item" id="address-group" style="display:none;">

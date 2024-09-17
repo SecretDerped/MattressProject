@@ -27,6 +27,7 @@ sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 
 site_config = config.get('site')
+delivery_types = site_config.get('delivery_types')
 regions = site_config.get('regions')
 flask_port = site_config.get('flask_port')
 streamlit_port = site_config.get('streamlit_port')
@@ -81,14 +82,13 @@ def index():
     tg_chat_id = request.args.get('chat_id')
 
     if request.method == 'POST':
-        logging.info(f"Получен POST-запрос. Данные формы: {request.form}")
+        logging.info(f"Получен POST-запрос. Данные формы: {request.json}")
 
         try:
-            order_data = request.form.to_dict()
+            order_data = request.json
             for k, v in order_data.items():
                 logging.debug(f'index/ POST: {k} :: {v} ({type(v)})\n')
 
-            order_data['positionsData'] = json.loads(order_data['positionsData'] or '{}')
             order_data['prepayment'] = str_num_to_float(order_data['prepayment'])
             base_fabric = remove_text_in_parentheses(order_data['base_fabric'])
             side_fabric = remove_text_in_parentheses(order_data['side_fabric'])
@@ -98,12 +98,12 @@ def index():
             total_price = 0
             position_str = ''
 
-            for position in positions_data:
-                item = nomenclatures[position['article']]
-                item_quantity = int(position['quantity'])
+            for mattress in order_data['mattresses']:
+                item = nomenclatures[mattress['name']]
+                item_quantity = int(mattress['quantity'])
 
-                position['price'] = str_num_to_float(position['price'])
-                total_price += position['price']
+                mattress['price'] = str_num_to_float(mattress['price'])
+                total_price += mattress['price']
 
                 if not item['is_mattress']:
                     continue
@@ -191,7 +191,10 @@ def index():
             abort(400, description=f"Сообщите администратору: {str(e)}.")
 
     logging.debug("Рендеринг шаблона index.html")
-    return render_template('index.html', nomenclatures=nomenclatures, regions=regions)
+    return render_template('index.html',
+                           nomenclatures=nomenclatures,
+                           regions=regions,
+                           delivery_types=delivery_types)
 
 
 @app.route('/command')

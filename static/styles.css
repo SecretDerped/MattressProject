@@ -1,12 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;700&display=swap');
+* {
+    font-family: 'Source Sans Pro', sans-serif;
+    }
 
 :root {
     --placeholder-color: #adb5bd;
 }
 
 body {
-    font-family: 'Source Sans Pro', sans-serif;
-    height: 100%;
     justify-content: center;
     align-items: center;
     position: relative;
@@ -20,11 +21,29 @@ body {
     padding: 0.3rem;
     border-radius: 10px;
     margin: 1rem;
+    position: relative;
 }
 
 .grid-item label {
     font-weight: bold;
     margin-left: 0.5rem;
+}
+
+.mattress-option-label {
+    display: inline-block; /* Элемент теперь может принимать установленную ширину */
+    margin-bottom: 0rem;
+    margin-top: 0.5rem;
+}
+
+.file-field {
+    height: 110%
+}
+
+.position-label {
+    font-weight: bold;
+    font-size: 1.5em;
+    margin-left: 0.7rem;
+    width: 75%;
 }
 
 .grid-item input {
@@ -63,6 +82,10 @@ body {
     border-radius: 10px;
 }
 
+.form-control input file {
+    border-radius: 0px;
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
@@ -84,7 +107,6 @@ body {
 }
 
 .delivery-type-group {
-    margin-left: 10px;
     margin-top: 10px;
 }
 
@@ -243,24 +265,41 @@ h1 {
     border: none;
     font-family: 'Source Sans Pro', sans-serif;
 }
-
 .btn-hide {
     background-color: #ffffff;
     border: 2px solid #ff4d4d;
     color: #31333f;
 }
-
 .btn-hide:hover {
     background-color: #ffe6e6;
 }
-
 .btn-complete {
     background-color: #007bff;
     color: #ffffff;
 }
-
 .btn-complete:hover {
     background-color: #0056b3;
+}
+
+/* Стиль для кнопок удаления */
+.remove-item {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #dc3545; /* Красный фон для кнопки удаления */
+    color: #ffffff; /* Белый текст */
+    border: none; /* Без бордюра */
+    border-radius: 10px; /* Скругление углов */
+    font-size: 0.075rem; /* Размер шрифта */
+    cursor: pointer; /* Указатель при наведении */
+    transition: background-color 0.3s; /* Плавный переход фона */
+}
+
+.remove-item:hover {
+    background-color: #c82333; /* Темнее при наведении */
+}
+.remove-item:focus {
+    outline: none; /* Убираем стандартный фокус */
 }
 
 #message {
