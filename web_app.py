@@ -15,8 +15,7 @@ from flask import Flask, render_template, request, abort, jsonify, Response
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
-    get_size_str
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message
 
 config = load_conf()
 
@@ -45,6 +44,8 @@ nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
 mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
+
+# Список артикулов, которые показываются на экране заготовщика, если они появляются
 components_page_articles = config.get('components', {}).get('showed_articles', [])
 
 sequence_buffer = {}
@@ -60,7 +61,12 @@ def str_num_to_float(string):
 
 def remove_text_in_parentheses(text):
     """Удаляет из строки все подстроки в скобках."""
-    return re.sub(r'\(.*?\)\s*', '', text)
+    try:
+        return re.sub(r'\(.*?\)\s*', '', text)
+    except TypeError:
+        return 'Нет'
+    except ValueError:
+        return 'ОШИБКА'
 
 
 def load_json(filepath):
@@ -86,95 +92,98 @@ def index():
 
         try:
             order_data = request.json
-            for k, v in order_data.items():
-                logging.debug(f'index/ POST: {k} :: {v} ({type(v)})\n')
-
-            order_data['prepayment'] = str_num_to_float(order_data['prepayment'])
-            base_fabric = remove_text_in_parentheses(order_data['base_fabric'])
-            side_fabric = remove_text_in_parentheses(order_data['side_fabric'])
-
-            positions_data = order_data['positionsData']
             mattress_quantity = 0
             total_price = 0
+
+            # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
+            # сообщение для telegram после отправки заявки
             position_str = ''
 
-            for mattress in order_data['mattresses']:
-                item = nomenclatures[mattress['name']]
-                item_quantity = int(mattress['quantity'])
+            # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
+            mattresses_list = order_data.get('mattresses')
+            if mattresses_list:
+                for mattress in mattresses_list:
+                    item_sbis_data = nomenclatures[mattress['name']]
+                    item_quantity = int(mattress.get('quantity', 1))
 
-                mattress['price'] = str_num_to_float(mattress['price'])
-                total_price += mattress['price']
+                    mattress['price'] = str_num_to_float(mattress.get('price', 0))
+                    total_price += mattress['price']
+                    # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
+                    # Если артикул в списке components_page_articles, то components_is_done = False,
+                    # а значит появится на экране заготовщика
+                    components_is_done_field = item_sbis_data['article'] not in components_page_articles
 
-                if not item['is_mattress']:
-                    continue
+                    # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
+                    base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
+                    side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
+                    size = mattress['size'] or item_sbis_data['size']
+                    task_data = {
+                        "high_priority": False,
+                        "deadline": dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
+                        "article": item_sbis_data['article'],
+                        "size": size,
+                        "base_fabric": base_fabric,
+                        "side_fabric": side_fabric or base_fabric,
+                        "photo": mattress.get('photo'),
+                        "comment": mattress['comment'],
+                        "springs": mattress["springBlock"] or 'Нет',
+                        "attributes": item_sbis_data['structure'],
+                        "components_is_done": components_is_done_field,
+                        "fabric_is_done": False,
+                        "gluing_is_done": False,
+                        "sewing_is_done": False,
+                        "packing_is_done": False,
+                        "history": "",
+                        "organization": order_data.get('organization'),
+                        "contact": order_data.get('contact'),
+                        "delivery_type": order_data['deliveryType'],
+                        "address": order_data.get("deliveryAddress"),
+                        "region": order_data.get('regionSelect'),
+                        "created": dt.now(),
+                    }
+                    print(f"{task_data['photo']} = ")
 
-                size = get_size_str(order_data['comment']) or order_data['size'] or item['size']
-                components_is_done_field = item['article'] not in components_page_articles
+                    # Формирование сообщения для telegram
+                    mattress_str = (
+                            f"Арт. {item_sbis_data['article']}, {item_quantity} шт. {size} \n"
+                            + (f"Топ: {base_fabric}\n" if base_fabric else '')
+                            + (f"Бок: {side_fabric}\n" if side_fabric else '')
+                            + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
+                            + (f"{mattress['comment']}" if mattress['comment'] != '' else '')
+                    )
+                    position_str += mattress_str
+                    mattress_quantity += item_quantity
+                    for _ in range(item_quantity):
+                        append_to_dataframe(task_data, tasks_cash)
 
-                task_data = {
-                    "high_priority": False,
-                    "deadline": dt.strptime(order_data['delivery_date'], '%Y-%m-%d'),
-                    "article": item['article'],
-                    "size": size,
-                    "base_fabric": base_fabric,
-                    "side_fabric": side_fabric or base_fabric,
-                    "photo": order_data['photo_data'],
-                    "comment": order_data['comment'],
-                    "springs": order_data["springs"] or 'нет',
-                    "attributes": item['structure'],
-                    "components_is_done": components_is_done_field,
-                    "fabric_is_done": False,
-                    "gluing_is_done": False,
-                    "sewing_is_done": False,
-                    "packing_is_done": False,
-                    "history": "",
-                    "client": order_data['party'],
-                    "delivery_type": order_data['delivery_type'],
-                    "address": order_data["delivery_address"],
-                    "region": order_data['region_select'],
-                    "created": dt.now(),
-                }
+            # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
+            additional_items_list = order_data.get('additionalItems')
+            if additional_items_list:
+                for item in additional_items_list:
+                    total_price += item['price']
+                    position_str += f"{item['article']}, {item} шт."
 
-                position_str += f"Арт. {item['article']}, {item_quantity} шт. {size}\n"
-                mattress_quantity += item_quantity
-                for _ in range(item_quantity):
-                    append_to_dataframe(task_data, tasks_cash)
+            # Заранее превращаем значение предоплаты во float, записываем в JSON
+            order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
-            def add_item(article, quantity):
-                """Функция для добавления материала"""
-                return {'article': article, 'quantity': quantity, 'price': 0}
-
-            # Добавляем ткани и пружины
-            if order_data['base_fabric']:
-                order_data['positionsData'].append(add_item(order_data['base_fabric'], mattress_quantity * (
-                    2 if not order_data['side_fabric'] else 1)))
-
-            if order_data['side_fabric']:
-                order_data['positionsData'].append(add_item(order_data['side_fabric'], mattress_quantity))
-
-            if order_data['springs']:
-                order_data['positionsData'].append(add_item(order_data['springs'], mattress_quantity))
-
+            # Из JSON создаётся документ реализации в СБИС
             sbis.write_implementation(order_data)
 
-            # Формирование сообщения
+            # Формирование сообщения для telegram
             order_message = (
                     f"{order_data['party']}\n"
-                    f"{dt.strptime(order_data['delivery_date'], '%Y-%m-%d').strftime('%d.%m')}\n"
+                    f"{dt.strptime(order_data['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
                     f"{position_str}"
-                    + (f"Топ: {base_fabric}\n" if base_fabric else '')
-                    + (f"Бок: {side_fabric}\n" if side_fabric else '')
-                    + (f"ПБ: {order_data['springs']}\n" if order_data['springs'] else '')
                     + (f"{order_data['contact']}\n" if order_data['contact'] else '')
-                    + (f"{order_data['delivery_address']}\n" if order_data['delivery_address'] != '' else '')
+                    + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
                     + f"\nИтого {total_price} р.\n"
                     + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
                     + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data['prepayment'] != 0 else '')
-                    + (f"\n{order_data['comment']}" if order_data['comment'] != '' else '')
             )
 
+            # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
             send_telegram_message(order_message, tg_chat_id)
-            send_telegram_message(order_message, tg_group_chat_id)
+            #send_telegram_message(order_message, tg_group_chat_id)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 
