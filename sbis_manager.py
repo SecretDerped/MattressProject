@@ -443,7 +443,7 @@ class SBISWebApp(SBISApiManager):
         order_address = customer_info.get('address_data', {}).get('value', None)
 
         # customer_name = order_data.get('party', None).replace('"', '&quot;')
-        comment = order_data.get('comment', None).replace('"', '&quot;')
+        comment = order_data.get('comment', '').replace('"', '&quot;')
         order_contact = order_data.get('contact', None)
 
         prepayment = order_data['prepayment']

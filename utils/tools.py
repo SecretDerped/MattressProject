@@ -135,18 +135,6 @@ def append_to_dataframe(data: dict, filepath: str):
     save_to_file(df, filepath)
 
 
-def add_dataframe(data: dict, filepath: str):
-    """
-    Принимает словарь для датафрейма, где ключи совпадают с названиями колонок.
-    Берёт оттуда значения без ключей и формирует датафрейм.
-    """
-    base_dict = {key: pd.Series(dtype='object') for key in data.keys()}
-    empty_dataframe = pd.DataFrame(base_dict)
-    new_row = pd.DataFrame([data])
-    df = pd.concat([df, new_row], ignore_index=True)
-    save_to_file(df, filepath)
-
-
 def cashing(data, state):
     st.session_state[state] = data
 
@@ -160,13 +148,14 @@ def clear_cash(state):
         del st.session_state[state]
 
 
-def create_cashfile_if_empty(columns: dict, cash_filepath: str):
-    """Если файл с кэшем отсутствует, создаёт его, прописывая пустые колонки
-    из ключей словаря настройки колонн, типа из tasks_columns_config"""
-    if not os.path.exists(cash_filepath):
-        base_dict = {key: pd.Series(dtype='object') for key in columns.keys()}
-        empty_dataframe = pd.DataFrame(base_dict)
-        save_to_file(empty_dataframe, cash_filepath + "/task.pkl")
+def create_dataframe(data: dict, filepath: str):
+    """
+    Принимает словарь для датафрейма, где ключи совпадают с названиями колонок.
+    Берёт оттуда значения без ключей и формирует датафрейм.
+    """
+    base_dict = {key: pd.Series(dtype='object') for key in data.keys()}
+    empty_dataframe = pd.DataFrame(base_dict)
+    save_to_file(empty_dataframe, filepath)
 
 
 def get_employee_column_data(index, column):

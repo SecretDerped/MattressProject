@@ -7,6 +7,7 @@ import logging
 import subprocess
 from io import BytesIO
 
+import pandas as pd
 import requests
 from waitress import serve
 from barcode import Code128
@@ -15,7 +16,8 @@ from flask import Flask, render_template, request, abort, jsonify, Response
 
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
+    create_dataframe, read_file
 
 config = load_conf()
 
@@ -92,7 +94,6 @@ def index():
 
         try:
             order_data = request.json
-            mattress_quantity = 0
             total_price = 0
 
             # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
@@ -102,6 +103,13 @@ def index():
             # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
             mattresses_list = order_data.get('mattresses')
             if mattresses_list:
+                # Сначала создаем список для хранения матрасов
+                mattress_rows = []
+                # Запоминаем время создания наряда
+                now = dt.now()
+                # И создаём название для файла, куда сохраним информацию о наряде
+                query_dataframe_path = f"{tasks_cash}/{dt.now().strftime('%Y-%m-%d_%H-%M-%S')}.pkl"
+
                 for mattress in mattresses_list:
                     item_sbis_data = nomenclatures[mattress['name']]
                     item_quantity = int(mattress.get('quantity', 1))
@@ -141,39 +149,44 @@ def index():
                         "region": order_data.get('regionSelect'),
                         "created": dt.now(),
                     }
-                    print(f"{task_data['photo']} = ")
 
-                    # Формирование сообщения для telegram
+                    # Формирование части сообщения с позициями для telegram
                     mattress_str = (
                             f"Арт. {item_sbis_data['article']}, {item_quantity} шт. {size} \n"
                             + (f"Топ: {base_fabric}\n" if base_fabric else '')
                             + (f"Бок: {side_fabric}\n" if side_fabric else '')
                             + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
-                            + (f"{mattress['comment']}" if mattress['comment'] != '' else '')
+                            + (f"{mattress['comment']}\n" if mattress['comment'] != '' else '')
+                            + f"\n"
                     )
                     position_str += mattress_str
-                    mattress_quantity += item_quantity
+
+                    # Формируем список матрасов для записи в датафрейм
                     for _ in range(item_quantity):
-                        append_to_dataframe(task_data, tasks_cash)
+                        mattress_rows.append(task_data)
+
+                df = pd.DataFrame(mattress_rows)
+                save_to_file(df, query_dataframe_path)
 
             # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
             additional_items_list = order_data.get('additionalItems')
             if additional_items_list:
                 for item in additional_items_list:
-                    total_price += item['price']
-                    position_str += f"{item['article']}, {item} шт."
+                    total_price += str_num_to_float(item['price'])
+                    # Формирование части сообщения с позициями для telegram
+                    position_str += f"{item['name']}, {item['quantity']} шт. \n"
 
             # Заранее превращаем значение предоплаты во float, записываем в JSON
             order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
             # Из JSON создаётся документ реализации в СБИС
-            sbis.write_implementation(order_data)
+            #sbis.write_implementation(order_data)
 
             # Формирование сообщения для telegram
             order_message = (
-                    f"{order_data['party']}\n"
+                    f"{order_data['organization']}\n"
                     f"{dt.strptime(order_data['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
-                    f"{position_str}"
+                    f"{position_str}\n"
                     + (f"{order_data['contact']}\n" if order_data['contact'] else '')
                     + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
                     + f"\nИтого {total_price} р.\n"

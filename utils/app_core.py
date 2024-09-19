@@ -1,10 +1,10 @@
 import datetime
+import os
 from pathlib import Path
 
 import streamlit as st
 
-from utils.tools import config, read_file, side_eval, get_date_str, create_cashfile_if_empty, \
-    load_tasks
+from utils.tools import config, read_file, side_eval, get_date_str, load_tasks, create_dataframe
 
 
 class Page:
@@ -19,7 +19,10 @@ class Page:
             "position": st.column_config.TextColumn("Роли", width='medium', default=''),
             "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=True),
         }
-        create_cashfile_if_empty(self.employee_columns_config, self.employees_cash)
+        # Если файл с кэшем отсутствует, создаёт его, прописывая пустые колонки
+        # из ключей словаря настройки колонн, типа из tasks_columns_config
+        if not os.path.exists(self.employees_cash):
+            create_dataframe(self.employee_columns_config, self.employees_cash)
 
         self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
@@ -75,7 +78,6 @@ class Page:
                                                        format="D.MM.YYYY | HH:MM",
                                                        disabled=True),
         }
-        #create_cashfile_if_empty(self.tasks_columns_config, self.task_cash)
 
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
