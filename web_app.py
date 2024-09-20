@@ -17,7 +17,7 @@ from flask import Flask, render_template, request, abort, jsonify, Response
 from sbis_manager import SBISWebApp
 from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
     get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
-    create_dataframe, read_file
+    create_dataframe, read_file, clean_filename
 
 config = load_conf()
 
@@ -107,8 +107,6 @@ def index():
                 mattress_rows = []
                 # Запоминаем время создания наряда
                 now = dt.now()
-                # И создаём название для файла, куда сохраним информацию о наряде
-                query_dataframe_path = f"{tasks_cash}/{dt.now().strftime('%Y-%m-%d_%H-%M-%S')}.pkl"
 
                 for mattress in mattresses_list:
                     item_sbis_data = nomenclatures[mattress['name']]
@@ -147,7 +145,7 @@ def index():
                         "delivery_type": order_data['deliveryType'],
                         "address": order_data.get("deliveryAddress"),
                         "region": order_data.get('regionSelect'),
-                        "created": dt.now(),
+                        "created": now,
                     }
 
                     # Формирование части сообщения с позициями для telegram
@@ -165,8 +163,17 @@ def index():
                     for _ in range(item_quantity):
                         mattress_rows.append(task_data)
 
-                df = pd.DataFrame(mattress_rows)
-                save_to_file(df, query_dataframe_path)
+                # Формируем имя файла
+                date_str = now.strftime('%m.%d %Hч %Mм %Sс')
+                client_info = order_data['organization'] or order_data['contact'] or 'Неизвестный клиент'
+                delivery_type = order_data['deliveryType']
+                region_info = '' if delivery_type == "Самовывоз" else f" - {order_data.get('regionSelect', '')}, {order_data.get('deliveryAddress', '')}"
+
+                # Создаем строку с исключением недопустимых символов
+                query_dataframe_path = clean_filename(
+                    f"{tasks_cash}/{date_str}, {client_info}, {delivery_type}{region_info}.pkl"
+                )
+                save_to_file(pd.DataFrame(mattress_rows), query_dataframe_path)
 
             # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
             additional_items_list = order_data.get('additionalItems')
@@ -180,7 +187,7 @@ def index():
             order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
             # Из JSON создаётся документ реализации в СБИС
-            #sbis.write_implementation(order_data)
+            # sbis.write_implementation(order_data)
 
             # Формирование сообщения для telegram
             order_message = (
@@ -191,12 +198,13 @@ def index():
                     + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
                     + f"\nИтого {total_price} р.\n"
                     + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
-                    + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data['prepayment'] != 0 else '')
+                    + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
+                                                                                                      'prepayment'] != 0 else '')
             )
 
             # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
             send_telegram_message(order_message, tg_chat_id)
-            #send_telegram_message(order_message, tg_group_chat_id)
+            # send_telegram_message(order_message, tg_group_chat_id)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
 

@@ -12,7 +12,7 @@ def show_and_hide_button(table_state, show_state, edited_df=None, original_df=No
     else:
         button_text = ":red[**Сохранить и вернуть режим просмотра**]"
 
-    if st.button(button_text, key=f'{table_state}_mode_button'):
+    if st.button(button_text, key=f'{file_path}_mode_button'):
         # Очистить данные, если таблица скрывается
         if st.session_state[show_state]:
             if edited_df is not None and original_df is not None:
@@ -41,21 +41,12 @@ class BrigadierPage(Page):
         """Показывает нередактируемую таблицу данных без индексов."""
         columns = self.tasks_columns_config
         data = read_file(file)
-        # В file_active_mode хранится название для переменной session_state,
-        # в которой булево значение "Показывать/Не показывать таблицу".
-        file_active_mode = f"{file}_active_mode"
         # В file_full_mode хранится состояние "Показать все наряды",
         file_full_mode = f"{file}_full_mode"
-        # Тут происходит инициализация переменной. По умолчанию show_table = False
-        if file_active_mode not in st.session_state:
-            st.session_state[file_active_mode] = False
-            # Аналогично и для...
-        if file_full_mode not in st.session_state:
-            st.session_state[file_full_mode] = False
 
         # Так сделано, чтобы настройка была только тут, чтобы
         # нельзя было менять таблицу во время режима редактирования
-        if st.checkbox('Показывать завершённые наряды'):
+        if st.checkbox('Показывать завершённые наряды', key=f"{file_full_mode}_full_mode_checkbox"):
             st.session_state[file_full_mode] = True
         else:
             st.session_state[file_full_mode] = False
@@ -66,14 +57,6 @@ class BrigadierPage(Page):
                         (data['gluing_is_done'] == False) |
                         (data['sewing_is_done'] == False) |
                         (data['packing_is_done'] == False)]
-
-        st.markdown("""
-            <style>
-                .stTable tr {
-                    height: 100px; # use this to adjust the height
-                }
-            </style>
-        """, unsafe_allow_html=True)
 
         st.dataframe(data=data,
                      column_config=columns,
@@ -120,7 +103,6 @@ class BrigadierPage(Page):
                 hide_index=True,
                 num_rows="fixed",
                 key=f"{file}_{state}_editor",
-                height=520
             )
 
             return editor, data
@@ -166,6 +148,7 @@ Page = BrigadierPage('Производственный терминал', '🛠�
 
 tasks_tab, employee_tab = st.tabs(['Наряды', 'Сотрудники'])
 
+
 with tasks_tab:
     col1, col2 = st.columns([1, 2])
 
@@ -181,14 +164,24 @@ with tasks_tab:
 
     for file in Page.task_cash.iterdir():
         if file.is_file():
+            # В file_active_mode хранится название для переменной session_state,
+            # в которой булево значение "Показывать/Не показывать таблицу".
+            file_full_mode = f"{file}_full_mode"
             file_active_mode = f"{file}_active_mode"
-            with st.expander(f'{file}'):
+            # Тут происходит инициализация переменной. По умолчанию show_table = False
+            if file_active_mode not in st.session_state:
+                st.session_state[file_active_mode] = False
+                # Аналогично и для...
+            if file_full_mode not in st.session_state:
+                st.session_state[file_full_mode] = False
+            data = read_file(file)
+            with st.expander(f'{file.name}'):
                 if st.session_state[file_active_mode]:
                     st.error('''##### Режим редактирования. Изменения других не сохраняются.''', icon="🚧")
                     editor, original_data = Page.tasks_editor(file)
-                    show_and_hide_button(Page.TASK_STATE, file_active_mode, editor, original_data, Page.task_cash)
+                    show_and_hide_button(Page.TASK_STATE, file_active_mode, editor, original_data, file)
                 else:
-                    show_and_hide_button(Page.TASK_STATE, file_active_mode)
+                    show_and_hide_button(Page.TASK_STATE, file_active_mode, file_path=file)
                     Page.tasks_table(file)
 
 
