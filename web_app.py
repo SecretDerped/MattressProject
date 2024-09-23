@@ -19,6 +19,10 @@ from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks
     get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
     create_dataframe, read_file, clean_filename
 
+from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Boolean, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+
 config = load_conf()
 
 sbis_config = config.get('sbis')
@@ -51,6 +55,49 @@ mattresses = {key: value for key, value in nomenclatures.items() if value['is_ma
 components_page_articles = config.get('components', {}).get('showed_articles', [])
 
 sequence_buffer = {}
+
+Base = declarative_base()
+
+
+class MattressRequest(Base):
+    __tablename__ = 'mattress_requests'
+    # TODO: Поля сопоставть с запросом
+    id = Column(Integer, primary_key=True)
+    high_priority = Column(Boolean, default=False)
+    deadline = Column(Date)
+    article = Column(String)
+    size = Column(String)
+    base_fabric = Column(String)
+    side_fabric = Column(String)
+    photo = Column(String)
+    comment = Column(String)
+    springs = Column(String)
+    attributes = Column(String)
+    components_is_done = Column(Boolean, default=False)
+    created = Column(Date)
+
+    orders = relationship("Order", back_populates="mattress_request")
+
+
+class Order(Base):
+    __tablename__ = 'orders'
+
+    id = Column(Integer, primary_key=True)
+    organization = Column(String)
+    delivery_type = Column(String)
+    address = Column(String)
+    region = Column(String)
+    created = Column(Date)
+
+    mattress_request_id = Column(Integer, ForeignKey('mattress_requests.id'))
+    mattress_request = relationship("MattressRequest", back_populates="orders")
+
+
+engine = create_engine('sqlite:///mattress_orders.db')  # Используйте другую строку подключения для PostgreSQL
+Base.metadata.create_all(engine)
+
+Session = sessionmaker(bind=engine)
+session = Session()
 
 
 def str_num_to_float(string):
@@ -87,8 +134,6 @@ def save_to_json(data, filepath):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    tg_chat_id = request.args.get('chat_id')
-
     if request.method == 'POST':
         logging.info(f"Получен POST-запрос. Данные формы: {request.json}")
 
@@ -103,17 +148,15 @@ def index():
             # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
             mattresses_list = order_data.get('mattresses')
             if mattresses_list:
-                # Сначала создаем список для хранения матрасов
-                mattress_rows = []
                 # Запоминаем время создания наряда
                 now = dt.now()
 
                 for mattress in mattresses_list:
-                    item_sbis_data = nomenclatures[mattress['name']]
-                    item_quantity = int(mattress.get('quantity', 1))
 
                     mattress['price'] = str_num_to_float(mattress.get('price', 0))
                     total_price += mattress['price']
+
+                    item_sbis_data = nomenclatures[mattress['name']]
                     # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
                     # Если артикул в списке components_page_articles, то components_is_done = False,
                     # а значит появится на экране заготовщика
@@ -122,35 +165,14 @@ def index():
                     # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
                     base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
                     side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
+
                     size = mattress['size'] or item_sbis_data['size']
-                    task_data = {
-                        "high_priority": False,
-                        "deadline": dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
-                        "article": item_sbis_data['article'],
-                        "size": size,
-                        "base_fabric": base_fabric,
-                        "side_fabric": side_fabric or base_fabric,
-                        "photo": mattress.get('photo'),
-                        "comment": mattress['comment'],
-                        "springs": mattress["springBlock"] or 'Нет',
-                        "attributes": item_sbis_data['structure'],
-                        "components_is_done": components_is_done_field,
-                        "fabric_is_done": False,
-                        "gluing_is_done": False,
-                        "sewing_is_done": False,
-                        "packing_is_done": False,
-                        "history": "",
-                        "organization": order_data.get('organization'),
-                        "contact": order_data.get('contact'),
-                        "delivery_type": order_data['deliveryType'],
-                        "address": order_data.get("deliveryAddress"),
-                        "region": order_data.get('regionSelect'),
-                        "created": now,
-                    }
+
+                    quantity = int(mattress.get('quantity', 1))
 
                     # Формирование части сообщения с позициями для telegram
                     mattress_str = (
-                            f"Арт. {item_sbis_data['article']}, {item_quantity} шт. {size} \n"
+                            f"Арт. {item_sbis_data['article']}, {quantity} шт. {size} \n"
                             + (f"Топ: {base_fabric}\n" if base_fabric else '')
                             + (f"Бок: {side_fabric}\n" if side_fabric else '')
                             + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
@@ -159,21 +181,46 @@ def index():
                     )
                     position_str += mattress_str
 
+                    mattress_request = MattressRequest(
+                        high_priority=False,
+                        deadline=dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
+                        article=item_sbis_data['article'],
+                        size=size,
+                        base_fabric=base_fabric,
+                        side_fabric=side_fabric or base_fabric,
+                        photo=mattress.get('photo'),
+                        comment=mattress.get('comment', ''),
+                        springs=mattress["springBlock"] or 'Нет',
+                        attributes=item_sbis_data['structure'],
+                        components_is_done=components_is_done_field,
+                        fabric_is_done=False,
+                        gluing_is_done=False,
+                        sewing_is_done=False,
+                        packing_is_done=False,
+                        history='',
+                        created=now
+                    )
+                    session.add(mattress_request)
                     # Формируем список матрасов для записи в датафрейм
-                    for _ in range(item_quantity):
-                        mattress_rows.append(task_data)
+                    for _ in range(quantity):
+                        session.add(mattress_request)
 
-                # Формируем имя файла
-                date_str = now.strftime('%m.%d %Hч %Mм %Sс')
-                client_info = order_data['organization'] or order_data['contact'] or 'Неизвестный клиент'
-                delivery_type = order_data['deliveryType']
-                region_info = '' if delivery_type == "Самовывоз" else f" - {order_data.get('regionSelect', '')}, {order_data.get('deliveryAddress', '')}"
-
-                # Создаем строку с исключением недопустимых символов
-                query_dataframe_path = clean_filename(
-                    f"{tasks_cash}/{date_str}, {client_info}, {delivery_type}{region_info}.pkl"
+                # Сохраняем заказ
+                order = Order(
+                    organization=order_data.get('organization'),
+                    contact=order_data.get('contact'),
+                    delivery_type=order_data['deliveryType'],
+                    address=order_data.get("deliveryAddress"),
+                    region=order_data.get('regionSelect'),
+                    created=now
                 )
-                save_to_file(pd.DataFrame(mattress_rows), query_dataframe_path)
+                session.add(order)
+
+                # Привязываем матрасы к заказу
+                for mattress_request in session.new:
+                    mattress_request.orders.append(order)
+
+                session.commit()
 
             # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
             additional_items_list = order_data.get('additionalItems')
@@ -203,7 +250,7 @@ def index():
             )
 
             # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
-            send_telegram_message(order_message, tg_chat_id)
+            send_telegram_message(order_message, request.args.get('chat_id'))
             # send_telegram_message(order_message, tg_group_chat_id)
 
             return "   Заявка принята.\nРеализация записана.\nНаряды созданы."

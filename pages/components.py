@@ -17,8 +17,8 @@ class ComponentsPage(ManufacturePage):
             'photo': st.column_config.ImageColumn("Фото"),
         }
 
-    def components_tasks(self):
-        data = super().load_tasks()
+    def components_tasks(self, file):
+        data = super().load_tasks(file)
         # Артикулы с нужными номерами отображаются, потому что в web_app есть функция, по умолчанию ставящая
         # всем артикулам в списке showed_articles из app_config значение components_is_done == False.
         # Остальным ставит True
@@ -28,22 +28,21 @@ class ComponentsPage(ManufacturePage):
                     (data['packing_is_done'] == False)]
 
     @st.experimental_fragment(run_every="1s")
-    def components_frame(self):
-        tasks = self.components_tasks()
+    def components_frame(self, file):
+        tasks = self.components_tasks(file)
         return st.data_editor(tasks[self.columns_order],
                               column_config=self.components_columns_config,
                               hide_index=True)
 
-    def components_table(self):
-        tasks = super().load_tasks()
+    def components_table(self, file):
+        tasks = super().load_tasks(file)
         # Создаем форму для обработки изменений в таблице
-        with st.form(key='tasks_components_form'):
+        with st.form(key=f'{file}_tasks_components_form'):
             inner_col_1, inner_col_2 = st.columns([4, 1])
             with inner_col_1:
-                edited_tasks_df = self.components_frame()
+                edited_tasks_df = self.components_frame(file)
 
             with inner_col_2:
-                st.write('Можно отметить много готовых заявок за раз и нажать кнопку:')
                 # Добавляем кнопку подтверждения
                 submit_button = st.form_submit_button(label='Подтвердить')
                 if submit_button:
@@ -56,20 +55,28 @@ class ComponentsPage(ManufacturePage):
                                 history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
                                 tasks.at[index, 'history'] += history_note
                                 tasks.at[index, 'components_is_done'] = True
-                        save_to_file(tasks, self.task_cash)
+                        save_to_file(tasks, file)
                         st.rerun()
+
+    def tables_row(self):
+        for file in self.task_cash.iterdir():
+            if file.is_file():
+                # Флаг для показа/скрытия таблицы
+                if not self.components_tasks(file).empty:
+                    self.components_table(file)
 
 
 Page = ComponentsPage(page_name='Заготовка',
                       icon="🧱",
-                      columns_order=['components_is_done', 'deadline', 'article', 'size', 'attributes', 'comment',
+                      columns_order=['components_is_done', 'article', 'size', 'attributes', 'comment',
                                      'photo'])
 
 col_table, col_info = st.columns([4, 1])
 
 with col_table:
-    Page.components_table()
+    Page.tables_row()
 
 with col_info:
     st.info('Вы можете сортировать наряды, нажимая на поля таблицы. ', icon="ℹ️")
+    st.info('Можно отметить много готовых заявок за раз и нажать кнопку "Подтвердить"', icon="ℹ️")
 

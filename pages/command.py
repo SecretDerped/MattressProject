@@ -30,11 +30,15 @@ class BrigadierPage(Page):
 
         self.TASK_STATE = 'task_dataframe'
         self.EMPLOYEE_STATE = 'employee_dataframe'
+        self.SHOW_DONE_STATE = 'show_done'
 
         self.EMPLOYEE_ACTIVE_MODE = 'employee_active_mode'
 
         if self.EMPLOYEE_ACTIVE_MODE not in st.session_state:
             st.session_state[self.EMPLOYEE_ACTIVE_MODE] = False
+
+        if self.SHOW_DONE_STATE not in st.session_state:
+            st.session_state[self.SHOW_DONE_STATE] = False
 
     @st.experimental_fragment(run_every="1s")
     def tasks_table(self, file):
@@ -110,6 +114,42 @@ class BrigadierPage(Page):
         except RuntimeError:
             st.rerun()
 
+    def tasks_tables(self):
+        for file in self.task_cash.iterdir():
+            if not file.is_file():
+                continue
+
+            data = read_file(file)
+            # Флаг для показа/скрытия таблицы
+            has_active_records = not data[
+                (data['components_is_done'] == False) |
+                (data['fabric_is_done'] == False) |
+                (data['gluing_is_done'] == False) |
+                (data['sewing_is_done'] == False) |
+                (data['packing_is_done'] == False)
+                ].empty
+
+            if has_active_records or st.session_state[self.SHOW_DONE_STATE] is True:
+                # В active_mode хранится название для переменной session_state,
+                # в которой булево значение "Показывать/Не показывать таблицу".
+                # Тут происходит инициализация переменной. По умолчанию show_table = False
+                active_mode = f"{file}_active_mode"
+                if active_mode not in st.session_state:
+                    st.session_state[active_mode] = False
+                # Аналогично и для...
+                full_mode = f"{file}_full_mode"
+                if full_mode not in st.session_state:
+                    st.session_state[full_mode] = False
+
+                with st.expander(f'{file.name}'):
+                    if st.session_state[active_mode]:
+                        st.error('''##### Режим редактирования. Изменения других не сохраняются.''', icon="🚧")
+                        editor, original_data = self.tasks_editor(file)
+                        show_and_hide_button(self.TASK_STATE, active_mode, editor, original_data, file)
+                    else:
+                        show_and_hide_button(self.TASK_STATE, active_mode, file_path=file)
+                        self.tasks_table(file)
+
     def employees_editor(self, dynamic_mode: bool = False):
         # Если кэша нет, загружаем туда данные
         state = self.EMPLOYEE_STATE
@@ -153,8 +193,12 @@ with tasks_tab:
     col1, col2 = st.columns([1, 2])
 
     with col1:
-        st.write('')
         st.title("🏭 Все наряды")
+
+        if st.checkbox('Отобразить сделанные заявки', key=f"{Page.SHOW_DONE_STATE}_key"):
+            st.session_state[Page.SHOW_DONE_STATE] = True
+        else:
+            st.session_state[Page.SHOW_DONE_STATE] = False
 
     with col2:
         st.write(' ')
@@ -162,27 +206,7 @@ with tasks_tab:
         наряд, включите режим редактирования. Он обладает высшим приоритетом - пока активен режим редактирования,
         изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
 
-    for file in Page.task_cash.iterdir():
-        if file.is_file():
-            # В file_active_mode хранится название для переменной session_state,
-            # в которой булево значение "Показывать/Не показывать таблицу".
-            file_full_mode = f"{file}_full_mode"
-            file_active_mode = f"{file}_active_mode"
-            # Тут происходит инициализация переменной. По умолчанию show_table = False
-            if file_active_mode not in st.session_state:
-                st.session_state[file_active_mode] = False
-                # Аналогично и для...
-            if file_full_mode not in st.session_state:
-                st.session_state[file_full_mode] = False
-            data = read_file(file)
-            with st.expander(f'{file.name}'):
-                if st.session_state[file_active_mode]:
-                    st.error('''##### Режим редактирования. Изменения других не сохраняются.''', icon="🚧")
-                    editor, original_data = Page.tasks_editor(file)
-                    show_and_hide_button(Page.TASK_STATE, file_active_mode, editor, original_data, file)
-                else:
-                    show_and_hide_button(Page.TASK_STATE, file_active_mode, file_path=file)
-                    Page.tasks_table(file)
+    Page.tasks_tables()
 
 
 with employee_tab:
@@ -193,6 +217,7 @@ with employee_tab:
         show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE)
 
     with col2:
+        st.write(' ')
         # Должность аналогична свойству page_name на файлах страниц
         st.info('Выставляйте рабочих на смену. Они будут активны при выборе ответственного на нужном экране. В поле'
                 '"Роли" пропишите рабочее место сотруднику. Можно вписать несколько.  \n'

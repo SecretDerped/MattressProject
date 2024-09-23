@@ -7,7 +7,7 @@ showErrorDetails = true
 toolbarMode = "minimal"
 
 # Показывает странички слева
-showSidebarNavigation = false
+showSidebarNavigation = true
 
 [theme]
 primaryColor = "#4B58FF"  # Синий

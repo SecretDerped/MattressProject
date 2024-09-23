@@ -59,7 +59,7 @@ class Page:
             "history": st.column_config.TextColumn("Действия",
                                                    width='small',
                                                    disabled=True),
-            "client": st.column_config.TextColumn("Заказчик",
+            "organization": st.column_config.TextColumn("Заказчик",
                                                   default='',
                                                   width='medium'),
             "delivery_type": st.column_config.SelectboxColumn("Тип доставки",
@@ -147,7 +147,7 @@ class ManufacturePage(Page):
                 f"**Ткань**: {row.get('base_fabric')}  \n"
                 f"**Тип доставки**: {row.get('delivery_type')}  \n"
                 f"**Адрес:** {row.get('address')}  \n"
-                f"**Клиент:** {row.get('client')}  \n"
+                f"**Клиент:** {row.get('organization')}  \n"
                 f"**Верх/Низ**: {row.get('base_fabric')}  \n"
                 f"**Бочина**: {row.get('side_fabric')}  \n"
                 f"**Состав:** {row.get('attributes')}  \n"

@@ -20,32 +20,31 @@ class CuttingPage(ManufacturePage):
         }
         self.showed_articles = config['components']['showed_articles']
 
-    def cutting_tasks(self):
-        data = super().load_tasks()
+    def cutting_tasks(self, file):
+        data = super().load_tasks(file)
         return data[(data['components_is_done'] == True) &
                     (data['fabric_is_done'] == False) &
                     (data['sewing_is_done'] == False) &
                     (data['packing_is_done'] == False)]
 
     @st.experimental_fragment(run_every="1s")
-    def cutting_frame(self):
-        tasks = self.cutting_tasks()
+    def cutting_frame(self, file):
+        tasks = self.cutting_tasks(file)
         # Вычисляемое поле размера бочины.
         tasks['side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
         return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
                               column_config=self.cutting_columns_config,
                               hide_index=True)
 
-    def cutting_table(self):
-        tasks = super().load_tasks()
+    def cutting_table(self, file):
+        tasks = super().load_tasks(file)
         # Создаем форму для обработки изменений в таблице
-        with st.form(key='tasks_cutting_form'):
+        with st.form(key=f'{file}_tasks_cutting_form'):
             inner_col_1, inner_col_2 = st.columns([4, 1])
             with inner_col_1:
-                edited_tasks_df = self.cutting_frame()
+                edited_tasks_df = self.cutting_frame(file)
 
             with inner_col_2:
-                st.write('Можно отметить много нарезанных заявок за раз и нажать кнопку:')
                 # Добавляем кнопку подтверждения
                 submit_button = st.form_submit_button(label='Подтвердить')
                 if submit_button:
@@ -58,20 +57,29 @@ class CuttingPage(ManufacturePage):
                                 history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
                                 tasks.at[index, 'history'] += history_note
                                 tasks.at[index, 'fabric_is_done'] = True
-                        save_to_file(tasks, self.task_cash)
+                        save_to_file(tasks, file)
                         st.rerun()
+
+    def tables_row(self):
+        for file in self.task_cash.iterdir():
+            if file.is_file():
+                # Флаг для показа/скрытия таблицы
+                if not self.cutting_tasks(file).empty:
+                    self.cutting_table(file)
 
 
 Page = CuttingPage(page_name='Нарезка',
                    icon="✂️",
-                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline',
+                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article',
                                   'comment'])
 
 col_table, col_info = st.columns([4, 1])
 
 with col_table:
-    Page.cutting_table()
+    Page.tables_row()
 
 with col_info:
     st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
             'Попробуйте отсортировать по размеру!', icon="ℹ️")
+
+    st.info('Можно отметить много нарезанных заявок за раз и нажать кнопку "Подтвердить"', icon="ℹ️")
