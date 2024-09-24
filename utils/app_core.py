@@ -4,6 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from db_connector import Session
 from utils.tools import config, read_file, side_eval, get_date_str, load_tasks, create_dataframe
 
 

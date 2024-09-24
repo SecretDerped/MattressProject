@@ -11,6 +11,9 @@ from bot import Tg
 from utils.tools import ensure_ngrok, start_scheduler, config
 from web_app import start_ngrok, app
 
+from fastapi import FastAPI
+
+
 streamlit_port = config['site']['streamlit_port']
 flask_port = config['site']['flask_port']
 

@@ -7,6 +7,13 @@ import logging
 import subprocess
 from io import BytesIO
 
+from fastapi import WebSocket, WebSocketDisconnect
+from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+
+from sqlalchemy.future import select
 import pandas as pd
 import requests
 from waitress import serve
@@ -14,14 +21,11 @@ from barcode import Code128
 from datetime import datetime as dt
 from flask import Flask, render_template, request, abort, jsonify, Response
 
+from db_connector import Order, MattressRequest, async_session
 from sbis_manager import SBISWebApp
-from utils.tools import load_conf, append_to_dataframe, save_to_file, load_tasks, \
-    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message, \
-    create_dataframe, read_file, clean_filename
+from utils.tools import load_conf, save_to_file, load_tasks, \
+    get_employee_column_data, time_now, get_filtered_tasks, get_date_str, fabric_type, send_telegram_message
 
-from sqlalchemy import create_engine, Column, Integer, String, Date, Float, Boolean, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
 
 config = load_conf()
 
@@ -43,7 +47,7 @@ employees_cash = hardware.get('employees_cash_filepath')
 current_tasks_cash = hardware.get('current_tasks_cash_filepath')
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
-app = Flask(__name__)
+app = FastAPI()
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
@@ -56,48 +60,24 @@ components_page_articles = config.get('components', {}).get('showed_articles', [
 
 sequence_buffer = {}
 
-Base = declarative_base()
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
 
 
-class MattressRequest(Base):
-    __tablename__ = 'mattress_requests'
-    # TODO: Поля сопоставть с запросом
-    id = Column(Integer, primary_key=True)
-    high_priority = Column(Boolean, default=False)
-    deadline = Column(Date)
-    article = Column(String)
-    size = Column(String)
-    base_fabric = Column(String)
-    side_fabric = Column(String)
-    photo = Column(String)
-    comment = Column(String)
-    springs = Column(String)
-    attributes = Column(String)
-    components_is_done = Column(Boolean, default=False)
-    created = Column(Date)
-
-    orders = relationship("Order", back_populates="mattress_request")
-
-
-class Order(Base):
-    __tablename__ = 'orders'
-
-    id = Column(Integer, primary_key=True)
-    organization = Column(String)
-    delivery_type = Column(String)
-    address = Column(String)
-    region = Column(String)
-    created = Column(Date)
-
-    mattress_request_id = Column(Integer, ForeignKey('mattress_requests.id'))
-    mattress_request = relationship("MattressRequest", back_populates="orders")
-
-
-engine = create_engine('sqlite:///mattress_orders.db')  # Используйте другую строку подключения для PostgreSQL
-Base.metadata.create_all(engine)
-
-Session = sessionmaker(bind=engine)
-session = Session()
+manager = ConnectionManager()
 
 
 def str_num_to_float(string):
@@ -132,150 +112,177 @@ def save_to_json(data, filepath):
         json.dump(data, file, indent=4)
 
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        logging.info(f"Получен POST-запрос. Данные формы: {request.json}")
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Обработка полученных данных
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
-        try:
-            order_data = request.json
-            total_price = 0
 
-            # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
-            # сообщение для telegram после отправки заявки
-            position_str = ''
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Обработка данных
+            await websocket.send_text(f"Message text was: {data}")
+    except WebSocketDisconnect:
+        pass
 
-            # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
-            mattresses_list = order_data.get('mattresses')
-            if mattresses_list:
+
+templates = Jinja2Templates(directory="templates")
+@app.get('/', response_class=HTMLResponse)
+async def get_index(request: Request):
+    logging.debug("Рендеринг шаблона index.html")
+    # Здесь вы можете использовать шаблонизатор Jinja2 для рендеринга HTML
+    return templates.TemplateResponse("index.html", {"request": request,
+                                                     "nomenclatures": nomenclatures,
+                                                     "regions": regions,
+                                                     "delivery_types": delivery_types})
+
+
+@app.post('/')
+async def post_index(order_data: dict):
+    async with async_session() as session:
+        async with session.begin():
+            logging.info(f"Получен POST-запрос. Данные формы: {request.json}")
+
+            try:
+                order_data = request.json
+                total_price = 0
+
+                # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
+                # сообщение для telegram после отправки заявки
+                position_str = ''
+
                 # Запоминаем время создания наряда
                 now = dt.now()
 
-                for mattress in mattresses_list:
-
-                    mattress['price'] = str_num_to_float(mattress.get('price', 0))
-                    total_price += mattress['price']
-
-                    item_sbis_data = nomenclatures[mattress['name']]
-                    # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
-                    # Если артикул в списке components_page_articles, то components_is_done = False,
-                    # а значит появится на экране заготовщика
-                    components_is_done_field = item_sbis_data['article'] not in components_page_articles
-
-                    # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
-                    base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
-                    side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
-
-                    size = mattress['size'] or item_sbis_data['size']
-
-                    quantity = int(mattress.get('quantity', 1))
-
-                    # Формирование части сообщения с позициями для telegram
-                    mattress_str = (
-                            f"Арт. {item_sbis_data['article']}, {quantity} шт. {size} \n"
-                            + (f"Топ: {base_fabric}\n" if base_fabric else '')
-                            + (f"Бок: {side_fabric}\n" if side_fabric else '')
-                            + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
-                            + (f"{mattress['comment']}\n" if mattress['comment'] != '' else '')
-                            + f"\n"
-                    )
-                    position_str += mattress_str
-
-                    mattress_request = MattressRequest(
-                        high_priority=False,
-                        deadline=dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
-                        article=item_sbis_data['article'],
-                        size=size,
-                        base_fabric=base_fabric,
-                        side_fabric=side_fabric or base_fabric,
-                        photo=mattress.get('photo'),
-                        comment=mattress.get('comment', ''),
-                        springs=mattress["springBlock"] or 'Нет',
-                        attributes=item_sbis_data['structure'],
-                        components_is_done=components_is_done_field,
-                        fabric_is_done=False,
-                        gluing_is_done=False,
-                        sewing_is_done=False,
-                        packing_is_done=False,
-                        history='',
-                        created=now
-                    )
-                    session.add(mattress_request)
-                    # Формируем список матрасов для записи в датафрейм
-                    for _ in range(quantity):
-                        session.add(mattress_request)
-
                 # Сохраняем заказ
                 order = Order(
-                    organization=order_data.get('organization'),
-                    contact=order_data.get('contact'),
-                    delivery_type=order_data['deliveryType'],
-                    address=order_data.get("deliveryAddress"),
-                    region=order_data.get('regionSelect'),
-                    created=now
-                )
+                        organization=order_data.get('organization'),
+                        contact=order_data.get('contact'),
+                        delivery_type=order_data['deliveryType'],
+                        address=order_data.get("deliveryAddress"),
+                        region=order_data.get('regionSelect'),
+                        created=now
+                    )
                 session.add(order)
 
-                # Привязываем матрасы к заказу
-                for mattress_request in session.new:
-                    mattress_request.orders.append(order)
+                # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
+                mattresses_list = order_data.get('mattresses')
+                if mattresses_list:
+                    for mattress in mattresses_list:
 
-                session.commit()
+                        # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
+                        base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
+                        side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
 
-            # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
-            additional_items_list = order_data.get('additionalItems')
-            if additional_items_list:
-                for item in additional_items_list:
-                    total_price += str_num_to_float(item['price'])
-                    # Формирование части сообщения с позициями для telegram
-                    position_str += f"{item['name']}, {item['quantity']} шт. \n"
+                        item_sbis_data = nomenclatures[mattress['name']]
+                        size = mattress['size'] or item_sbis_data['size']
 
-            # Заранее превращаем значение предоплаты во float, записываем в JSON
-            order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
+                        quantity = int(mattress.get('quantity', 1))
 
-            # Из JSON создаётся документ реализации в СБИС
-            # sbis.write_implementation(order_data)
+                        # Формирование части сообщения с позициями для telegram
+                        mattress_str = (
+                                f"Арт. {item_sbis_data['article']}, {quantity} шт. {size} \n"
+                                + (f"Топ: {base_fabric}\n" if base_fabric else '')
+                                + (f"Бок: {side_fabric}\n" if side_fabric else '')
+                                + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
+                                + (f"{mattress['comment']}\n" if mattress['comment'] != '' else '')
+                                + f"\n"
+                        )
+                        position_str += mattress_str
 
-            # Формирование сообщения для telegram
-            order_message = (
-                    f"{order_data['organization']}\n"
-                    f"{dt.strptime(order_data['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
-                    f"{position_str}\n"
-                    + (f"{order_data['contact']}\n" if order_data['contact'] else '')
-                    + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
-                    + f"\nИтого {total_price} р.\n"
-                    + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
-                    + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
-                                                                                                      'prepayment'] != 0 else '')
-            )
+                        # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
+                        # Если артикул в списке components_page_articles, то components_is_done = False,
+                        # а значит появится на экране заготовщика
+                        components_is_done_field = item_sbis_data['article'] not in components_page_articles
+                        mattress_request = MattressRequest(
+                            high_priority=False,
+                            deadline=dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
+                            article=item_sbis_data['article'],
+                            size=size,
+                            base_fabric=base_fabric,
+                            side_fabric=side_fabric or base_fabric,
+                            photo=mattress.get('photo'),
+                            comment=mattress.get('comment', ''),
+                            springs=mattress["springBlock"] or 'Нет',
+                            attributes=item_sbis_data['structure'],
+                            components_is_done=components_is_done_field,
+                            fabric_is_done=False,
+                            gluing_is_done=False,
+                            sewing_is_done=False,
+                            packing_is_done=False,
+                            history='',
+                            created=now
+                        )
 
-            # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
-            send_telegram_message(order_message, request.args.get('chat_id'))
-            # send_telegram_message(order_message, tg_group_chat_id)
+                        # Цена записывается в итог
+                        mattress['price'] = str_num_to_float(mattress.get('price', 0))
+                        total_price += mattress['price']
 
-            return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
+                        # Формируем список матрасов для записи в датафрейм
+                        for _ in range(quantity):
+                            session.add(mattress_request)
+                            # Привязываем матрасы к заказу
+                            mattress_request.order = order  # Устанавливаем связь
 
-        except KeyError as e:
-            logging.error(f"Отсутствует обязательное поле {str(e)}", exc_info=True)
-            abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
+                await session.commit()
 
-        except ValueError as e:
-            logging.error(f"Ошибка: неверный формат данных - {str(e)}", exc_info=True)
-            abort(400, description=f"Неверный формат данных: {str(e)}")
+                # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
+                additional_items_list = order_data.get('additionalItems')
+                if additional_items_list:
+                    for item in additional_items_list:
+                        total_price += str_num_to_float(item['price'])
+                        # Формирование части сообщения с позициями для telegram
+                        position_str += f"{item['name']}, {item['quantity']} шт. \n"
 
-        except Exception as e:
-            logging.error(f"Необработанная ошибка: - {str(e)}", exc_info=True)
-            abort(400, description=f"Сообщите администратору: {str(e)}.")
+                # Заранее превращаем значение предоплаты во float, записываем в JSON
+                order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
-    logging.debug("Рендеринг шаблона index.html")
-    return render_template('index.html',
-                           nomenclatures=nomenclatures,
-                           regions=regions,
-                           delivery_types=delivery_types)
+                # Из JSON создаётся документ реализации в СБИС
+                # await sbis.write_implementation(order_data)
+
+                # Формирование сообщения для telegram
+                order_message = (
+                        f"{order_data['organization']}\n"
+                        f"{dt.strptime(order_data['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
+                        f"{position_str}\n"
+                        + (f"{order_data['contact']}\n" if order_data['contact'] else '')
+                        + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
+                        + f"\nИтого {total_price} р.\n"
+                        + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
+                        + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
+                                                                                                          'prepayment'] != 0 else '')
+                )
+
+                # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
+                await send_telegram_message(order_message, request.args.get('chat_id'))
+                # await send_telegram_message(order_message, tg_group_chat_id)
+
+                return "   Заявка принята.\nРеализация записана.\nНаряды созданы."
+
+            except KeyError as e:
+                logging.error(f"Отсутствует обязательное поле {str(e)}", exc_info=True)
+                abort(400, description=f"Отсутствует обязательное поле: {str(e)}")
+
+            except ValueError as e:
+                logging.error(f"Ошибка: неверный формат данных - {str(e)}", exc_info=True)
+                abort(400, description=f"Неверный формат данных: {str(e)}")
+
+            except Exception as e:
+                logging.error(f"Необработанная ошибка: - {str(e)}", exc_info=True)
+                abort(400, description=f"Сообщите администратору: {str(e)}.")
 
 
-@app.route('/command')
-def mirror_command():
+@app.get('/command')
+async def mirror_command():
     # URL, куда будет перенаправлен запрос
     streamlit_url = 'http://localhost:8501/command'
 
@@ -292,14 +299,14 @@ def mirror_command():
     return Response(response.content, status=response.status_code, headers=dict(response.headers))
 
 
-@app.route('/gluing')
-def gluing():
+@app.get('/gluing')
+async def gluing():
     logging.debug('Рендеринг страницы склейки')
     return render_template('gluing.html')
 
 
-@app.route('/log_sequence_gluing', endpoint="log_sequence_gluing", methods=['POST'])
-def log_sequence_gluing():
+@app.post('/log_sequence_gluing')
+async def log_sequence_gluing():
     filter_conditions = [
         "components_is_done == True",
         "gluing_is_done == False",
@@ -329,19 +336,19 @@ def log_sequence_gluing():
     return log_sequence('Сборка', 'Отметка', filter_conditions, transform_task_data)
 
 
-@app.route('/complete_task_gluing', methods=['POST'])
-def complete_task_gluing():
+@app.post('/complete_task_gluing')
+async def complete_task_gluing():
     return complete_task('Сборка', 'Готово', 'gluing_is_done')
 
 
-@app.route('/sewing')
-def sewing():
+@app.get('/sewing')
+async def sewing():
     logging.debug('Рендеринг страницы швейного стола')
     return render_template('sewing.html')
 
 
-@app.route('/log_sequence_sewing', endpoint="log_sequence_sewing", methods=['POST'])
-def log_sequence_sewing():
+@app.post('/log_sequence_sewing')
+async def log_sequence_sewing():
     filter_conditions = [
         "components_is_done == True",
         "gluing_is_done == True",
@@ -368,39 +375,33 @@ def log_sequence_sewing():
     return log_sequence('Шитьё', 'Отметка', filter_conditions, transform_task_data)
 
 
-@app.route('/complete_task_sewing', methods=['POST'])
-def complete_task_sewing():
+@app.post('/complete_task_sewing')
+async def complete_task_sewing():
     return complete_task('Шитье', 'Готово', 'sewing_is_done')
 
 
-@app.route('/api/nomenclatures', methods=['GET'])
-def get_articles():
+@app.get('/api/nomenclatures')
+async def get_articles():
     """Запрос выдаёт список строк с названиями товаров.
     Символы строк в формате Unicode escape-последовательности"""
     logging.debug("Получен GET-запрос к /api/nomenclatures")
     return jsonify(list(nomenclatures))
 
 
-@app.route('/api/fabrics', methods=['GET'])
-def get_fabrics():
-    """Запрос почти как /api/nomenclatures, только выдаёт
-    не все товары, а список строк с названиями тканей.
-    Символы строк в формате Unicode escape-последовательности"""
+@app.get('/api/fabrics')
+async def get_fabrics():
     logging.debug("Получен GET-запрос к /api/fabrics")
     return jsonify(list(fabrics))
 
 
-@app.route('/api/springs', methods=['GET'])
-def get_springs():
-    """Запрос почти как /api/nomenclatures, только выдаёт
-    не все товары, а список строк с названиями пружинных блоков.
-    Символы строк в формате Unicode escape-последовательности"""
+@app.get('/api/springs')
+async def get_springs():
     logging.debug("Получен GET-запрос к /api/springs")
     return jsonify(list(springs))
 
 
-@app.route('/api/mattresses', methods=['GET'])
-def get_mattresses():
+@app.get('/api/mattresses')
+async def get_mattresses():
     """Запрос почти как /api/nomenclatures, только выдаёт
     не все товары, а список строк с названиями матрасов.
     Символы строк в формате Unicode escape-последовательности"""
@@ -408,8 +409,8 @@ def get_mattresses():
     return jsonify(list(mattresses))
 
 
-@app.route('/api/barcode/<employee_id>', methods=['GET'])
-def get_barcode(employee_id: str = ''):
+@app.get('/api/barcode/<employee_id>')
+async def get_barcode(employee_id: str = ''):
     """Параметры: employee_id: id сотрудника из датафрейма.
     При переходе по ссылке на основе id создаётся линейный штрих-код
     Code128 в формате svg и выводится на экран.

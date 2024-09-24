@@ -1,5 +1,6 @@
 import os
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -61,6 +62,7 @@ tasks_cash = Path(hardware.get('tasks_cash_filepath'))
 employees_cash = hardware.get('employees_cash_filepath')
 backup_folder = hardware.get('backup_path')
 log_path = hardware.get('log_filepath')
+db_path = hardware.get('database_path')
 
 log_format = '[%(asctime)s | %(name)s]: %(message)s'
 log_level = DEBUG
