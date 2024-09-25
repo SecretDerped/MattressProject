@@ -2,21 +2,23 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy.orm import joinedload
 
-from db_connector import Order, Session, MattressRequest
+from utils.models import Order, MattressRequest
+from utils.db_connector import session
 from utils.app_core import Page
 from utils.tools import clear_cash, read_file, cashing, \
     get_cash, save_to_file, barcode_link
 
 
 def get_orders_with_mattress_requests(session):
-    return session.query(Order).options(joinedload(Order.mattress_requests)).all()
+    # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+    return session.query(Order).options(joinedload(Order.mattress_requests)).order_by(Order.id.desc()).limit(20).all()
 
 
 class BrigadierPage(Page):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
 
-        self.session = Session()
+        self.session = session()
         self.TASK_STATE = 'task_dataframe'
         self.EMPLOYEE_STATE = 'employee_dataframe'
         self.SHOW_DONE_STATE = 'show_done'
@@ -25,7 +27,7 @@ class BrigadierPage(Page):
 
     def save_changes_to_db(self, edited_df):
         for index, row in edited_df.iterrows():
-            mattress_request = self.session.get(MattressRequest, index)  # Используем Session.get()
+            mattress_request = self.session.get(MattressRequest, index)  # Используем session.get()
             if mattress_request:
                 for column in self.tasks_columns_config.keys():
                     setattr(mattress_request, column, row[column])
@@ -50,7 +52,6 @@ class BrigadierPage(Page):
             st.session_state[show_state] = not st.session_state[show_state]
             st.rerun()
 
-    @st.experimental_fragment(run_every="1s")
     def tasks_table(self, order):
         """Показывает нередактируемую таблицу данных без индексов."""
 

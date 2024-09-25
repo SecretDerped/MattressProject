@@ -2,25 +2,27 @@ import asyncio
 import logging
 import os
 import subprocess
+import sys
 
 import threading
 
-from waitress import serve
+import uvicorn
 
-from bot import Tg
+from utils.bot import Tg
 from utils.tools import ensure_ngrok, start_scheduler, config
-from web_app import start_ngrok, app
-
-from fastapi import FastAPI
+from utils.web_app import start_ngrok
 
 
 streamlit_port = config['site']['streamlit_port']
-flask_port = config['site']['flask_port']
+site_port = config['site']['site_port']
+
+if sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
-def run_flask():
-    logging.info("Запуск Flask-приложения на Waitress")
-    serve(app, host='0.0.0.0', port=flask_port)
+def run_fastapi_app():
+    logging.info("Запуск FastAPI-приложения на Uvicorn")
+    uvicorn.run("web_app:app", host='0.0.0.0', port=int(site_port), reload=False)
 
 
 def run_streamlit_app():
@@ -34,8 +36,8 @@ if __name__ == '__main__':
     streamlit_thread = threading.Thread(target=run_streamlit_app)
     streamlit_thread.start()
 
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
+    fastapi_thread = threading.Thread(target=run_fastapi_app)
+    fastapi_thread.start()
     start_scheduler(17, 35)  # Запуск планировщика задач
 
     ensure_ngrok()
@@ -45,7 +47,7 @@ if __name__ == '__main__':
     bot_thread = threading.Thread(target=lambda: asyncio.run(bot.main()))
     bot_thread.start()
 
-    flask_thread.join()  # Дожидаемся потока Flask-приложения
+    fastapi_thread.join()  # Дожидаемся потока Flask-приложения
     bot_thread.join()  # Дожидаемся потока бота
 
     ngrok_process.wait()

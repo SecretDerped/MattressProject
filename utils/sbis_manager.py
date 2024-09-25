@@ -21,8 +21,8 @@ class SBISManager:
             'Content-Type': 'application/json-rpc; charset=utf-8',
             'Accept': 'application/json-rpc'
         }
-        if not os.path.exists('cash'):
-            os.makedirs('cash')
+        if not os.path.exists('../cash'):
+            os.makedirs('../cash')
 
     def auth(self):
         payload = {

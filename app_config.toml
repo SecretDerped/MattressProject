@@ -47,7 +47,7 @@ delivery_types = [
     "Страны"
 ]
 streamlit_port = '8501'
-flask_port = '5000'
+site_port = '5000'
 
 [site.hardware]
 default_printer = 'HP Ink Tank 110 series'  # Название стандартного принтера для печати гарантийных талонов

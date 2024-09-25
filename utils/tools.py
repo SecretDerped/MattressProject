@@ -1,6 +1,5 @@
 import os
 import re
-import sqlite3
 import sys
 from pathlib import Path
 
@@ -18,10 +17,15 @@ import streamlit as st
 import aspose.pdf as ap
 
 import logging
-from logging import basicConfig, StreamHandler, FileHandler, INFO, DEBUG
+from logging import basicConfig, StreamHandler, FileHandler, DEBUG
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime, timedelta
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from utils.models import Employee
 
 # Создание директории cash, если она не существует
 if not os.path.exists('cash'):
@@ -52,7 +56,7 @@ def load_conf():
 config = load_conf()
 
 site_conf = config.get('site')
-flask_port = site_conf.get('flask_port')
+site_port = site_conf.get('site_port')
 
 tg_conf = config.get('telegram')
 tg_token = tg_conf.get('token')
@@ -94,7 +98,7 @@ def load_tasks(file):
                             ascending=[False, True, True, False])
 
 
-"""def create_backup():
+def create_backup():
     # Создание папки для бэкапов и excel, если она не существует
     os.makedirs(backup_folder, exist_ok=True)
 
@@ -116,7 +120,7 @@ def load_tasks(file):
 
     # Сохранение обновленного DataFrame
     save_to_file(filtered_data, tasks_cash)
-    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')"""
+    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')
 
 
 def get_filtered_tasks(tasks, conditions):
@@ -160,28 +164,13 @@ def create_dataframe(data: dict, filepath: str):
     save_to_file(empty_dataframe, filepath)
 
 
-def get_employee_column_data(index, column):
-    """
-    Загружает DataFrame из файла кэша сотрудников и возвращает значение из колонки по заданному индексу.
-
-    :param index: ID сотрудника, он же индекс строки
-    :return: Значение из колонки по заданному индексу
-    """
+async def get_employee_column_data(session: AsyncSession, employee_id: int, column_name: str):
     try:
-        # Загружаем DataFrame из файла .pkl
-        df = pd.read_pickle(employees_cash)
-        # Проверяем, что DataFrame содержит колонку 'name'
-        if column not in df.columns:
-            raise Exception(f"Column {column} does not exist in the DataFrame.")
-
-        # Получаем значение из колонки по заданному индексу
-        value = df[column].get(int(index))
-        return value
-
-    except FileNotFoundError:
-        return f"Нет доступа к файлу '{employees_cash}'."
-    except KeyError as e:
-        return f"Ошибка номера сотрудника: {str(e)}"
+        employee = await session.execute(select(Employee).where(Employee.id == employee_id))
+        employee = employee.scalar_one_or_none()
+        if employee:
+            return getattr(employee, column_name, None)
+        return None
     except Exception as e:
         return f"Системная ошибка: {str(e)}"
 
@@ -303,7 +292,7 @@ def get_date_str(dt_obj) -> str:
 
 def barcode_link(id: str) -> str:
     """Возвращает ссылку со сгенерированным штрих-кодом."""
-    return f'http://{local_ip}:{flask_port}/api/barcode/{id}'
+    return f'http://{local_ip}:{site_port}/api/barcode/{id}'
 
 
 def clean_filename(filename):
@@ -374,7 +363,7 @@ def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
 def start_scheduler(hour: int = 0, minute: int = 0) -> None:
     scheduler = BackgroundScheduler()
     trigger = CronTrigger(hour=hour, minute=minute)  # Запуск каждый день. По умолчанию в полночь
-    #scheduler.add_job(create_backup, trigger)
+    scheduler.add_job(create_backup, trigger)
     scheduler.start()
     logging.info(f"Планировщик задач запущен. Каждый день в {hour} часов {minute} минут будет создаваться копия "
                  f"данных нарядов.")

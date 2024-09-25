@@ -35,7 +35,7 @@ $(document).ready(function() {
     // Загрузка данных из указанного URL
     function loadOptions(url, callback) {
         $.getJSON(url, function(data) {
-            var options = data.map(function(item) {
+            var options = data['data'].map(function(item) {
                 return '<option value="' + item + '">' + item + '</option>';
             }).join('');
             callback(options);
@@ -48,7 +48,7 @@ $(document).ready(function() {
             source: function (request, response) {
                 $.getJSON(url, function (data) {
                     console.log('Данные загружены:', data);
-                    var results = $.ui.autocomplete.filter(data, request.term);
+                    var results = $.ui.autocomplete.filter(data['data'], request.term);
                     response(results.slice(0, 30));
                 });
             },
@@ -225,8 +225,8 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify(formData),
             success: function (response) {
-                if (response.includes("Заявка принята")) {
-                    alert(response.trim()); // Показываем сообщение с результатом
+                if (response['data'].includes("Заявка принята")) {
+                    alert(response['data'].trim()); // Показываем сообщение с результатом
                     window.location.reload(); // Перезагружаем страницу
                 } else {
                     // Одна ошибка и ты ошибся... Активируем кнопку снова при ошибке
@@ -248,7 +248,7 @@ $(document).ready(function() {
 
     // Инициализация автозаполнения для матрасов и допов
     initializeAutocomplete('#mattressArticle', '/api/mattresses', addMattress);
-    initializeAutocomplete('#additionalArticle', '/api/nomenclatures', addAdditional);
+    initializeAutocomplete('#additionalArticle', '/api/additions', addAdditional);
     // Установка сегодняшней даты в поле
     $('#delivery_date').val(formatDate(new Date()));
 
