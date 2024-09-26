@@ -93,7 +93,8 @@ def read_file(filepath: str) -> pd.DataFrame:
 
 
 def load_tasks(file):
-    data = read_file(file)
+    # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+    return session.query(Mattress_requests).order_by(Order.id.desc()).limit(100).all()
     return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
                             ascending=[False, True, True, False])
 
@@ -173,21 +174,6 @@ async def get_employee_column_data(session: AsyncSession, employee_id: int, colu
         return None
     except Exception as e:
         return f"Системная ошибка: {str(e)}"
-
-
-def scripts_in_dir(directory):
-    """
-    Возвращает список имен файлов .py и .html в указанной директории,
-    исключая '__init__.py' и 'barcode.py'. Жуткий хардкод, но работает.
-
-    :param directory: Путь к директории
-    :return: Список имен файлов .py и .html
-    """
-    scripts = []
-    for file in os.listdir(directory):
-        if (file.endswith('.py') or file.endswith('.html')) and file not in ['__init__.py', 'barcode.html']:
-            scripts.append(file)
-    return scripts
 
 
 def get_size_int(size: str):

@@ -1,10 +1,9 @@
 import datetime
-import os
 from pathlib import Path
 
 import streamlit as st
 
-from utils.tools import config, read_file, side_eval, get_date_str, load_tasks, create_dataframe
+from utils.tools import config, read_file, load_tasks
 
 
 class Page:
@@ -19,10 +18,6 @@ class Page:
             "position": st.column_config.TextColumn("Роли", width='medium', default=''),
             "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=True),
         }
-        # Если файл с кэшем отсутствует, создаёт его, прописывая пустые колонки
-        # из ключей словаря настройки колонн, типа из tasks_columns_config
-        if not os.path.exists(self.employees_cash):
-            create_dataframe(self.employee_columns_config, self.employees_cash)
 
         self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
@@ -86,10 +81,6 @@ class Page:
     def header(self):
         st.title(f'{self.icon} {self.page_name}')
 
-    @staticmethod
-    def load_tasks(file):
-        return load_tasks(file)
-
 
 class ManufacturePage(Page):
     def __init__(self, page_name, icon):
@@ -139,17 +130,3 @@ class ManufacturePage(Page):
                      index=None,
                      key=self.page_name,
                      on_change=save_employee, args=(self.page_name,))
-
-    @staticmethod
-    def inner_box_text(row):
-        """Метод, выдающий текст внутри бокса. Для каждой страницы с плитками заявок можно переопределять этот метод."""
-        return (f"**Артикул:** {row.get('article')}  \n"
-                f"**Ткань**: {row.get('base_fabric')}  \n"
-                f"**Тип доставки**: {row.get('delivery_type')}  \n"
-                f"**Адрес:** {row.get('address')}  \n"
-                f"**Клиент:** {row.get('organization')}  \n"
-                f"**Верх/Низ**: {row.get('base_fabric')}  \n"
-                f"**Бочина**: {row.get('side_fabric')}  \n"
-                f"**Состав:** {row.get('attributes')}  \n"
-                f"**Размер:** {row.get('size')} ({side_eval(row.get('size'), row.get('side_fabric'))}  \n"
-                f"**Срок**: {get_date_str(row.get('deadline'))}  \n")

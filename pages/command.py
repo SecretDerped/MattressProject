@@ -2,16 +2,10 @@ import pandas as pd
 import streamlit as st
 from sqlalchemy.orm import joinedload
 
-from utils.models import Order, MattressRequest
+from utils.models import Order, MattressRequest, Employee
 from utils.db_connector import session
 from utils.app_core import Page
-from utils.tools import clear_cash, read_file, cashing, \
-    get_cash, save_to_file, barcode_link
-
-
-def get_orders_with_mattress_requests(session):
-    # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
-    return session.query(Order).options(joinedload(Order.mattress_requests)).order_by(Order.id.desc()).limit(20).all()
+from utils.tools import clear_cash, cashing, get_cash, barcode_link
 
 
 class BrigadierPage(Page):
@@ -25,15 +19,21 @@ class BrigadierPage(Page):
 
         self.EMPLOYEE_ACTIVE_MODE = 'employee_active_mode'
 
-    def save_changes_to_db(self, edited_df):
+    def save_changes_to_db(self, edited_df,  model):
         for index, row in edited_df.iterrows():
-            mattress_request = self.session.get(MattressRequest, index)  # Используем session.get()
-            if mattress_request:
+            request = self.session.get(model, index)  # Используем session.get()
+            if request:
                 for column in self.tasks_columns_config.keys():
-                    setattr(mattress_request, column, row[column])
+                    if column in row:  # Check if column exists
+                        setattr(request, column, row[column])
         self.session.commit()
 
-    def show_and_hide_button(self, table_state, show_state, edited_df=None, original_df=None, order_id=None):
+    def get_orders_with_mattress_requests(self):
+        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+        return self.session.query(Order).options(joinedload(Order.mattress_requests)).order_by(Order.id.desc()).limit(
+            20).all()
+
+    def show_and_hide_button(self, table_state, show_state, model, edited_df=None, original_df=None, order_id=None):
         # Кнопка для отображения/скрытия таблицы с изменением текста
         if show_state not in st.session_state:
             st.session_state[show_state] = False
@@ -47,7 +47,7 @@ class BrigadierPage(Page):
             # Очистить данные, если таблица скрывается
             if st.session_state.get(show_state, False):
                 if edited_df is not None and original_df is not None:
-                    self.save_changes_to_db(edited_df)
+                    self.save_changes_to_db(edited_df, model)
             clear_cash(table_state)
             st.session_state[show_state] = not st.session_state[show_state]
             st.rerun()
@@ -57,18 +57,18 @@ class BrigadierPage(Page):
 
         columns = self.tasks_columns_config
         data = []
-        file_full_mode = f"{order.id}_full_mode"
+        order_full_mode = f"{order.id}_full_mode"
 
         # Так сделано, чтобы настройка была только тут, чтобы
         # нельзя было менять таблицу во время режима редактирования
-        full_mode_checkbox = st.checkbox('Показывать завершённые наряды', key=f"{file_full_mode}_full_mode_checkbox")
+        full_mode_checkbox = st.checkbox('Показывать завершённые наряды', key=f"{order_full_mode}_checkbox")
         if full_mode_checkbox:
-            st.session_state[file_full_mode] = True
+            st.session_state[order_full_mode] = True
         else:
-            st.session_state[file_full_mode] = False
+            st.session_state[order_full_mode] = False
 
         for mattress_request in order.mattress_requests:
-            if st.session_state[file_full_mode] or not (
+            if st.session_state[order_full_mode] or not (
                     mattress_request.components_is_done and
                     mattress_request.fabric_is_done and
                     mattress_request.gluing_is_done and
@@ -108,7 +108,7 @@ class BrigadierPage(Page):
                          column_order=(column for column in columns.keys()),
                          hide_index=True)
         else:
-            pass
+            st.write('Активных нарядов нет')
 
     def tasks_editor(self, order):
         """База данных в этом проекте представляет собой файл pkl с датафреймом библиотеки pandas.
@@ -187,7 +187,7 @@ class BrigadierPage(Page):
             st.rerun()
 
     def tasks_tables(self):
-        orders = get_orders_with_mattress_requests(self.session)
+        orders = self.get_orders_with_mattress_requests()
         for order in orders:
 
             # Проверяем, есть ли активные заявки на матрасы
@@ -217,28 +217,72 @@ class BrigadierPage(Page):
                         editor, original_data = self.tasks_editor(order)
                         self.show_and_hide_button(state, active_mode, editor, original_data, order.id)
                     else:
-                        self.show_and_hide_button(state, active_mode, order_id=order.id)
+                        self.show_and_hide_button(state, active_mode, MattressRequest, order_id=order.id)
                         self.tasks_table(order)
 
+    def get_employees(self):
+        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+        return self.session.query(Employee).all()
+
+    def add_employee(self):
+        with st.form(key='add_employee'):
+            # Заголовок формы
+            st.markdown("#### Добавить нового сотрудника")
+
+            # Поля для ввода данных сотрудника
+            name = st.text_input("Имя")
+            position = st.text_input("Роли", placeholder="Перечислите через запятую")
+
+            # Кнопка для добавления сотрудника
+            if st.form_submit_button("Добавить сотрудника"):
+                if name and position:  # Проверка, что обязательные поля заполнены
+                    new_employee = Employee(
+                        is_on_shift=False,
+                        name=name,
+                        position=position,
+                        barcode=None,
+                    )
+                    self.session.add(new_employee)  # Добавление нового сотрудника в сессию
+                    self.session.commit()  # Сохранение изменений в базе данных
+                    st.success("Сотрудник успешно добавлен!")
+                else:
+                    st.error("Пожалуйста, заполните все обязательные поля.")
+
     def employees_editor(self, dynamic_mode: bool = False):
+        employees = self.get_employees()
         # Если кэша нет, загружаем туда данные
         state = self.EMPLOYEE_STATE
-        if state not in st.session_state:
-            dataframe = read_file(self.employees_cash)
+        # Если функция была открыта, значит после изменения на странице остался кэш,
+        # то есть загружаем данные из кэша.
+        if state in st.session_state:
+            df = get_cash(state)
+        else:
+            data = []
+            if not employees:
+                return st.subheader('В базе данных нет сотрудников. Добавьте новых.')
+            for employee in employees:
+                row = {
+                    'id': employee.id,
+                    'is_on_shift': employee.is_on_shift,
+                    'name': employee.name,
+                    'position': employee.position,
+                    'barcode': employee.barcode
+                }
+                data.append(row)
+            df = pd.DataFrame(data)
+            # Устанавливаем 'id' как индекс
+            df.set_index('id', inplace=True)
 
             # Создаётся колонка строк, где каждая ячейка формируется на основе соответсвующего индекса в датафрейме.
             # Для того чтобы это сработало, мы берём список индексов, преобразовываем в серию для чтения, применяем
             # к каждому индексу функцию, записываем полученную строку на соответсвующую позицию и сохраняем
             # datatype столбца как string. Всё это в строчке ниже
-            dataframe['barcode'] = dataframe.index.to_series().apply(barcode_link).astype('string')
-
-            cashing(dataframe, state)
+            df['barcode'] = df.index.to_series().apply(barcode_link).astype('string')
+            cashing(df, state)
 
         if dynamic_mode:
-            mode = 'dynamic'
             columns = ("name", "position")
         else:
-            mode = 'fixed'
             columns = ("is_on_shift", "name", "position", "barcode")
 
         edited_df = get_cash(state)
@@ -247,11 +291,11 @@ class BrigadierPage(Page):
             column_config=self.employee_columns_config,
             column_order=columns,
             hide_index=True,
-            num_rows=mode,
+            num_rows='fixed',
             on_change=cashing, args=(edited_df, state),
-            key=f"{state}_{mode}_editor"
+            key=f"{state}_editor"
         )
-        save_to_file(editor, self.employees_cash)
+        self.save_changes_to_db(editor, Employee)
 
 
 Page = BrigadierPage('Производственный терминал', '🛠️')
@@ -282,7 +326,7 @@ with employee_tab:
 
     with col1:
         st.title("👷 Сотрудники")
-        Page.show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE)
+        Page.show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE, Employee)
 
     with col2:
         st.write(' ')
@@ -297,6 +341,7 @@ with employee_tab:
         # Отображение таблицы в зависимости от состояния
         if st.session_state.get(Page.EMPLOYEE_ACTIVE_MODE, False):
             Page.employees_editor(True)
+            Page.add_employee()
         else:
             Page.employees_editor()
 

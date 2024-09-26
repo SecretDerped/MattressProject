@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import RedirectResponse
 
 from utils.models import Order, MattressRequest, Employee
-from db_connector import async_session
-from sbis_manager import SBISWebApp
+from utils.db_connector import async_session
+from utils.sbis_manager import SBISWebApp
 from utils.tools import load_conf, time_now, get_date_str, fabric_type, send_telegram_message
 
 config = load_conf()
