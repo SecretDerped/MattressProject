@@ -1,7 +1,7 @@
 version: "2"
 authtoken: 2daVhzWrPKORLFFdUcEHjerK9Ky_5WnYxSzExmRpejDzJyTzg
 tunnels:
-  flask:
+  fastapi:
     proto: http
     addr: 5000
   streamlit:

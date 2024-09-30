@@ -22,7 +22,9 @@ if sys.platform.startswith('win'):
 
 def run_fastapi_app():
     logging.info("Запуск FastAPI-приложения на Uvicorn")
-    uvicorn.run("web_app:app", host='0.0.0.0', port=int(site_port), reload=False)
+    # В консольной команде должен быть прописан путь к web_app,
+    # либо перейти в нужную папку с помощью cd, иначе uvicorn не найдёт, что загружать
+    uvicorn.run("utils.web_app:app", host='0.0.0.0', port=int(site_port), reload=False)
 
 
 def run_streamlit_app():
@@ -43,7 +45,7 @@ if __name__ == '__main__':
     ensure_ngrok()
     ngrok_process, ngrok_urls = start_ngrok()
 
-    bot = Tg(ngrok_urls['flask'], ngrok_urls['streamlit'])
+    bot = Tg(ngrok_urls['fastapi'], ngrok_urls['streamlit'])
     bot_thread = threading.Thread(target=lambda: asyncio.run(bot.main()))
     bot_thread.start()
 

@@ -3,7 +3,6 @@ import streamlit as st
 from sqlalchemy.orm import joinedload
 
 from utils.models import Order, MattressRequest, Employee
-from utils.db_connector import session
 from utils.app_core import Page
 from utils.tools import clear_cash, cashing, get_cash, barcode_link
 
@@ -12,28 +11,13 @@ class BrigadierPage(Page):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
 
-        self.session = session()
         self.TASK_STATE = 'task_dataframe'
         self.EMPLOYEE_STATE = 'employee_dataframe'
         self.SHOW_DONE_STATE = 'show_done'
 
         self.EMPLOYEE_ACTIVE_MODE = 'employee_active_mode'
 
-    def save_changes_to_db(self, edited_df,  model):
-        for index, row in edited_df.iterrows():
-            request = self.session.get(model, index)  # Используем session.get()
-            if request:
-                for column in self.tasks_columns_config.keys():
-                    if column in row:  # Check if column exists
-                        setattr(request, column, row[column])
-        self.session.commit()
-
-    def get_orders_with_mattress_requests(self):
-        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
-        return self.session.query(Order).options(joinedload(Order.mattress_requests)).order_by(Order.id.desc()).limit(
-            20).all()
-
-    def show_and_hide_button(self, table_state, show_state, model, edited_df=None, original_df=None, order_id=None):
+    def show_and_hide_button(self, table_state, show_state, model, edited_df=None, order_id=None):
         # Кнопка для отображения/скрытия таблицы с изменением текста
         if show_state not in st.session_state:
             st.session_state[show_state] = False
@@ -45,12 +29,53 @@ class BrigadierPage(Page):
 
         if st.button(button_text, key=f'{order_id}_mode_button'):
             # Очистить данные, если таблица скрывается
-            if st.session_state.get(show_state, False):
-                if edited_df is not None and original_df is not None:
-                    self.save_changes_to_db(edited_df, model)
+            if st.session_state.get(show_state, False) and edited_df is not None:
+                self.save_changes_to_db(edited_df, model)
             clear_cash(table_state)
             st.session_state[show_state] = not st.session_state[show_state]
             st.rerun()
+
+    def get_orders_with_mattress_requests(self):
+        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+        return (self.session.query(Order)
+                .options(joinedload(Order.mattress_requests))
+                .order_by(Order.id.desc())
+                .limit(50)
+                .all())
+
+    def tasks_tables(self):
+        orders = self.get_orders_with_mattress_requests()
+        for order in orders:
+
+            # Проверяем, есть ли активные заявки на матрасы
+            has_active_requests = any(
+                not (request.components_is_done and
+                     request.fabric_is_done and
+                     request.gluing_is_done and
+                     request.sewing_is_done and
+                     request.packing_is_done)
+                for request in order.mattress_requests
+            )
+
+            if has_active_requests or st.session_state[self.SHOW_DONE_STATE]:
+                # В active_mode хранится название для переменной session_state,
+                # в которой булево значение "Показывать/Не показывать таблицу".
+                # Тут происходит инициализация переменной. По умолчанию show_table = False
+                active_mode = f"{order.id}_active_mode"
+                # Аналогично и для...
+                full_mode = f"{order.id}_full_mode"
+                if full_mode not in st.session_state:
+                    st.session_state[full_mode] = False
+
+                with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}', expanded=True):
+                    state = self.TASK_STATE + str(order.id)
+                    if st.session_state.get(active_mode, False):
+                        st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
+                        editor = self.tasks_editor(order)
+                        self.show_and_hide_button(state, active_mode, MattressRequest, edited_df=editor, order_id=order.id)
+                    else:
+                        self.show_and_hide_button(state, active_mode, MattressRequest, order_id=order.id)
+                        self.tasks_table(order)
 
     def tasks_table(self, order):
         """Показывает нередактируемую таблицу данных без индексов."""
@@ -111,21 +136,23 @@ class BrigadierPage(Page):
             st.write('Активных нарядов нет')
 
     def tasks_editor(self, order):
-        """База данных в этом проекте представляет собой файл pkl с датафреймом библиотеки pandas.
-        Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
-        а кэш пишется в session_state текущего состояния таблицы. Каждое изменение таблицы
-        провоцируют on_change методы, а потом обновление всей страницы. Поэтому система
-        такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
+        """База данных в этом проекте - PostgreSQL. Сначала идёт запрос в базу, а потом записи превращаются в датафрейм
+        для отображения таблицы. Кэш выступает промежуточным состоянием таблицы. Таблица стремится подгрузится из кэша,
+        а кэш пишется в session_state. Каждое изменение таблицы провоцируют on_change методы, а потом обновление
+        всей страницы. Поэтому система такая: если кэша нет - подгружается таблица из базы, она же копируется в кэш.
         Как только какое-то поле было изменено, то изменения записываются в кэш,
-        потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями
-        сохраняется в базу."""
+        потом страница обновляется, подгружая данные из кэша, и после новая таблица с изменениями сохраняется в базу."""
         state = self.TASK_STATE + str(order.id)
         columns = self.tasks_columns_config
 
         try:
             # Если функция редактирования не открывалась, значит нет кэша.
             # Грузим данные из базы и копируем в кэш.
-            if state not in st.session_state:
+            if state in st.session_state:
+                # Если функция была открыта, значит после изменения на странице остался кэш,
+                # то есть загружаем данные из кэша.
+                df = get_cash(state)
+            else:
                 data = []
                 for mattress_request in order.mattress_requests:
                     row = {
@@ -156,10 +183,6 @@ class BrigadierPage(Page):
                 df = pd.DataFrame(data)
                 df.set_index('id', inplace=True)  # Устанавливаем 'id' как индекс
                 cashing(df, state)
-            # Если функция была открыта, значит после изменения на странице остался кэш,
-            # то есть загружаем данные из кэша.
-            else:
-                df = get_cash(state)
 
             file_full_mode = f"{order.id}_full_mode"
             # Стейт галочки "Показать все наряды". Декларирована вне объекта там, внизу
@@ -181,44 +204,10 @@ class BrigadierPage(Page):
                 key=f"{state}_editor",
             )
 
-            return editor, df
+            return editor
 
         except RuntimeError:
             st.rerun()
-
-    def tasks_tables(self):
-        orders = self.get_orders_with_mattress_requests()
-        for order in orders:
-
-            # Проверяем, есть ли активные заявки на матрасы
-            has_active_requests = any(
-                not (request.components_is_done and
-                     request.fabric_is_done and
-                     request.gluing_is_done and
-                     request.sewing_is_done and
-                     request.packing_is_done)
-                for request in order.mattress_requests
-            )
-
-            if has_active_requests or st.session_state[self.SHOW_DONE_STATE]:
-                # В active_mode хранится название для переменной session_state,
-                # в которой булево значение "Показывать/Не показывать таблицу".
-                # Тут происходит инициализация переменной. По умолчанию show_table = False
-                active_mode = f"{order.id}_active_mode"
-                # Аналогично и для...
-                full_mode = f"{order.id}_full_mode"
-                if full_mode not in st.session_state:
-                    st.session_state[full_mode] = False
-
-                with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}'):
-                    state = self.TASK_STATE + str(order.id)
-                    if st.session_state.get(active_mode, False):
-                        st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
-                        editor, original_data = self.tasks_editor(order)
-                        self.show_and_hide_button(state, active_mode, editor, original_data, order.id)
-                    else:
-                        self.show_and_hide_button(state, active_mode, MattressRequest, order_id=order.id)
-                        self.tasks_table(order)
 
     def get_employees(self):
         # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
@@ -254,9 +243,7 @@ class BrigadierPage(Page):
         state = self.EMPLOYEE_STATE
         # Если функция была открыта, значит после изменения на странице остался кэш,
         # то есть загружаем данные из кэша.
-        if state in st.session_state:
-            df = get_cash(state)
-        else:
+        if state not in st.session_state:
             data = []
             if not employees:
                 return st.subheader('В базе данных нет сотрудников. Добавьте новых.')
@@ -295,7 +282,7 @@ class BrigadierPage(Page):
             on_change=cashing, args=(edited_df, state),
             key=f"{state}_editor"
         )
-        self.save_changes_to_db(editor, Employee)
+        self.save_changes_to_db(get_cash(state), Employee)
 
 
 Page = BrigadierPage('Производственный терминал', '🛠️')
@@ -326,7 +313,6 @@ with employee_tab:
 
     with col1:
         st.title("👷 Сотрудники")
-        Page.show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE, Employee)
 
     with col2:
         st.write(' ')
@@ -344,6 +330,7 @@ with employee_tab:
             Page.add_employee()
         else:
             Page.employees_editor()
+        Page.show_and_hide_button(Page.EMPLOYEE_STATE, Page.EMPLOYEE_ACTIVE_MODE, Employee)
 
     with col2:
         pass

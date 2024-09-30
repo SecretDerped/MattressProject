@@ -45,6 +45,9 @@ current_tasks_cash = hardware.get('current_tasks_cash_filepath')
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
 app = FastAPI()
+
+connected_websockets = set()
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
@@ -117,10 +120,14 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
-            # Обработка полученных данных
-            await websocket.send_text(f"Message text was: {data}")
+            await manager.broadcast(f"Message text was: {data}")
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+async def notify_database_change():
+    for websocket in connected_websockets:
+        await websocket.send_text("database_updated")
 
 
 @app.get('/', response_class=HTMLResponse)
@@ -220,8 +227,6 @@ async def post_index(request: Request):
                             mattress_request.order = order  # Устанавливаем связь
                             session.add(mattress_request)
 
-                await session.commit()
-
                 # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
                 additional_items_list = order_data.get('additionalItems')
                 if additional_items_list:
@@ -252,10 +257,11 @@ async def post_index(request: Request):
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 send_telegram_message(order_message, request.query_params.get('chat_id'))
                 # await send_telegram_message(order_message, tg_group_chat_id)
+                await session.commit()
 
                 # Отправка обновлений всем подключённым клиентам
                 await manager.broadcast(json.dumps({
-                    "event": "new_order",
+                    "event": "new_commit",
                     "data": order_data
                 }))
 
@@ -566,7 +572,6 @@ async def update_task_history(session: AsyncSession, task: MattressRequest, page
     logging.debug(f"История задачи {task.id} обновлена: {history_note}")
 
 
-
 def start_ngrok():
     base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     ngrok_path = os.path.join(base_dir, '', 'ngrok.exe')
@@ -584,7 +589,7 @@ def start_ngrok():
         except Exception:
             time.sleep(1)
 
-    logging.warning(f'Flask доступен через ngrok: {urls["flask"]}')
+    logging.warning(f'FastAPI доступен через ngrok: {urls["fastapi"]}')
     logging.warning(f'Streamlit доступен через ngrok: {urls["streamlit"]}')
     return process, urls
 
