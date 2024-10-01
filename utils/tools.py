@@ -72,16 +72,18 @@ log_format = '[%(asctime)s | %(name)s]: %(message)s'
 log_level = DEBUG
 basicConfig(level=log_level,
             format=log_format,
-            handlers=(StreamHandler(),
+            handlers=(StreamHandler(sys.stdout),
                       FileHandler(log_path, mode="w")),
             encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
+logging.getLogger('websockets.client').setLevel(logging.INFO)
 
 
-def save_to_file(data: pd.DataFrame, filepath: str):
+def save_to_file(data: pd.DataFrame, filepath):
     data.to_pickle(filepath)
 
 
-def read_file(filepath: str) -> pd.DataFrame:
+def read_file(filepath) -> pd.DataFrame:
     try:
         data = pd.read_pickle(filepath)
         return data
@@ -90,13 +92,6 @@ def read_file(filepath: str) -> pd.DataFrame:
     # поэтому тихо ловим ошибки и страницу обновляем, тогда все данные занесутся корректно.
     except (RuntimeError, EOFError):
         st.rerun()
-
-
-def load_tasks(file):
-    # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
-    return session.query(Mattress_requests).order_by(Order.id.desc()).limit(100).all()
-    return data.sort_values(by=['high_priority', 'deadline', 'delivery_type', 'comment'],
-                            ascending=[False, True, True, False])
 
 
 def create_backup():
@@ -115,7 +110,7 @@ def create_backup():
 
     # Удаление записей старше 31 дня
     data = read_file(tasks_cash)
-    cutoff_date = datetime.now() - timedelta(days=31)
+    cutoff_date = datetime.now() - timedelta(days=90)
     data['created'] = pd.to_datetime(data['created'])
     filtered_data = data[data['created'] > cutoff_date]
 
@@ -167,7 +162,7 @@ def create_dataframe(data: dict, filepath: str):
 
 async def get_employee_column_data(session: AsyncSession, employee_id: int, column_name: str):
     try:
-        employee = await session.execute(select(Employee).where(Employee.id == employee_id))
+        employee = await session.execute(select(Employee).where(Employee.id is employee_id))
         employee = employee.scalar_one_or_none()
         if employee:
             return getattr(employee, column_name, None)

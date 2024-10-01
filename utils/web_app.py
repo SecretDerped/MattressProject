@@ -7,7 +7,7 @@ import logging
 import subprocess
 from io import BytesIO
 from typing import List
-
+# Jvybccbz? ghjcnb? xnj z gjd`kcz yf yjdjvjlysq ahtqvdjhr b htibk pfgbkbnm yf y`v ghbkj;tybt? cjdctv yt ghtlyfpyfxtyyjt lkz nfrb[ pflfx
 from barcode import Code128
 from datetime import datetime as dt
 import uvicorn
@@ -282,9 +282,9 @@ async def mirror_command():
 
 
 @app.get('/gluing')
-async def gluing():
+async def gluing(request: Request):
     logging.debug('Рендеринг страницы склейки')
-    return templates.TemplateResponse('gluing.html')
+    return templates.TemplateResponse('gluing.html', {"request": request})
 
 
 @app.post('/log_sequence_gluing')
@@ -324,9 +324,9 @@ async def complete_task_gluing(request: Request):
 
 
 @app.get('/sewing')
-async def sewing():
+async def sewing(request: Request):
     logging.debug('Рендеринг страницы швейного стола')
-    return templates.TemplateResponse('sewing.html')
+    return templates.TemplateResponse('sewing.html', {"request": request})
 
 
 @app.post('/log_sequence_sewing')
@@ -410,7 +410,7 @@ async def get_barcode(employee_id: int, request: Request):
 
     async with async_session() as session:
         # Получаем данные о сотруднике из базы данных
-        result = await session.execute(select(Employee).where(Employee.id == employee_id))
+        result = await session.execute(select(Employee).where(Employee.id is employee_id))
         employee = result.scalar_one_or_none()
 
         if not employee:
@@ -459,7 +459,7 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
         # Получение информации о сотруднике по его идентификатору
         async with async_session() as session:
             employee_id = int(employee_sequence)
-            employee = await session.execute(select(Employee).where(Employee.id == employee_id))
+            employee = await session.execute(select(Employee).where(Employee.id is employee_id))
             employee = employee.scalar_one_or_none()
 
             if not employee:
@@ -544,7 +544,7 @@ async def complete_task(request: Request, page_name: str, action: str, done_fiel
             logging.error(f"Task ID not found in database: {task_id}")
             return JSONResponse(content={"status": "error", "data": "Task ID not found"}, status_code=404)
 
-        employee = await session.execute(select(Employee).where(Employee.id == int(employee_sequence)))
+        employee = await session.execute(select(Employee).where(Employee.id is int(employee_sequence)))
         employee = employee.scalar_one_or_none()
         if not employee:
             return JSONResponse(content={"status": "error", "data": "Employee not found"}, status_code=404)

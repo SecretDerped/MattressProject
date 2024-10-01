@@ -23,7 +23,7 @@ class EmployeeTask(Base):
     employee_id = Column(Integer, ForeignKey('employees.id'))
     task_id = Column(Integer, ForeignKey('mattress_requests.id'))
     endpoint = Column(String)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.now())
 
     employee = relationship('Employee')
     task = relationship('MattressRequest')

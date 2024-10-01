@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-from utils.models import Base
+from utils.models import Base, MattressRequest, Order
 from utils.tools import load_conf
 
 config = load_conf()
@@ -68,6 +68,11 @@ def update_db(query):
     conn.execute(query)
     conn.commit()
     conn.close()
+
+
+def load_tasks(session):
+    # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+    return session.query(MattressRequest).order_by(Order.id.desc()).limit(100).all()
 
 
 if __name__ == "__main__":

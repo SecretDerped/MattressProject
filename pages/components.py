@@ -44,13 +44,13 @@ class ComponentsPage(ManufacturePage):
         if data:
             df = pd.DataFrame(data)
             df.set_index('id', inplace=True)  # Set 'id' as the index
-            return df
+            return df[self.columns_order]
         else:
             return "Нет заявок"
 
     def components_frame(self):
         tasks = self.components_tasks()
-        return st.data_editor(tasks[self.columns_order],
+        return st.data_editor(tasks,
                               column_config=self.components_columns_config,
                               hide_index=True)
 

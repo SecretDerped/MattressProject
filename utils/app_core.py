@@ -1,8 +1,6 @@
 import datetime
 from pathlib import Path
 
-import threading
-
 import pandas as pd
 import streamlit as st
 import asyncio
@@ -12,7 +10,6 @@ import json
 from utils.db_connector import session
 from utils.models import MattressRequest
 from utils.tools import config, read_file
-from utils.web_app import manager
 
 
 class Page:
@@ -84,26 +81,19 @@ class Page:
         }
 
         self.session = session()
-
-        # Start the WebSocket listener in a separate thread
-        websocket_thread = threading.Thread(target=self.start_websocket_listener)
-        websocket_thread.start()
-
+        #self.start_websocket_listener()
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
                            layout="wide")
 
     def save_changes_to_db(self, edited_df, model):
         for index, row in edited_df.iterrows():
-            request = self.session.get(model, index)  # Используем session.get()
-            if request:
-                for column in self.tasks_columns_config.keys():
-                    if column in row:  # Check if column exists
-                        setattr(request, column, row[column])
+            instance = self.session.get(model, index)
+            if instance:
+                for column in row.index:
+                    if hasattr(instance, column):
+                        setattr(instance, column, row[column])
         self.session.commit()
-        manager.broadcast(json.dumps({
-            "event": "new_commit"
-        }))
 
     async def listen_for_updates(self):
         uri = f"ws://localhost:{config['site'].get('site_port', '5000')}/ws"  # Update with your FastAPI WebSocket URL
