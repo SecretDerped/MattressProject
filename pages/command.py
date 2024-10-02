@@ -229,7 +229,6 @@ class BrigadierPage(Page):
             model=Employee,
             columns_config=self.employee_columns_config,
             columns_order=columns_order,
-            dynamic_mode=True,
             state_key=self.EMPLOYEE_STATE,
         )
 

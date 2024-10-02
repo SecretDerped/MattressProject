@@ -105,7 +105,7 @@ class SBISApiManager:
             file.write(sid)
 
         token = result['token']
-        with open(f"cash/{self.login}_sbis__service_token.txt", "w+") as file:
+        with open(f"cash/{self.login}_sbis_service_token.txt", "w+") as file:
             file.write(token)
 
         return sid, token
