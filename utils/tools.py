@@ -44,7 +44,7 @@ def load_conf():
     else:
         base_path = os.path.abspath(".")
 
-    config_path = os.path.join(base_path, "app_config.toml")
+    config_path = os.path.join(base_path, "utils/app_config.toml")
 
     # Загрузка конфигурации
     with open(config_path, 'rb') as f:

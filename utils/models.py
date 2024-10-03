@@ -39,7 +39,7 @@ class MattressRequest(Base):
     size = Column(String)
     base_fabric = Column(String)
     side_fabric = Column(String)
-    springs = Column(String, default='Нет')
+    springs = Column(String, default='')
     photo = Column(String, default='')
     components_is_done = Column(Boolean, default=False)
     fabric_is_done = Column(Boolean, default=False)
