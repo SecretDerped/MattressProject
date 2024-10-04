@@ -1,7 +1,9 @@
+import pandas as pd
 import streamlit as st
 
 from utils.app_core import ManufacturePage
-from utils.tools import config, side_eval, save_to_file, time_now
+from utils.models import MattressRequest
+from utils.tools import config, side_eval
 
 
 class CuttingPage(ManufacturePage):
@@ -17,69 +19,81 @@ class CuttingPage(ManufacturePage):
             'article': st.column_config.TextColumn("Артикул", disabled=True),
             'deadline': st.column_config.DateColumn("Срок", format="DD.MM", disabled=True),
             'comment': st.column_config.TextColumn("Комментарий", disabled=True),
+            'history': st.column_config.TextColumn()  # Include history for updates
         }
         self.showed_articles = config['components']['showed_articles']
 
-    def cutting_tasks(self, file):
-        data = super().load_tasks(file)
-        return data[(data['components_is_done'] == True) &
-                    (data['fabric_is_done'] == False) &
-                    (data['sewing_is_done'] == False) &
-                    (data['packing_is_done'] == False)]
+    def cutting_tasks(self):
+        mattress_requests = self.load_tasks()
+        data = []
+        for task in mattress_requests:
+            if not (task.components_is_done or
+                    task.fabric_is_done or
+                    task.sewing_is_done or
+                    task.packing_is_done):
+                row = {
+                    'id': task.id,
+                    'fabric_is_done': task.components_is_done,
+                    'base_fabric': task.base_fabric,
+                    'side_fabric': task.side_fabric,
+                    'size': task.size,
+                    'article': task.article,
+                    'deadline': task.deadline,
+                    'comment': task.comment,
+                    'history': task.history  # Include history for updates
+                }
+                data.append(row)
 
-    @st.experimental_fragment(run_every="1s")
-    def cutting_frame(self, file):
-        tasks = self.cutting_tasks(file)
-        # Вычисляемое поле размера бочины.
+        if not data:
+            return None
+
+        df = pd.DataFrame(data)
+        df.set_index('id', inplace=True)  # Set 'id' as the index
+        return df
+
+    @st.fragment(run_every=2)
+    def cutting_frame(self):
+
+        employee = st.session_state.get(self.page_name)
+        if not employee:
+            st.warning("Сначала отметьте сотрудника.")
+            return
+
+        tasks = self.cutting_tasks()
+        if tasks is None or tasks.empty:
+            st.info("Заявки закончились.")
+            return
+
+        # Формируем колонку с информацией о длине бочины, вычисляеммой динамически. Её ее требуется сохранять
         tasks['side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
         return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
                               column_config=self.cutting_columns_config,
                               hide_index=True)
 
-    def cutting_table(self, file):
-        tasks = super().load_tasks(file)
-        # Создаем форму для обработки изменений в таблице
-        with st.form(key=f'{file}_tasks_cutting_form'):
-            inner_col_1, inner_col_2 = st.columns([4, 1])
-            with inner_col_1:
-                edited_tasks_df = self.cutting_frame(file)
+    def cutting_table(self):
+        submit = st.button(label='Подтвердить')
 
-            with inner_col_2:
-                # Добавляем кнопку подтверждения
-                submit_button = st.form_submit_button(label='Подтвердить')
-                if submit_button:
-                    employee = st.session_state.get(self.page_name)
-                    if not employee:
-                        st.warning("Сначала отметьте сотрудника.")
-                    else:
-                        for index, row in edited_tasks_df.iterrows():
-                            if row['fabric_is_done']:
-                                history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
-                                tasks.at[index, 'history'] += history_note
-                                tasks.at[index, 'fabric_is_done'] = True
-                        save_to_file(tasks, file)
-                        st.rerun()
+        original_df = self.cutting_tasks()
+        edited_df = self.cutting_frame()
 
-    def tables_row(self):
-        for file in self.task_cash.iterdir():
-            if file.is_file():
-                # Флаг для показа/скрытия таблицы
-                if not self.cutting_tasks(file).empty:
-                    self.cutting_table(file)
+        if not submit or edited_df is None:
+            return
+
+        self.update_tasks(original_df, edited_df, 'fabric_is_done')
+        self.save_changes_to_db(original_df, MattressRequest)
+        st.rerun()
 
 
 Page = CuttingPage(page_name='Нарезка',
                    icon="✂️",
-                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article',
+                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline',
                                   'comment'])
 
 col_table, col_info = st.columns([4, 1])
 
 with col_table:
-    Page.tables_row()
+    Page.cutting_table()
 
 with col_info:
-    st.info('Вы можете сортировать заявки, нажимая на поля таблицы. '
-            'Попробуйте отсортировать по размеру!', icon="ℹ️")
-
+    st.info('Вы можете сортировать заявки, нажимая на поля таблицы.', icon="ℹ️")
     st.info('Можно отметить много нарезанных заявок за раз и нажать кнопку "Подтвердить"', icon="ℹ️")

@@ -18,7 +18,7 @@ class ComponentsPage(ManufacturePage):
             'attributes': st.column_config.TextColumn("Состав", width='large'),
             'comment': st.column_config.TextColumn("Комментарий", width='medium'),
             'photo': st.column_config.ImageColumn("Фото"),
-            'history': st.column_config.TextColumn("Bcnjhbz", width='large')  # Include history for updates
+            'history': st.column_config.TextColumn()  # Include history for updates
         }
 
     def components_tasks(self):
@@ -26,8 +26,8 @@ class ComponentsPage(ManufacturePage):
         data = []
         for task in mattress_requests:
             if not (task.components_is_done or
-                    task.sewing_is_done or
                     task.gluing_is_done or
+                    task.sewing_is_done or
                     task.packing_is_done):
                 row = {
                     'id': task.id,
