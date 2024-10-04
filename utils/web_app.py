@@ -114,22 +114,6 @@ def save_to_json(data, filepath):
         json.dump(data, file, indent=4)
 
 
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(f"Message text was: {data}")
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
-
-
-async def notify_database_change():
-    for websocket in connected_websockets:
-        await websocket.send_text("database_updated")
-
-
 @app.get('/', response_class=HTMLResponse)
 async def get_index(request: Request):
     logging.debug("Рендеринг шаблона index.html")
@@ -162,8 +146,9 @@ async def post_index(request: Request):
                     organization=order_data.get('organization'),
                     contact=order_data.get('contact'),
                     delivery_type=order_data['deliveryType'],
-                    address=order_data.get("deliveryAddress"),
+                    address=order_data.get("deliveryAddress", 'г. Краснодар, ул. Демуса, д. 6а'),
                     region=order_data.get('regionSelect'),
+                    deadline=dt.strptime(order_data.get('deliveryDate'), '%Y-%m-%d'),
                     created=now
                 )
                 session.add(order)
@@ -206,7 +191,6 @@ async def post_index(request: Request):
                         for _ in range(quantity):
                             mattress_request = MattressRequest(
                                 high_priority=False,
-                                deadline=dt.strptime(order_data['deliveryDate'], '%Y-%m-%d'),
                                 article=item_sbis_data['article'],
                                 size=size,
                                 base_fabric=base_fabric,

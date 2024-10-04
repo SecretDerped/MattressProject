@@ -3,7 +3,6 @@ import streamlit as st
 
 from utils.app_core import ManufacturePage
 from utils.models import MattressRequest
-from utils.tools import time_now
 
 
 class ComponentsPage(ManufacturePage):

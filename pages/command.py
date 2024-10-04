@@ -2,9 +2,9 @@ import logging
 
 import pandas as pd
 import streamlit as st
-from sqlalchemy.orm import joinedload
+from streamlit import session_state as state
 
-from utils.models import Order, MattressRequest, Employee
+from utils.models import MattressRequest, Employee
 from utils.app_core import Page
 from utils.tools import clear_cash, barcode_link
 
@@ -21,29 +21,18 @@ class BrigadierPage(Page):
 
     def show_and_hide_button(self, table_state, show_state, model, edited_df=None, order_id=None):
         # Кнопка для отображения/скрытия таблицы с изменением текста
-        if show_state not in st.session_state:
-            st.session_state[show_state] = False
+        if show_state not in state:
+            state[show_state] = False
 
-        if not st.session_state.get(show_state, False):
-            button_text = '**Перейти в режим редактирования**'
-        else:
-            button_text = ":red[**Сохранить и вернуть режим просмотра**]"
+        button_text = ":red[**Сохранить и вернуть режим просмотра**]" if state.get(show_state) else '**Перейти в режим редактирования**'
 
         if st.button(button_text, key=f'{order_id}_mode_button'):
             # Очистить данные, если таблица скрывается
-            if st.session_state.get(show_state, False) and edited_df is not None:
+            if state.get(show_state, False) and edited_df is not None:
                 self.save_changes_to_db(edited_df, model)
             clear_cash(table_state)
-            st.session_state[show_state] = not st.session_state[show_state]
+            state[show_state] = not state[show_state]
             st.rerun()
-
-    def get_orders_with_mattress_requests(self):
-        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
-        return (self.session.query(Order)
-                .options(joinedload(Order.mattress_requests))
-                .order_by(Order.id.desc())
-                .limit(50)
-                .all())
 
     def edit_table(self, model, columns_config, columns_order, dynamic_mode=False, order_id=None,
                    state_key='state'):
@@ -102,24 +91,24 @@ class BrigadierPage(Page):
                 for request in order.mattress_requests
             )
 
-            if has_active_requests or st.session_state[self.SHOW_DONE_STATE]:
+            if has_active_requests or state[self.SHOW_DONE_STATE]:
                 # В active_mode хранится название для переменной session_state,
                 # в которой булево значение "Показывать/Не показывать таблицу".
                 # Тут происходит инициализация переменной. По умолчанию show_table = False
                 active_mode = f"{order.id}_active_mode"
                 # Аналогично и для...
                 full_mode = f"{order.id}_full_mode"
-                if full_mode not in st.session_state:
-                    st.session_state[full_mode] = False
+                if full_mode not in state:
+                    state[full_mode] = False
 
                 with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}', expanded=True):
-                    state = self.TASK_STATE + str(order.id)
-                    if st.session_state.get(active_mode, False):
+                    task_state = self.TASK_STATE + str(order.id)
+                    if state.get(active_mode, False):
                         st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
                         editor = self.tasks_editor(order)
-                        self.show_and_hide_button(state, active_mode, MattressRequest, edited_df=editor, order_id=order.id)
+                        self.show_and_hide_button(task_state, active_mode, MattressRequest, edited_df=editor, order_id=order.id)
                     else:
-                        self.show_and_hide_button(state, active_mode, MattressRequest, order_id=order.id)
+                        self.show_and_hide_button(task_state, active_mode, MattressRequest, order_id=order.id)
                         self.tasks_table(order)
 
     def tasks_table(self, order):
@@ -133,12 +122,12 @@ class BrigadierPage(Page):
         # нельзя было менять таблицу во время режима редактирования
         full_mode_checkbox = st.checkbox('Показывать завершённые наряды', key=f"{order_full_mode}_checkbox")
         if full_mode_checkbox:
-            st.session_state[order_full_mode] = True
+            state[order_full_mode] = True
         else:
-            st.session_state[order_full_mode] = False
+            state[order_full_mode] = False
 
         for mattress_request in order.mattress_requests:
-            if st.session_state[order_full_mode] or not (
+            if state[order_full_mode] or not (
                     mattress_request.components_is_done and
                     mattress_request.fabric_is_done and
                     mattress_request.gluing_is_done and
@@ -274,11 +263,11 @@ with employee_tab:
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        Page.employees_editor(dynamic_mode=st.session_state.get(Page.EMPLOYEE_ACTIVE_MODE, False))
+        Page.employees_editor(dynamic_mode=state.get(Page.EMPLOYEE_ACTIVE_MODE, False))
         Page.add_employee()
         # Toggle between modes if needed
         if st.button("Переключить режим редактирования сотрудников"):
-            st.session_state[Page.EMPLOYEE_ACTIVE_MODE] = not st.session_state.get(Page.EMPLOYEE_ACTIVE_MODE, False)
+            state[Page.EMPLOYEE_ACTIVE_MODE] = not state.get(Page.EMPLOYEE_ACTIVE_MODE, False)
 
     with col2:
         pass

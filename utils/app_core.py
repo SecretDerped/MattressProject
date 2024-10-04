@@ -1,14 +1,12 @@
 import datetime
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
-import asyncio
-import websockets
-import json
+
+from sqlalchemy.orm import joinedload
 
 from utils.db_connector import session
-from utils.models import MattressRequest
+from utils.models import MattressRequest, Order
 from utils.tools import config, read_file, time_now
 
 
@@ -97,6 +95,14 @@ class Page:
     def header(self):
         st.title(f'{self.icon} {self.page_name}')
 
+    def get_orders_with_mattress_requests(self):
+        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
+        return (self.session.query(Order)
+                .options(joinedload(Order.mattress_requests))
+                .order_by(Order.id.desc())
+                .limit(50)
+                .all())
+
 
 class ManufacturePage(Page):
     def __init__(self, page_name, icon):
@@ -164,3 +170,4 @@ class ManufacturePage(Page):
     def create_history_note(self):
         employee = st.session_state.get(self.page_name)
         return f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
+
