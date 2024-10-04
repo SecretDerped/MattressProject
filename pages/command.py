@@ -87,6 +87,7 @@ class BrigadierPage(Page):
             logging.error(f"Error in edit_table: {e}", exc_info=True)
             st.rerun()
 
+    @st.fragment(run_every=1)
     def tasks_tables(self):
         orders = self.get_orders_with_mattress_requests()
         for order in orders:
@@ -221,6 +222,7 @@ class BrigadierPage(Page):
                 else:
                     st.error("Пожалуйста, заполните все обязательные поля.")
 
+    @st.fragment(run_every=5)
     def employees_editor(self, dynamic_mode: bool = False):
         columns_order = ["is_on_shift", "name", "position", "barcode"]
         if dynamic_mode:

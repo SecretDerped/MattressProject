@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-from pandas.core.interchange.dataframe_protocol import DataFrame
 
 from utils.app_core import ManufacturePage
 from utils.models import MattressRequest
@@ -19,6 +18,7 @@ class ComponentsPage(ManufacturePage):
             'attributes': st.column_config.TextColumn("Состав", width='large'),
             'comment': st.column_config.TextColumn("Комментарий", width='medium'),
             'photo': st.column_config.ImageColumn("Фото"),
+            'history': st.column_config.TextColumn("Bcnjhbz", width='large')  # Include history for updates
         }
 
     def components_tasks(self):
@@ -41,39 +41,43 @@ class ComponentsPage(ManufacturePage):
                     'history': task.history  # Include history for updates
                 }
                 data.append(row)
-        if data:
-            df = pd.DataFrame(data)
-            df.set_index('id', inplace=True)  # Set 'id' as the index
-            return df[self.columns_order]
-        else:
-            return "Нет заявок"
 
+        if not data:
+            return None
+
+        df = pd.DataFrame(data)
+        df.set_index('id', inplace=True)  # Set 'id' as the index
+        return df
+
+    @st.fragment(run_every=2)
     def components_frame(self):
+
+        employee = st.session_state.get(self.page_name)
+        if not employee:
+            st.warning("Сначала отметьте сотрудника.")
+            return
+
         tasks = self.components_tasks()
-        return st.data_editor(tasks,
+        if tasks is None or tasks.empty:
+            st.info("Срочных заявок нет. Продолжайте нарезать обычные материалы.")
+            return
+
+        return st.data_editor(tasks[self.columns_order],
                               column_config=self.components_columns_config,
                               hide_index=True)
 
     def components_table(self):
-        tasks_df = self.components_tasks()
-        with st.form(key=f'tasks_components_form'):
-            inner_col_1, inner_col_2 = st.columns([4, 1])
-            with inner_col_1:
-                edited_tasks_df = self.components_frame()
-            with inner_col_2:
-                submit_button = st.form_submit_button(label='Подтвердить')
-                if submit_button:
-                    employee = st.session_state.get(self.page_name)
-                    if not employee:
-                        st.warning("Сначала отметьте сотрудника.")
-                    else:
-                        for index, row in edited_tasks_df.iterrows():
-                            if row['components_is_done']:
-                                history_note = f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
-                                tasks_df.at[index, 'history'] += history_note
-                                tasks_df.at[index, 'components_is_done'] = True
-                        self.save_changes_to_db(tasks_df, MattressRequest)
-                        st.rerun()
+        submit = st.button(label='Подтвердить')
+
+        original_df = self.components_tasks()
+        edited_df = self.components_frame()
+
+        if not submit or edited_df is None:
+            return
+
+        self.update_tasks(original_df, edited_df, 'components_is_done')
+        self.save_changes_to_db(original_df, MattressRequest)
+        st.rerun()
 
 
 Page = ComponentsPage(page_name='Заготовка',

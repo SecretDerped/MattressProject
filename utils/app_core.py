@@ -9,7 +9,7 @@ import json
 
 from utils.db_connector import session
 from utils.models import MattressRequest
-from utils.tools import config, read_file
+from utils.tools import config, read_file, time_now
 
 
 class Page:
@@ -81,7 +81,6 @@ class Page:
         }
 
         self.session = session()
-        #self.start_websocket_listener()
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
                            layout="wide")
@@ -94,20 +93,6 @@ class Page:
                     if hasattr(instance, column):
                         setattr(instance, column, row[column])
         self.session.commit()
-
-    async def listen_for_updates(self):
-        uri = f"ws://localhost:{config['site'].get('site_port', '5000')}/ws"  # Update with your FastAPI WebSocket URL
-        async with websockets.connect(uri) as websocket:
-            while True:
-                message = await websocket.recv()
-                update = json.loads(message)
-                if update["event"] == "new_commit":
-                    st.rerun()  # Trigger a rerun to refresh the data
-
-    def start_websocket_listener(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.listen_for_updates())
 
     def header(self):
         st.title(f'{self.icon} {self.page_name}')
@@ -167,3 +152,15 @@ class ManufacturePage(Page):
                      index=None,
                      key=self.page_name,
                      on_change=save_employee, args=(self.page_name,))
+
+    def update_tasks(self, tasks_df, edited_tasks_df, done_field: str):
+        for index, row in edited_tasks_df.iterrows():
+            if not row[done_field]:
+                continue
+
+            tasks_df.at[index, 'history'] += self.create_history_note()
+            tasks_df.at[index, done_field] = True
+
+    def create_history_note(self):
+        employee = st.session_state.get(self.page_name)
+        return f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
