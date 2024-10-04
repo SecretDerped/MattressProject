@@ -3,8 +3,7 @@ from pathlib import Path
 
 import psycopg2
 import pandas as pd
-import streamlit
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
@@ -58,21 +57,6 @@ def read_from_db(query):
     return df
 
 
-def listen_for_notifications():
-    conn = get_db_connection()
-    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
-    cursor = conn.cursor()
-    cursor.execute("LISTEN mattress_changes;")
-
-    while True:
-        conn.poll()  # Check for notifications
-        while conn.notifies:
-            notify = conn.notifies.pop(0)
-            logging.debug(f"Received notification: {notify.payload}")
-            streamlit.rerun()
-            # Here you can set a flag or call a function to refresh the data in your Streamlit app
-
-
 # Save to database
 def save_to_db(dataframe, table_name):
     conn = get_db_connection()
@@ -92,17 +76,6 @@ def update_db(query):
 def load_tasks(session):
     # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
     return session.query(MattressRequest).order_by(Order.id.desc()).limit(100).all()
-
-
-# Assuming you're using SQLAlchemy for your database operations
-@event.listens_for(MattressRequest, 'after_insert')
-@event.listens_for(MattressRequest, 'after_update')
-def notify_changes(mapper, connection, target):
-    logging.debug(f'Inserted: {target}')
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("NOTIFY mattress_changes;")
-    streamlit.rerun()
 
 
 if __name__ == "__main__":
