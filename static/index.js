@@ -133,7 +133,7 @@ $(document).ready(function() {
     }
 
     // Сбор данных из формы в виде JSON
-    function collectFormData() {
+    async function collectFormData() {
         var data = {
             mattresses: [],
             additionalItems: [],
@@ -147,29 +147,36 @@ $(document).ready(function() {
         };
 
         // Собираем данные для матрасов
-         $('#mattressTable .grid-item').each(async function() {
-            let $element = $(this);
+         const mattressPromises = $('#mattressTable .grid-item').map(async function() {
+        let $element = $(this);
 
-            let photoFile = $element.find('input[name^="photo_mattress"]').prop('files')[0];
-            let photoBase64 = '';
-            if (photoFile) {
+        let photoFile = $element.find('input[name^="photo_mattress"]').prop('files')[0];
+        let photoBase64 = '';
+        if (photoFile) {
+            try {
                 photoBase64 = await convertFileToBase64(photoFile);
+            } catch (error) {
+                console.error('Error converting file to Base64:', error);
             }
+        }
 
-            var item = {
-                name: $element.data('name'),
-                quantity: $element.find('input[name^="quantity_mattress"]').val(),
-                price: $element.find('input[name^="price_mattress"]').val(),
-                size: $element.find('input[name^="size_mattress"]').val(),
-                topFabric: $element.find('select[name^="top_fabric_mattress"]').val(),
-                sideFabric: $element.find('select[name^="side_fabric_mattress"]').val(),
-                springBlock: $element.find('select[name^="spring_block_mattress"]').val(),
-                comment: $element.find('input[name^="comment_mattress"]').val(),
-                photo: photoBase64
-            };
+        var item = {
+            name: $element.data('name'),
+            quantity: $element.find('input[name^="quantity_mattress"]').val(),
+            price: $element.find('input[name^="price_mattress"]').val(),
+            size: $element.find('input[name^="size_mattress"]').val(),
+            topFabric: $element.find('select[name^="top_fabric_mattress"]').val(),
+            sideFabric: $element.find('select[name^="side_fabric_mattress"]').val(),
+            springBlock: $element.find('select[name^="spring_block_mattress"]').val(),
+            comment: $element.find('input[name^="comment_mattress"]').val(),
+            photo: photoBase64
+        };
 
-            data.mattresses.push(item);
-        });
+        data.mattresses.push(item);
+    }).get(); // `.get()` converts the jQuery object to a standard array
+
+    // Wait for all mattressPromises to complete
+    await Promise.all(mattressPromises);
 
         // А тут собираются дополнительные позиции
         $('#additionalTable .grid-item').each(function() {
@@ -208,12 +215,12 @@ $(document).ready(function() {
     });
 
     // Поведение при отправке формы. Кнопка становится неактивной при нажатии, чтобы юзверь не успел несколько раз создать реализацию
-    $('form').on('submit', function (event) {
+    $('form').on('submit', async function (event) {
         // Останавливаем стандартное поведение формы
         event.preventDefault();
         // Собираем данные в JSON
         let form = $(this);
-        let formData = collectFormData();
+        let formData = await collectFormData();
         // Делаем кнопку неактивной и меняем текст
         var submitBtn = $('#submitBtn');
         submitBtn.prop('disabled', true).text('Отправка...');

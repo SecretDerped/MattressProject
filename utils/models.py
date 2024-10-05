@@ -64,6 +64,7 @@ class Order(Base):
     contact = Column(String)
     address = Column(String)
     region = Column(String)
+    deadline = Column(Date)
     created = Column(Date)
 
     # Отношение "один-ко-многим" к MattressRequest

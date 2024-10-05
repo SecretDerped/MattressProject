@@ -90,12 +90,15 @@ class PackingPage(ManufacturePage):
 
             box = row_container[count % num_columns].container(border=True)
             with box:
-
+                main_row, photo_space, buffer = st.columns([18, 1, 1])
                 photo = task.photo
-                if photo:
-                    st.image(photo, caption='Фото', width=80)
 
-                st.markdown(form_box_text(task))
+                if photo:
+                    main_row, photo_space, buffer = st.columns([10, 2, 2])
+                    with photo_space:
+                        st.image(photo, caption='Фото', width=80)
+                with main_row:
+                    st.markdown(form_box_text(task))
 
                 button_row_1, button_row_2, button_row_3 = st.columns([1, 1, 1])
 
