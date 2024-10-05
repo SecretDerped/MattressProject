@@ -17,7 +17,7 @@ class ComponentsPage(ManufacturePage):
             'attributes': st.column_config.TextColumn("Состав", width='large'),
             'comment': st.column_config.TextColumn("Комментарий", width='medium'),
             'photo': st.column_config.ImageColumn("Фото"),
-            'history': st.column_config.TextColumn()  # Include history for updates
+            'history': st.column_config.TextColumn("История", width='large')
         }
 
     def components_tasks(self):
@@ -37,15 +37,15 @@ class ComponentsPage(ManufacturePage):
                     'attributes': task.attributes,
                     'comment': task.comment,
                     'photo': task.photo,
-                    'history': task.history  # Include history for updates
+                    'history': task.history
                 }
                 data.append(row)
 
         if not data:
-            return None
+            return pd.DataFrame()  # Возвращаем пустой DataFrame
 
         df = pd.DataFrame(data)
-        df.set_index('id', inplace=True)  # Set 'id' as the index
+        df.set_index('id', inplace=True)
         return df
 
     @st.fragment(run_every=2)
@@ -57,7 +57,7 @@ class ComponentsPage(ManufacturePage):
             return
 
         tasks = self.components_tasks()
-        if tasks is None or tasks.empty:
+        if tasks.empty:
             st.info("Срочных заявок нет. Продолжайте нарезать обычные материалы.")
             return
 
@@ -75,14 +75,13 @@ class ComponentsPage(ManufacturePage):
             return
 
         self.update_tasks(original_df, edited_df, 'components_is_done')
-        self.save_changes_to_db(original_df, MattressRequest)
+        self.save_changes_to_db(edited_df, MattressRequest)
         st.rerun()
 
 
 Page = ComponentsPage(page_name='Заготовка',
                       icon="🧱",
-                      columns_order=['components_is_done', 'article', 'size', 'attributes', 'comment',
-                                     'photo'])
+                      columns_order=['components_is_done', 'article', 'size', 'attributes', 'comment', 'photo'])
 
 col_table, col_info = st.columns([4, 1])
 

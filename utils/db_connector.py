@@ -64,15 +64,6 @@ def save_to_db(dataframe, table_name):
     conn.close()
 
 
-# Update or delete operations
-def update_db(query):
-    logging.debug(f'Update: {query}')
-    conn = get_db_connection()
-    conn.execute(query)
-    conn.commit()
-    conn.close()
-
-
 def load_tasks(session):
     # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
     return session.query(MattressRequest).order_by(Order.id.desc()).limit(100).all()

@@ -3,48 +3,63 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentEmployeeSequence = '';
 
     document.addEventListener('keydown', function (event) {
+        // Игнорируем нажатия клавиш-модификаторов
+        if (event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt') {
+            return;
+        }
+
         let key = event.key;
 
         if (key === '(') {
             capturing = true;
             currentEmployeeSequence = '';
-            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
+            console.log('Начало считывания последовательности...');
         } else if (key === ')') {
             capturing = false;
-            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
+            console.log('Конец считывания. Полученная последовательность:', currentEmployeeSequence);
+            processSequence(currentEmployeeSequence);  // Отправляем всю последовательность на сервер
         } else if (capturing) {
             currentEmployeeSequence += key;
-            sendKey(key, '/log_sequence_gluing'); // Меняем на '/log_sequence_sewing' для страницы сшивания
         }
     });
 
-    function sendKey(key, url) {
-        fetch(url, {
+    function processSequence(sequence) {
+        console.log('Отправка последовательности на сервер:', sequence);
+
+        fetch('/log_sequence_gluing', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ key: key })
+            body: JSON.stringify({ sequence: sequence })
         })
         .then(response => response.json())
-        .then(data => {
-            console.log(data); // Логирование ответа сервера
-            if (data.sequence) {
-                console.log(`Считанная последовательность: ${data.sequence}`);
-                document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
-            }
-            if (data.task_data) {
-                if (data.task_data.error) {
-                    document.getElementById('task_data').innerText = data.task_data.error;
-                } else {
-                    displayTaskData(data.task_data);
-                    document.getElementById('buttons').style.display = 'block';
-                    document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+        .then(responseData => {
+            console.log('Ответ от сервера:', responseData); // Логирование ответа сервера
+
+            if (responseData.status === 'success') {
+                const data = responseData.data;
+
+                if (data.sequence) {
+                    console.log(`Считанная последовательность: ${data.sequence}`);
+                    document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
                 }
+                if (data.task_data) {
+                    if (data.task_data.error) {
+                        document.getElementById('task_data').innerText = data.task_data.error;
+                    } else {
+                        displayTaskData(data.task_data);
+                        document.getElementById('buttons').style.display = 'block';
+                        document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+                    }
+                }
+            } else {
+                console.error('Ошибка от сервера:', responseData.data.error || responseData.message);
+                document.getElementById('task_data').innerText = responseData.data.error || 'Произошла ошибка.';
             }
         })
         .catch(error => {
-            console.error('Ошибка при отправке запроса:', error);
+            console.error('Ошибка при отправке последовательности:', error);
         });
     }
 
@@ -57,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         console.log(`Завершение задачи для сотрудника: ${employeeSequence}`); // Логирование перед отправкой запроса
 
-        fetch('/complete_task_gluing', { // Меняем на '/complete_task_sewing' для страницы сшивания
+        fetch('/complete_task_gluing', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -65,12 +80,13 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({ employee_sequence: employeeSequence })
         })
         .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ok') {
+        .then(responseData => {
+            if (responseData.status === 'success') {
                 // Возвращаем страницу в начальное состояние
                 resetPage();
             } else {
-                console.error('Ошибка при завершении задачи:', data.message);
+                console.error('Ошибка при завершении задачи:', responseData.data || responseData.message);
+                document.getElementById('task_data').innerText = 'Ошибка при завершении задачи.';
             }
         })
         .catch(error => {

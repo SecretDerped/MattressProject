@@ -7,8 +7,8 @@ import streamlit as st
 from sqlalchemy.orm import joinedload
 
 from utils.db_connector import session
-from utils.models import MattressRequest, Order
-from utils.tools import config, read_file, time_now
+from utils.models import MattressRequest, Order, Employee
+from utils.tools import config, time_now
 
 
 class Page:
@@ -27,10 +27,6 @@ class Page:
         self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
-            "deadline": st.column_config.DateColumn("Срок",
-                                                    format="DD.MM.YYYY",
-                                                    step=1,
-                                                    default=datetime.date.today()),
             "article": "Артикул",
             "size": "Размер",
             "base_fabric": st.column_config.TextColumn("Ткань (Верх / Низ)",
@@ -135,41 +131,44 @@ class ManufacturePage(Page):
                             .limit(300)
                             .all())
 
+    @st.fragment(run_every=5)
     def employees_on_shift(self, searching_position: str) -> list:
-        """Принимает строку для фильтрации по роли сотрудника (position).
-        Читает .pkl из employees_cash_filepath, преобразует в датафрейм.
-        Фильтрует записи, где значение в "is_on_shift" стоит True,
-        а в колонке "position" есть подстрока из аргумента функции (независимо от регистра).
+        """Возвращает список кортежей (имя сотрудника, ID) сотрудников, которые на смене и соответствуют заданной роли."""
+        employees = self.session.query(Employee).filter(
+            Employee.is_on_shift == True,
+            Employee.position.ilike(f'%{searching_position}%')
+        ).all()
+        return [(employee.name, employee.id) for employee in employees]
 
-        :returns: [список имен сотрудников на смене по искомой роли]"""
-        dataframe = read_file(self.employees_cash)
-        if 'is_on_shift' not in dataframe.columns or 'position' not in dataframe.columns:
-            raise ValueError("В датафрейме сотрудников должны быть колонки 'is_on_shift' и 'position'")
-
-        filtered_df = dataframe[(dataframe['is_on_shift'] == True) & (
-            dataframe['position'].str.contains(searching_position, case=False, na=False))]
-
-        return filtered_df['name'].tolist()
-
-    @st.experimental_fragment(run_every="4s")
     def employee_choose(self):
-        """Виджет для выбора активного сотрудника для рабочего места.
-        Рабочее место - строка в качестве аргумента.
-        Показывает выпадающий список из сотрудников, находящихся на смене.
-        При выборе сотрудника в session_state сохраняется строка с именем сотрудника под ключом с названием должности.
-        Пример: st.session_state['швейный стол'] == 'Полиграф Полиграфович'"""
+        """Виджет для выбора активного сотрудника для рабочего места."""
 
-        def save_employee(position):
-            """Метод для работы эффекта on_change виджета из employee_choose.
-            Без него выбираемый сотрудник корректно не записывается в session_state."""
-            st.session_state[position] = st.session_state[position]
+        employees = self.employees_on_shift(self.page_name)
+        if not employees:
+            st.warning("Нет доступных сотрудников на смене с соответствующей ролью.")
+            return
 
-        st.selectbox('Ответственный',
-                     placeholder="Выберите сотрудника",
-                     options=self.employees_on_shift(self.page_name),
-                     index=None,
-                     key=self.page_name,
-                     on_change=save_employee, args=(self.page_name,))
+        employee_names = [name for name, _ in employees]
+
+        # Проверяем, есть ли уже выбранный сотрудник в session_state
+        if self.page_name in st.session_state:
+            selected_name = st.session_state[self.page_name]
+            if selected_name not in employee_names:
+                # Если ранее выбранный сотрудник больше не доступен, выбираем первого из списка
+                selected_name = employee_names[0]
+        else:
+            selected_name = employee_names[0]
+
+        # Создаем selectbox для выбора сотрудника
+        selected_name = st.selectbox('Выберите сотрудника',
+                                     options=employee_names,
+                                     index=employee_names.index(selected_name),
+                                     key=self.page_name)
+
+        # Сохраняем ID выбранного сотрудника в session_state с уникальным ключом
+        selected_employee = next((emp for emp in employees if emp[0] == selected_name), None)
+        if selected_employee:
+            st.session_state[f"{self.page_name}_employee_id"] = selected_employee[1]
 
     def update_tasks(self, tasks_df, edited_tasks_df, done_field: str):
         for index, row in edited_tasks_df.iterrows():

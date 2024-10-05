@@ -101,7 +101,7 @@ class BrigadierPage(Page):
                 if full_mode not in state:
                     state[full_mode] = False
 
-                with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}', expanded=True):
+                with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}, Срок: {order.deadline}', expanded=True):
                     task_state = self.TASK_STATE + str(order.id)
                     if state.get(active_mode, False):
                         st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
@@ -184,44 +184,88 @@ class BrigadierPage(Page):
         )
 
     def get_employees(self):
-        # Возвращает все заказы в порядке id. Если нужно сортировать в порядке убывания, используй Order.id.desc()
         return self.session.query(Employee).all()
 
     def add_employee(self):
         with st.form(key='add_employee'):
-            # Заголовок формы
             st.markdown("#### Добавить нового сотрудника")
-
-            # Поля для ввода данных сотрудника
             name = st.text_input("Имя")
             position = st.text_input("Роли", placeholder="Перечислите через запятую")
 
-            # Кнопка для добавления сотрудника
             if st.form_submit_button("Добавить сотрудника"):
-                if name and position:  # Проверка, что обязательные поля заполнены
+                if name and position:
                     new_employee = Employee(
                         is_on_shift=False,
                         name=name,
                         position=position,
                         barcode=None,
                     )
-                    self.session.add(new_employee)  # Добавление нового сотрудника в сессию
-                    self.session.commit()  # Сохранение изменений в базе данных
+                    self.session.add(new_employee)
+                    self.session.commit()
                     st.success("Сотрудник успешно добавлен!")
+                    st.rerun()
                 else:
                     st.error("Пожалуйста, заполните все обязательные поля.")
 
-    @st.fragment(run_every=5)
-    def employees_editor(self, dynamic_mode: bool = False):
-        columns_order = ["is_on_shift", "name", "position", "barcode"]
-        if dynamic_mode:
-            columns_order = ["name", "position"]
-        self.edit_table(
-            model=Employee,
-            columns_config=self.employee_columns_config,
-            columns_order=columns_order,
-            state_key=self.EMPLOYEE_STATE,
+    def employees_editor(self):
+        # Получаем сотрудников из базы данных
+        employees = self.get_employees()
+
+        # Подготавливаем данные для отображения
+        data = []
+        for employee in employees:
+            row = {
+                'id': employee.id,
+                'is_on_shift': employee.is_on_shift,
+                'name': employee.name,
+                'position': employee.position,
+                'barcode': barcode_link(employee.id),
+                'Удалить': False  # Инициализируем флаг удаления как False
+            }
+            data.append(row)
+        df = pd.DataFrame(data)
+        df.set_index('id', inplace=True)
+
+        # Настройки колонок для отображения
+        self.employee_columns_config = {
+            "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
+            "name": st.column_config.TextColumn("Имя / Фамилия", default=''),
+            "position": st.column_config.TextColumn("Роли", width='medium', default=''),
+            "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=False),
+            "Удалить": st.column_config.CheckboxColumn("Удалить", default=False),
+        }
+
+        # Отображаем таблицу редактирования
+        edited_df = st.data_editor(
+            df,
+            column_config=self.employee_columns_config,
+            column_order=['is_on_shift', 'name', 'position', 'Удалить', 'barcode'],
+            hide_index=True,
+            num_rows='fixed',
+            key='employee_editor'
         )
+
+        # Кнопка для сохранения изменений
+        if st.button('Сохранить изменения'):
+            self.save_employee_changes(edited_df)
+
+    def save_employee_changes(self, edited_df):
+        # Итерируемся по строкам DataFrame
+        for index, row in edited_df.iterrows():
+            employee = self.session.get(Employee, index)
+            if row['Удалить']:
+                # Удаляем сотрудника
+                if employee:
+                    self.session.delete(employee)
+            else:
+                # Обновляем поля сотрудника
+                if employee:
+                    employee.is_on_shift = row['is_on_shift']
+                    employee.name = row['name']
+                    employee.position = row['position']
+        self.session.commit()
+        st.success('Изменения сохранены.')
+        st.rerun()
 
 
 Page = BrigadierPage('Производственный терминал', '🛠️')
@@ -252,7 +296,8 @@ with employee_tab:
 
     with col1:
         st.title("👷 Сотрудники")
-
+        Page.employees_editor()
+        Page.add_employee()
     with col2:
         st.write(' ')
         # Должность аналогична свойству page_name на файлах страниц
@@ -260,15 +305,4 @@ with employee_tab:
                 '"Роли" пропишите рабочее место сотруднику. Можно вписать несколько.  \n'
                 'Доступно: заготовка, сборка, нарезка, шитьё, упаковка',
                 icon="ℹ️")
-
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        Page.employees_editor(dynamic_mode=state.get(Page.EMPLOYEE_ACTIVE_MODE, False))
-        Page.add_employee()
-        # Toggle between modes if needed
-        if st.button("Переключить режим редактирования сотрудников"):
-            state[Page.EMPLOYEE_ACTIVE_MODE] = not state.get(Page.EMPLOYEE_ACTIVE_MODE, False)
-
-    with col2:
-        pass
 
