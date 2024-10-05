@@ -1,4 +1,5 @@
 import datetime
+import logging
 from pathlib import Path
 
 import streamlit as st
@@ -82,6 +83,17 @@ class Page:
         st.set_page_config(page_title=self.page_name,
                            page_icon=self.icon,
                            layout="wide")
+
+    def update_db(self, task):
+        logging.debug(f'Update: {task}')
+        try:
+            self.session.add(task)
+            self.session.commit()
+        except Exception as e:
+            self.session.rollback()
+            logging.error(f"Error updating database: {e}")
+        finally:
+            self.session.close()
 
     def save_changes_to_db(self, edited_df, model):
         for index, row in edited_df.iterrows():

@@ -63,25 +63,6 @@ components_page_articles = config.get('components', {}).get('showed_articles', [
 sequence_buffer = {}
 
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
-
-
-manager = ConnectionManager()
-
-
 def str_num_to_float(string):
     """Превращает число из строки в дробное с двумя знаками после запятой. Если не получается, возвращает 0."""
     try:
@@ -242,12 +223,6 @@ async def post_index(request: Request):
                 send_telegram_message(order_message, request.query_params.get('chat_id'))
                 # await send_telegram_message(order_message, tg_group_chat_id)
                 await session.commit()
-
-                # Отправка обновлений всем подключённым клиентам
-                await manager.broadcast(json.dumps({
-                    "event": "new_commit",
-                    "data": order_data
-                }))
 
                 return {"status": "success",
                         "data": "   Заявка принята.\nРеализация записана.\nНаряды созданы."}

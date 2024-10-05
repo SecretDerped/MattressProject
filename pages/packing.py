@@ -5,17 +5,9 @@ import time
 from openpyxl.reader.excel import load_workbook
 
 from utils.app_core import ManufacturePage
-from utils.db_connector import get_db_connection
+from utils.models import MattressRequest
 from utils.tools import config, print_file, get_date_str
 import streamlit as st
-
-
-def update_db(query):
-    logging.debug(f'Update: {query}')
-    conn = get_db_connection()
-    conn.execute(query)
-    conn.commit()
-    conn.close()
 
 
 def form_box_text(task):
@@ -44,7 +36,7 @@ class PackingPage(ManufacturePage):
             # Заполнение шаблона
             ws['B4'] = "Матрас АРТ.№ " + task.article + '  |  ПБ: ' + task.springs
             ws['B6'] = task.size
-            ws['B8'] = order.deadline
+            ws['B8'] = task.deadline
             ws['B16'] = f"{order.organization} - {order.address}"
 
             document_path = fr'cash\{self.page_name}_talon_{order.id}.xlsx'
@@ -107,14 +99,22 @@ class PackingPage(ManufacturePage):
                 with button_row_1:
                     if st.button(f":green[**{self.done_button_text}**]", key=f'button_packing_done_{task.id}'):
                         history_note = f'{self.create_history_note()} \n'
-                        task.at[task.id, 'packing_is_done'] = True
-                        task.at[task.id, 'history'] += history_note
-                        update_db()
+                        db_task = self.session.query(MattressRequest).get(task.id)
+
+                        if db_task:
+                            db_task.packing_is_done = True
+                            db_task.history += history_note
+                            self.update_db(db_task)
+                        else:
+                            logging.error(f"Task with id {task.id} not found in the database")
                         st.rerun()
+
                 with button_row_2:
                     self.talon_button(order, task)
+
                 with button_row_3:
                     self.label_button(task)
+
             count += 1
 
     @st.fragment(run_every=3)
