@@ -3,6 +3,7 @@ import os
 import time
 
 from openpyxl.reader.excel import load_workbook
+from win32ctypes.pywin32 import pywintypes
 
 from utils.app_core import ManufacturePage
 from utils.models import MattressRequest
@@ -41,10 +42,12 @@ class PackingPage(ManufacturePage):
 
             document_path = fr'cash\{self.page_name}_talon_{order.id}.xlsx'
             wb.save(document_path)
-
-            print_file(document_path, self.default_printer_name)
-            st.toast("Печать талона...", icon='🖨️')
-            time.sleep(1)
+            try:
+                print_file(document_path, self.default_printer_name)
+                st.toast("Печать талона...", icon='🖨️')
+                time.sleep(1)
+            except pywintypes.error as e:
+                st.toast(f"Ошибка печати: {e}")
             try:
                 os.remove(document_path)
             except Exception:
