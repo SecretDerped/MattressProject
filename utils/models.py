@@ -20,9 +20,9 @@ class EmployeeTask(Base):
     __tablename__ = 'employee_tasks'
 
     id = Column(Integer, primary_key=True)
-    employee_id = Column(Integer, ForeignKey('employees.id'))
-    task_id = Column(Integer, ForeignKey('mattress_requests.id'))
-    endpoint = Column(String)
+    employee_id: Column[int] = Column(Integer, ForeignKey('employees.id'))
+    task_id: Column[int] = Column(Integer, ForeignKey('mattress_requests.id'))
+    endpoint: Column[str] = Column(String)
     timestamp = Column(DateTime, default=datetime.now())
 
     employee = relationship('Employee')

@@ -83,7 +83,7 @@ implementation_filepath = "cash/implementation.xml"  # Расположение 
 # Список свойств товаров можно получить методом get_nomenclature_list() из sbis_manager.py
 mattress_group_id = 2  # Товары с hierarchicalParent равным mattress_group_id считаются матрасами и добавляются в датафрейм
 fabrics_group_id = 285  # Эти товары - ткани. Показываются при выборе ткани из окна заявок.
-springs_group_id = 294 # Пружинные блоки.
+springs_group_id = 312 # Пружинные блоки.
 
 [sbis.regalement_id_list]
 # ID регламента СБИС.

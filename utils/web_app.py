@@ -353,7 +353,7 @@ async def get_barcode(employee_id: int, request: Request):
 
     async with async_session() as session:
         # Получаем данные о сотруднике из базы данных
-        result = await session.execute(select(Employee).where(Employee.id == employee_id))
+        result = await session.execute(select(Employee).where(employee_id == Employee.id))
         employee = result.scalar_one_or_none()
 
         if not employee:
