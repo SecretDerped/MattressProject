@@ -290,6 +290,7 @@ async def log_sequence_sewing(request: Request):
             'Ткань (Верх / низ)': fabric_type(task.base_fabric),
             'Ткань (Боковина)': fabric_type(task.side_fabric)
         }
+
         if task.comment:
             message['Комментарий'] = f"<strong>{task.comment}</strong>"
 
@@ -298,12 +299,12 @@ async def log_sequence_sewing(request: Request):
 
         return message
 
-    return log_sequence(request, 'Шитьё', 'Отметка', filter_conditions, transform_task_data)
+    return await log_sequence(request, 'Шитьё', 'Отметка', filter_conditions, transform_task_data)
 
 
 @app.post('/complete_task_sewing')
 async def complete_task_sewing(request: Request):
-    return await complete_task(request, 'Шитье', 'Готово', 'sewing_is_done')
+    return await complete_task(request, 'Шитьё', 'Готово', 'sewing_is_done')
 
 
 @app.get('/api/nomenclatures')
@@ -393,13 +394,13 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
     # Проверяем, что sequence не пустая
     if not sequence:
         return JSONResponse(content={"status": "error",
-                                     "data": {'error': 'Ошибка в штрих-коде. Идентификатор отсутствует.'}})
+                                     "data": {'error': 'Ошибка в штрих-коде. Идентификатор отсутствует.\n\nЖду штрих-код...'}})
 
     try:
         employee_id = int(sequence)
     except ValueError:
         return JSONResponse(content={"status": "error",
-                                     "data": {'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.'}})
+                                     "data": {'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.\n\nЖду штрих-код...'}})
 
     # Получение информации о сотруднике по его идентификатору
     async with async_session() as session:
@@ -408,17 +409,17 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
 
         if not employee:
             return JSONResponse(content={"status": "error",
-                                         "data": {'error': 'Сотрудник не найден.'}})
+                                         "data": {'error': 'Сотрудник не найден.\n\nЖду штрих-код...'}})
 
         if not employee.is_on_shift:
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Сначала нужно открыть смену.'}})
+                                                  'error': 'Сначала нужно открыть смену. Сообщите бригадиру.\n\nЖду штрих-код...'}})
 
         if page_name.lower() not in employee.position.lower():
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Нет доступа. Уточните свою должность.'}})
+                                                  'error': 'Нет доступа. Уточните свою должность у бригадира.\n\nЖду штрих-код...'}})
 
         # Проверяем, есть ли у сотрудника текущая задача в таблице EmployeeTask
         existing_task = await session.execute(
@@ -447,7 +448,7 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
             if not tasks:
                 return JSONResponse(content={"status": "error",
                                              "data": {'sequence': employee.name,
-                                                      'error': 'Сейчас пока нет задач.'}})
+                                                      'error': 'Сейчас пока нет задач.\n\nЖду штрих-код...'}})
 
             # Поиск новой задачи
             for task in tasks:
@@ -477,7 +478,7 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
             else:
                 return JSONResponse(content={"status": "error",
                                              "data": {'sequence': employee.name,
-                                                      'error': 'Задач для тебя пока нет. Приходи позже.'}})
+                                                      'error': 'Задач для тебя пока нет. Приходи позже.\n\nЖду штрих-код...'}})
 
 
 async def complete_task(request: Request, page_name: str, action: str, done_field: str):

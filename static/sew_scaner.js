@@ -34,20 +34,28 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({ sequence: sequence })
         })
         .then(response => response.json())
-        .then(data => {
-            console.log('Ответ от сервера:', data); // Логирование ответа сервера
-            if (data.sequence) {
-                console.log(`Считанная последовательность: ${data.sequence}`);
-                document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
-            }
-            if (data.task_data) {
-                if (data.task_data.error) {
-                    document.getElementById('task_data').innerText = data.task_data.error;
-                } else {
-                    displayTaskData(data.task_data);
-                    document.getElementById('buttons').style.display = 'block';
-                    document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+        .then(responseData => {
+            console.log('Ответ от сервера:', responseData); // Логирование ответа сервера
+
+            if (responseData.status === 'success') {
+                const data = responseData.data;
+
+                if (data.sequence) {
+                    console.log(`Считанная последовательность: ${data.sequence}`);
+                    document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
                 }
+                if (data.task_data) {
+                    if (data.task_data.error) {
+                        document.getElementById('task_data').innerText = data.task_data.error;
+                    } else {
+                        displayTaskData(data.task_data);
+                        document.getElementById('buttons').style.display = 'block';
+                        document.getElementById('complete_button').dataset.employeeSequence = currentEmployeeSequence;
+                    }
+                }
+            } else {
+                console.error('Ошибка от сервера:', responseData.data.error || responseData.message);
+                document.getElementById('task_data').innerText = responseData.data.error || 'Произошла ошибка.';
             }
         })
         .catch(error => {
@@ -72,12 +80,12 @@ document.addEventListener('DOMContentLoaded', function () {
             body: JSON.stringify({ employee_sequence: employeeSequence })
         })
         .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
+        .then(responseData => {
+            if (responseData.status === 'success') {
                 // Возвращаем страницу в начальное состояние
                 resetPage();
             } else {
-                console.error('Ошибка при завершении задачи:', data.message);
+                console.error('Ошибка при завершении задачи:', responseData.data || responseData.message);
                 document.getElementById('task_data').innerText = 'Ошибка при завершении задачи.';
             }
         })
