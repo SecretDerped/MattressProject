@@ -1,4 +1,3 @@
-import datetime
 import logging
 from pathlib import Path
 
@@ -16,7 +15,6 @@ class Page:
         self.page_name = page_name
         self.icon = icon
 
-        self.employees_cash = config.get('site').get('hardware').get('employees_cash_filepath')
         self.employee_columns_config = {
             "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
             "name": st.column_config.TextColumn("Имя / Фамилия", default=''),
