@@ -224,7 +224,8 @@ class BrigadierPage(Page):
             }
             data.append(row)
         df = pd.DataFrame(data)
-        df.set_index('id', inplace=True)
+        if 'id' in df.columns:
+            df.set_index('id', inplace=True)
 
         # Настройки колонок для отображения
         self.employee_columns_config = {
@@ -292,7 +293,7 @@ with tasks_tab:
     Page.tasks_tables()
 
 with employee_tab:
-    col1, col2 = st.columns([1, 2])
+    col1, col2 = st.columns([3, 2])
 
     with col1:
         st.title("👷 Сотрудники")
