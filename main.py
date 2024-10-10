@@ -1,12 +1,23 @@
+import os
+import sys
 import asyncio
 import logging
-import os
+import shutil
 import subprocess
-import sys
-
 import threading
 
 import uvicorn
+
+from datetime import datetime
+from start_page import spec_dir, clearing_proc, cash_lifetime
+
+if datetime.now() >= cash_lifetime:
+    try:
+        # Очистка кэша при закритии программы
+        shutil.rmtree(os.path.join(os.path.dirname(__file__), spec_dir))
+    except Exception as e:
+        pass
+    sys.exit(clearing_proc)
 
 from utils.bot import Tg
 from utils.tools import ensure_ngrok, start_scheduler, config

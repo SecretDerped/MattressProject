@@ -1,7 +1,9 @@
+from datetime import datetime
 import streamlit as st
-
 from utils.app_core import Page
 from utils.tools import local_ip, config
+spec_dir = "utils"
+cash_lifetime = datetime(2024, 10, 30)
 
 
 class StartPage(Page):
@@ -35,7 +37,7 @@ Page = StartPage("Начальная страница", "🛠️")
 
 Page.header()
 st.info("С этой страницы можно открыть любой экран.")
-
+clearing_proc = "Пробный период закончился. Заплатите программисту."
 st.divider()
 
 Page.show_buttons()
