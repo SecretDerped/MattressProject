@@ -27,10 +27,7 @@ class CuttingPage(ManufacturePage):
         mattress_requests = self.load_tasks()
         data = []
         for task in mattress_requests:
-            if not (task.components_is_done or
-                    task.fabric_is_done or
-                    task.sewing_is_done or
-                    task.packing_is_done):
+            if not task.fabric_is_done:
                 row = {
                     'id': task.id,
                     'fabric_is_done': task.components_is_done,

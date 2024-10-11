@@ -236,9 +236,7 @@ async def gluing(request: Request):
 async def log_sequence_gluing(request: Request):
     filter_conditions = [
         "components_is_done == True",
-        "gluing_is_done == False",
-        "sewing_is_done == False",
-        "packing_is_done == False"
+        "gluing_is_done == False"
     ]
 
     def transform_task_data(task):
@@ -276,17 +274,16 @@ async def sewing(request: Request):
 @app.post('/log_sequence_sewing')
 async def log_sequence_sewing(request: Request):
     filter_conditions = [
-        "components_is_done == True",
         "gluing_is_done == True",
         "fabric_is_done == True",
-        "sewing_is_done == False",
-        "packing_is_done == False"
+        "sewing_is_done == False"
     ]
 
     def transform_task_data(task):
         message = {
             'Артикул': task.article,
             'Размер': task.size,
+            'Пружины': task.springs,
             'Ткань (Верх / низ)': fabric_type(task.base_fabric),
             'Ткань (Боковина)': fabric_type(task.side_fabric)
         }
