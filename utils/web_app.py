@@ -284,8 +284,8 @@ async def log_sequence_sewing(request: Request):
             'Артикул': task.article,
             'Размер': task.size,
             'Пружины': task.springs,
-            'Ткань (Верх / низ)': fabric_type(task.base_fabric),
-            'Ткань (Боковина)': fabric_type(task.side_fabric)
+            'Ткань (Верх / низ)': task.base_fabric,
+            'Ткань (Боковина)': task.side_fabric
         }
 
         if task.comment:
