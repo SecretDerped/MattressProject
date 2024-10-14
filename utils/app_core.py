@@ -24,6 +24,8 @@ class Page:
 
         self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
+            'order_id': st.column_config.NumberColumn("Заказ", disabled=True),
+            'mattress_request_id': st.column_config.NumberColumn("Матрас", disabled=True),
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
             "article": "Артикул",
             "size": "Размер",

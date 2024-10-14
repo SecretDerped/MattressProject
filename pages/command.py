@@ -19,12 +19,13 @@ class BrigadierPage(Page):
 
         self.EMPLOYEE_ACTIVE_MODE = 'employee_active_mode'
 
-    def show_and_hide_button(self, table_state, show_state, model, edited_df=None, order_id=None):
+    def edit_mode_button(self, table_state, show_state, model, edited_df=None, order_id=None):
         # Кнопка для отображения/скрытия таблицы с изменением текста
         if show_state not in state:
             state[show_state] = False
 
-        button_text = ":red[**Сохранить и вернуть режим просмотра**]" if state.get(show_state) else '**Перейти в режим редактирования**'
+        button_text = ":red[**Сохранить и вернуть режим просмотра**]" if state.get(
+            show_state) else '**Перейти в режим редактирования**'
 
         if st.button(button_text, key=f'{order_id}_mode_button'):
             # Очистить данные, если таблица скрывается
@@ -34,47 +35,94 @@ class BrigadierPage(Page):
             state[show_state] = not state[show_state]
             st.rerun()
 
-    def edit_table(self, model, columns_config, columns_order, dynamic_mode=False, order_id=None,
-                   state_key='state'):
-        try:
-            # Fetch data from the database
-            if order_id:
-                data_query = self.session.query(model).filter(MattressRequest.order_id == order_id).all()
-            else:
-                data_query = self.session.query(model).all()
+    def edit_mode_button_2(self, show_state, model, edited_df=None):
+        button_text = ":red[**Сохранить и вернуть режим просмотра**]" if state.get(
+            show_state) else '**Перейти в режим редактирования**'
 
-            # Convert data to DataFrame
-            data = []
-            for item in data_query:
-                row = item.__dict__.copy()
-                row.pop('_sa_instance_state', None)
-                data.append(row)
-            df = pd.DataFrame(data)
-            if 'id' in df.columns:
-                df.set_index('id', inplace=True)
-
-            # Additional processing (e.g., formatting barcode links)
-            if model == Employee and 'barcode' in df.columns:
-                df['barcode'] = df.index.to_series().apply(barcode_link).astype('string')
-
-            # Adjust columns order based on dynamic_mode or other conditions
-            if dynamic_mode and model == Employee:
-                columns_order = ["name", "position"]
-
-            edited_df = st.data_editor(
-                df,
-                column_config=columns_config,
-                column_order=columns_order,
-                hide_index=True,
-                num_rows='dynamic' if dynamic_mode else 'fixed',
-                key=f"{state_key}_editor"
-            )
-
-            return edited_df
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
-            logging.error(f"Error in edit_table: {e}", exc_info=True)
+        if st.button(button_text, key=f'{model}_mode_button'):
+            # Очистить данные, если таблица скрывается
+            if state.get(show_state, False) and edited_df is not None:
+                self.save_changes_to_db(edited_df, model)
+            clear_cash(self.TASK_STATE)
+            state[show_state] = not state[show_state]
             st.rerun()
+
+    @st.fragment(run_every=1)
+    def all_tasks(self):
+
+        mode_state_all_tasks = 'MattressRequest_redact_mode'
+        if mode_state_all_tasks not in state:
+            state[mode_state_all_tasks] = False
+
+        show_state_all_tasks = 'MattressRequest_full_mode'
+        if show_state_all_tasks not in state:
+            state[show_state_all_tasks] = False
+
+        orders = self.get_orders_with_mattress_requests()
+        # Так сделано, чтобы настройка была только тут, чтобы
+        # нельзя было менять таблицу во время режима редактирования
+        full_mode_checkbox = st.checkbox('Показывать завершённые наряды', key=f"{show_state_all_tasks}_checkbox")
+        if full_mode_checkbox:
+            state[show_state_all_tasks] = True
+        else:
+            state[show_state_all_tasks] = False
+
+        data = []
+        for order in orders:
+            for mattress_request in order.mattress_requests:
+                if state[show_state_all_tasks] or not (
+                        mattress_request.components_is_done and
+                        mattress_request.fabric_is_done and
+                        mattress_request.gluing_is_done and
+                        mattress_request.sewing_is_done and
+                        mattress_request.packing_is_done):
+                    row = {
+                        'order_id': order.id,
+                        'mattress_request_id': mattress_request.id,
+                        'high_priority': mattress_request.high_priority,
+                        'deadline': mattress_request.deadline,
+                        'article': mattress_request.article,
+                        'size': mattress_request.size,
+                        'base_fabric': mattress_request.base_fabric,
+                        'side_fabric': mattress_request.side_fabric,
+                        'photo': mattress_request.photo,
+                        'comment': mattress_request.comment,
+                        'springs': mattress_request.springs,
+                        'attributes': mattress_request.attributes,
+                        'components_is_done': mattress_request.components_is_done,
+                        'fabric_is_done': mattress_request.fabric_is_done,
+                        'gluing_is_done': mattress_request.gluing_is_done,
+                        'sewing_is_done': mattress_request.sewing_is_done,
+                        'packing_is_done': mattress_request.packing_is_done,
+                        'history': mattress_request.history,
+                        'organization': order.organization,
+                        'delivery_type': order.delivery_type,
+                        'address': order.address,
+                        'region': order.region,
+                        'created': mattress_request.created,
+                    }
+                    data.append(row)
+        df = pd.DataFrame(data)
+
+        if df.empty:
+            st.write('Активных нарядов нет')
+            return
+
+        if state.get(mode_state_all_tasks, False):
+            st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
+            editor = st.data_editor(data=df,
+                                    column_config=self.tasks_columns_config,
+                                    column_order=(column for column in self.tasks_columns_config.keys()),
+                                    hide_index=True,
+                                    key =self.TASK_STATE)
+            self.edit_mode_button_2(mode_state_all_tasks, MattressRequest, edited_df=editor)
+        else:
+            st.dataframe(data=df,
+                                  column_config=self.tasks_columns_config,
+                                  column_order=(column for column in self.tasks_columns_config.keys()),
+                                  hide_index=True,
+                                    key =self.TASK_STATE)
+            self.edit_mode_button_2(mode_state_all_tasks, MattressRequest)
 
     @st.fragment(run_every=1)
     def tasks_tables(self):
@@ -101,15 +149,52 @@ class BrigadierPage(Page):
                 if full_mode not in state:
                     state[full_mode] = False
 
-                with st.expander(f'Заказ №{order.id} - {order.organization or order.contact or "- -"}, Срок: {order.deadline}', expanded=True):
+                with st.expander(
+                        f'Заказ №{order.id} - {order.organization or order.contact or "- -"}, Срок: {order.deadline}',
+                        expanded=True):
                     task_state = self.TASK_STATE + str(order.id)
                     if state.get(active_mode, False):
                         st.error('##### Режим редактирования. Изменения других не сохраняются.', icon="🚧")
                         editor = self.tasks_editor(order)
-                        self.show_and_hide_button(task_state, active_mode, MattressRequest, edited_df=editor, order_id=order.id)
+                        self.edit_mode_button(task_state, active_mode, MattressRequest, edited_df=editor,
+                                              order_id=order.id)
                     else:
-                        self.show_and_hide_button(task_state, active_mode, MattressRequest, order_id=order.id)
+                        self.edit_mode_button(task_state, active_mode, MattressRequest, order_id=order.id)
                         self.tasks_table(order)
+
+    def edit_table(self, model, columns_config, columns_order, order_id=None,
+                   state_key='state'):
+        try:
+            # Fetch data from the database
+            if order_id:
+                data_query = self.session.query(model).filter(MattressRequest.order_id == order_id).all()
+            else:
+                data_query = self.session.query(model).all()
+
+            # Convert data to DataFrame
+            data = []
+            for item in data_query:
+                row = item.__dict__.copy()
+                row.pop('_sa_instance_state', None)
+                data.append(row)
+            df = pd.DataFrame(data)
+            if 'id' in df.columns:
+                df.set_index('id', inplace=True)
+
+            edited_df = st.data_editor(
+                df,
+                column_config=columns_config,
+                column_order=columns_order,
+                hide_index=True,
+                num_rows='fixed',
+                key=f"{state_key}_editor"
+            )
+
+            return edited_df
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
+            logging.error(f"Error in edit_table: {e}", exc_info=True)
+            st.rerun()
 
     def tasks_table(self, order):
         """Показывает нередактируемую таблицу данных без индексов."""
@@ -135,6 +220,8 @@ class BrigadierPage(Page):
                     mattress_request.packing_is_done
             ):
                 row = {
+                    'order_id': order.id,
+                    'mattress_request_id': mattress_request.id,
                     'high_priority': mattress_request.high_priority,
                     'deadline': mattress_request.deadline,
                     'article': mattress_request.article,
@@ -271,26 +358,30 @@ class BrigadierPage(Page):
 
 Page = BrigadierPage('Производственный терминал', '🛠️')
 
-tasks_tab, employee_tab = st.tabs(['Наряды', 'Сотрудники'])
+tasks_tab, employee_tab = st.tabs(['Матрасы', 'Сотрудники'])
 
 with tasks_tab:
-    col1, col2 = st.columns([1, 2])
+    tab_1, tab_2 = st.tabs(['Заказы', 'Все наряды'])
+    with tab_1:
+        col1, col2 = st.columns([1, 2])
 
-    with col1:
-        st.title("🏭 Все наряды")
+        with col1:
+            st.title("🏭 Все наряды")
 
-        if st.checkbox('Отобразить сделанные заявки', key=f"{Page.SHOW_DONE_STATE}_key"):
-            st.session_state[Page.SHOW_DONE_STATE] = True
-        else:
-            st.session_state[Page.SHOW_DONE_STATE] = False
+            if st.checkbox('Отобразить сделанные заявки', key=f"{Page.SHOW_DONE_STATE}_key"):
+                st.session_state[Page.SHOW_DONE_STATE] = True
+            else:
+                st.session_state[Page.SHOW_DONE_STATE] = False
 
-    with col2:
-        st.write(' ')
-        st.info('''На этом экране показываются данные о нарядах в режиме реального времени. Чтобы поправить любой
-        наряд, включите режим редактирования. Он обладает высшим приоритетом - пока активен режим редактирования,
-        изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
+        with col2:
+            st.write(' ')
+            st.info('''На этом экране показываются данные о нарядах в режиме реального времени. Чтобы поправить любой
+            наряд, включите режим редактирования. Он обладает высшим приоритетом - пока активен режим редактирования,
+            изменения других рабочих не сохраняются. **Не забывайте сохранять таблицу!**''', icon="ℹ️")
 
-    Page.tasks_tables()
+        Page.tasks_tables()
+    with tab_2:
+        Page.all_tasks()
 
 with employee_tab:
     col1, col2 = st.columns([3, 2])
@@ -306,4 +397,3 @@ with employee_tab:
                 '"Роли" пропишите рабочее место сотруднику. Можно вписать несколько.  \n'
                 'Доступно: заготовка, сборка, нарезка, шитьё, упаковка',
                 icon="ℹ️")
-
