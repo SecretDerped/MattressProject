@@ -24,19 +24,20 @@ class ComponentsPage(ManufacturePage):
         mattress_requests = self.load_tasks()
         data = []
         for task in mattress_requests:
-            if not task.components_is_done:
-                row = {
-                    'id': task.id,
-                    'components_is_done': task.components_is_done,
-                    'deadline': task.deadline,
-                    'article': task.article,
-                    'size': task.size,
-                    'attributes': task.attributes,
-                    'comment': task.comment,
-                    'photo': task.photo,
-                    'history': task.history
-                }
-                data.append(row)
+            if task.components_is_done:
+                continue
+            row = {
+                'id': task.id,
+                'components_is_done': task.components_is_done,
+                'deadline': task.deadline,
+                'article': task.article,
+                'size': task.size,
+                'attributes': task.attributes,
+                'comment': task.comment,
+                'photo': task.photo,
+                'history': task.history
+            }
+            data.append(row)
 
         if not data:
             return pd.DataFrame()  # Возвращаем пустой DataFrame
@@ -60,7 +61,8 @@ class ComponentsPage(ManufacturePage):
 
         return st.data_editor(tasks[self.columns_order],
                               column_config=self.components_columns_config,
-                              hide_index=True)
+                              hide_index=True,
+                              height=750)
 
     def components_table(self):
         submit = st.button(label='Подтвердить')
@@ -72,7 +74,7 @@ class ComponentsPage(ManufacturePage):
             return
 
         self.update_tasks(original_df, edited_df, 'components_is_done')
-        self.save_changes_to_db(edited_df, MattressRequest)
+        self.save_mattress_df_to_db(edited_df, MattressRequest)
         st.rerun()
 
 

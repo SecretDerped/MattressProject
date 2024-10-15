@@ -46,6 +46,7 @@ delivery_types = [
     "Регионы",
     "Страны"
 ]
+
 streamlit_port = '8501'
 site_port = '5000'
 

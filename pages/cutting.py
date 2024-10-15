@@ -11,13 +11,12 @@ class CuttingPage(ManufacturePage):
         super().__init__(page_name, icon)
         self.columns_order = columns_order
         self.cutting_columns_config = {
-            'fabric_is_done': st.column_config.CheckboxColumn("Готово"),
+            'fabric_is_done': st.column_config.CheckboxColumn("Готово", default=False),
             'base_fabric': st.column_config.TextColumn("Ткань (Верх / Низ)", disabled=True),
             'side_fabric': st.column_config.TextColumn("Ткань (Бочина)", disabled=True),
             'size': st.column_config.TextColumn("Размер", disabled=True),
             'side': st.column_config.TextColumn("Бочина", disabled=True),
             'article': st.column_config.TextColumn("Артикул", disabled=True),
-            'deadline': st.column_config.DateColumn("Срок", format="DD.MM", disabled=True),
             'comment': st.column_config.TextColumn("Комментарий", disabled=True),
             'history': st.column_config.TextColumn()  # Include history for updates
         }
@@ -27,19 +26,19 @@ class CuttingPage(ManufacturePage):
         mattress_requests = self.load_tasks()
         data = []
         for task in mattress_requests:
-            if not task.fabric_is_done:
-                row = {
-                    'id': task.id,
-                    'fabric_is_done': task.components_is_done,
-                    'base_fabric': task.base_fabric,
-                    'side_fabric': task.side_fabric,
-                    'size': task.size,
-                    'article': task.article,
-                    'deadline': task.deadline,
-                    'comment': task.comment,
-                    'history': task.history  # Include history for updates
-                }
-                data.append(row)
+            if task.fabric_is_done:
+                continue
+            row = {
+                'id': task.id,
+                'fabric_is_done': task.fabric_is_done,
+                'base_fabric': task.base_fabric,
+                'side_fabric': task.side_fabric,
+                'size': task.size,
+                'article': task.article,
+                'comment': task.comment,
+                'history': task.history  # Include history for updates
+            }
+            data.append(row)
 
         if not data:
             return None
@@ -65,7 +64,8 @@ class CuttingPage(ManufacturePage):
         tasks['side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
         return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
                               column_config=self.cutting_columns_config,
-                              hide_index=True)
+                              hide_index=True,
+                              height=750)
 
     def cutting_table(self):
         submit = st.button(label='Подтвердить')
@@ -77,14 +77,13 @@ class CuttingPage(ManufacturePage):
             return
 
         self.update_tasks(original_df, edited_df, 'fabric_is_done')
-        self.save_changes_to_db(original_df, MattressRequest)
+        self.save_mattress_df_to_db(original_df, MattressRequest)
         st.rerun()
 
 
 Page = CuttingPage(page_name='Нарезка',
                    icon="✂️",
-                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'deadline',
-                                  'comment'])
+                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'comment'])
 
 col_table, col_info = st.columns([4, 1])
 

@@ -27,6 +27,9 @@ class Page:
             'order_id': st.column_config.NumberColumn("Заказ", disabled=True),
             'mattress_request_id': st.column_config.NumberColumn("Матрас", disabled=True),
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
+            "deadline": st.column_config.DatetimeColumn("Срок",
+                                                        format="D.MM",
+                                                        disabled=True),
             "article": "Артикул",
             "size": "Размер",
             "base_fabric": st.column_config.TextColumn("Ткань (Верх / Низ)",
@@ -88,12 +91,10 @@ class Page:
         except Exception as e:
             self.session.rollback()
             logging.error(f"Error updating database: {e}")
-        finally:
-            self.session.close()
 
-    def save_changes_to_db(self, edited_df, model):
+    def save_mattress_df_to_db(self, edited_df, model):
         for index, row in edited_df.iterrows():
-            instance = self.session.get(model, index)
+            instance = self.session.get(model, row.mattress_request_id)
             if instance:
                 for column in row.index:
                     if hasattr(instance, column):
@@ -108,7 +109,6 @@ class Page:
         return (self.session.query(Order)
                 .options(joinedload(Order.mattress_requests))
                 .order_by(Order.id.desc())
-                .limit(50)
                 .all())
 
 
@@ -127,11 +127,11 @@ class ManufacturePage(Page):
 
     def load_tasks(self):
         return (self.session.query(MattressRequest)
-                            .order_by(MattressRequest.id.desc())
-                            .limit(300)
-                            .all())
+                .order_by(MattressRequest.id.desc())
+                .limit(300)
+                .all())
 
-    @st.fragment(run_every=5)
+    @st.fragment(run_every=3)
     def employees_on_shift(self, searching_position: str) -> list:
         """Возвращает список кортежей (имя сотрудника, ID) сотрудников, которые на смене и соответствуют заданной роли."""
         employees = self.session.query(Employee).filter(
@@ -181,4 +181,3 @@ class ManufacturePage(Page):
     def create_history_note(self):
         employee = st.session_state.get(self.page_name)
         return f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
-
