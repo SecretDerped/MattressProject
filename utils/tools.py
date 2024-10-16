@@ -274,11 +274,6 @@ def barcode_link(id: str) -> str:
     return f'http://{local_ip}:{site_port}/api/barcode/{id}'
 
 
-def clean_filename(filename):
-    # Удаляем недопустимые символы
-    return re.sub(r'[<>:"/\\|?*]', '', filename)
-
-
 def time_now():
     return datetime.now().strftime("%H:%M")
 

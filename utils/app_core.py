@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -7,7 +8,7 @@ from sqlalchemy.orm import joinedload
 
 from utils.db_connector import session
 from utils.models import MattressRequest, Order, Employee
-from utils.tools import config, time_now
+from utils.tools import config
 
 
 class Page:
@@ -17,15 +18,16 @@ class Page:
 
         self.employee_columns_config = {
             "is_on_shift": st.column_config.CheckboxColumn("На смене", default=False),
-            "name": st.column_config.TextColumn("Имя / Фамилия", default=''),
+            "name": st.column_config.TextColumn("Имя", default=''),
             "position": st.column_config.TextColumn("Роли", width='medium', default=''),
-            "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=True),
+            "barcode": st.column_config.LinkColumn("Штрих-код", display_text="Открыть", disabled=False),
+            "Удалить": st.column_config.CheckboxColumn("Удалить", default=False),
         }
 
         self.task_cash = Path(config.get('site').get('hardware').get('tasks_cash_filepath'))
         self.tasks_columns_config = {
+            'id': st.column_config.NumberColumn("Матрас", disabled=True),
             'order_id': st.column_config.NumberColumn("Заказ", disabled=True),
-            'mattress_request_id': st.column_config.NumberColumn("Матрас", disabled=True),
             "high_priority": st.column_config.CheckboxColumn("Приоритет", default=False),
             "deadline": st.column_config.DatetimeColumn("Срок",
                                                         format="D.MM",
@@ -94,7 +96,7 @@ class Page:
 
     def save_mattress_df_to_db(self, edited_df, model):
         for index, row in edited_df.iterrows():
-            instance = self.session.get(model, row.mattress_request_id)
+            instance = self.session.get(model, index)
             if instance:
                 for column in row.index:
                     if hasattr(instance, column):
@@ -180,4 +182,4 @@ class ManufacturePage(Page):
 
     def create_history_note(self):
         employee = st.session_state.get(self.page_name)
-        return f'({time_now()}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
+        return f'({datetime.now().strftime("%d.%m.%Y %H:%M:%S")}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'

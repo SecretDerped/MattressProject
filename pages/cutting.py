@@ -17,26 +17,28 @@ class CuttingPage(ManufacturePage):
             'size': st.column_config.TextColumn("Размер", disabled=True),
             'side': st.column_config.TextColumn("Бочина", disabled=True),
             'article': st.column_config.TextColumn("Артикул", disabled=True),
-            'comment': st.column_config.TextColumn("Комментарий", disabled=True),
-            'history': st.column_config.TextColumn()  # Include history for updates
+            'comment': st.column_config.TextColumn("Комментарий", disabled=True)
         }
         self.showed_articles = config['components']['showed_articles']
 
     def cutting_tasks(self):
         mattress_requests = self.load_tasks()
         data = []
-        for task in mattress_requests:
-            if task.fabric_is_done:
+        for mattress_request in mattress_requests:
+            if mattress_request.fabric_is_done:
                 continue
             row = {
-                'id': task.id,
-                'fabric_is_done': task.fabric_is_done,
-                'base_fabric': task.base_fabric,
-                'side_fabric': task.side_fabric,
-                'size': task.size,
-                'article': task.article,
-                'comment': task.comment,
-                'history': task.history  # Include history for updates
+                'id': mattress_request.id,
+                'deadline': mattress_request.deadline,
+                'high_priority': mattress_request.high_priority,
+                'fabric_is_done': mattress_request.fabric_is_done,
+                'base_fabric': mattress_request.base_fabric,
+                'side_fabric': mattress_request.side_fabric,
+                'size': mattress_request.size,
+                'article': mattress_request.article,
+                'comment': mattress_request.comment,
+                'delivery_type': mattress_request.delivery_type,
+                'history': mattress_request.history  # Include history for updates
             }
             data.append(row)
 
@@ -44,7 +46,12 @@ class CuttingPage(ManufacturePage):
             return None
 
         df = pd.DataFrame(data)
-        df.set_index('id', inplace=True)  # Set 'id' as the index
+        df.sort_values(by=['deadline', 'delivery_type', 'high_priority'],
+                       ascending=[True, True, False],
+                       inplace=True)
+        if 'id' in df.columns:
+            df.set_index('id', inplace=True)  # Set 'id' as the index
+
         return df
 
     @st.fragment(run_every=2)
