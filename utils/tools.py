@@ -278,6 +278,12 @@ def time_now():
     return datetime.now().strftime("%H:%M")
 
 
+def create_history_note(page_name: str,
+                        employee_name: str,
+                        action: str):
+    return f'({datetime.now().strftime("%d.%m.%Y %H:%M:%S")}) {page_name} [ {employee_name} ] -> {action}; \n'
+
+
 def send_telegram_message(text, chat_id: str):
     """Отправляет текстовое сообщение ботом в telegram в указанный chat_id.
     Id группы по заявкам прописывается в app_config"""

@@ -104,7 +104,7 @@ class PackingPage(ManufacturePage):
 
                 with button_row_1:
                     if st.button(f":green[**{self.done_button_text}**]", key=f'button_packing_done_{task.id}'):
-                        history_note = f'{self.create_history_note()} \n'
+                        history_note = f'{self.pages_history_note()} \n'
                         db_task = self.session.query(MattressRequest).get(task.id)
 
                         if db_task:

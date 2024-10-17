@@ -6,10 +6,11 @@ import time
 import logging
 import subprocess
 from io import BytesIO
-from typing import List
+from re import search
+
 # Jvybccbz? ghjcnb? xnj z gjd`kcz yf yjdjvjlysq ahtqvdjhr b htibk pfgbkbnm yf y`v ghbkj;tybt? cjdctv yt ghtlyfpyfxtyyjt lkz nfrb[ pflfx
 from barcode import Code128
-from datetime import datetime as dt
+from datetime import datetime as dt, datetime
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -17,26 +18,19 @@ from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from starlette.responses import RedirectResponse
 
 from utils.models import Order, MattressRequest, Employee, EmployeeTask
 from utils.db_connector import async_session
 from utils.sbis_manager import SBISWebApp
-from utils.tools import load_conf, time_now, fabric_type, send_telegram_message
+from utils.tools import load_conf, fabric_type, send_telegram_message, create_history_note
 
 config = load_conf()
 
-sbis_config = config.get('sbis')
-login = sbis_config.get('login')
-password = sbis_config.get('password')
-sale_point_name = sbis_config.get('sale_point_name')
-price_list_name = sbis_config.get('price_list_name')
-
 site_config = config.get('site')
-delivery_types = site_config.get('delivery_types')
 regions = site_config.get('regions')
-site_port = site_config.get('site_port')
-streamlit_port = site_config.get('streamlit_port')
+delivery_types = site_config.get('delivery_types')
 
 hardware = site_config.get('hardware')
 tasks_cash = hardware.get('tasks_cash_filepath')
@@ -45,11 +39,14 @@ current_tasks_cash = hardware.get('current_tasks_cash_filepath')
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
 app = FastAPI()
-
-connected_websockets = set()
-
-templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+sbis_config = config.get('sbis')
+password = sbis_config.get('password')
+login = sbis_config.get('login')
+sale_point_name = sbis_config.get('sale_point_name')
+price_list_name = sbis_config.get('price_list_name')
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
@@ -234,11 +231,6 @@ async def gluing(request: Request):
 
 @app.post('/log_sequence_gluing')
 async def log_sequence_gluing(request: Request):
-    filter_conditions = [
-        "components_is_done == True",
-        "gluing_is_done == False"
-    ]
-
     def transform_task_data(task):
         message = {
             'Артикул': task.article,
@@ -257,7 +249,7 @@ async def log_sequence_gluing(request: Request):
 
         return message
 
-    return await log_sequence(request, 'Сборка', 'Отметка', filter_conditions, transform_task_data)
+    return await log_sequence(request, 'Сборка', 'Отметка', transform_task_data)
 
 
 @app.post('/complete_task_gluing')
@@ -273,12 +265,6 @@ async def sewing(request: Request):
 
 @app.post('/log_sequence_sewing')
 async def log_sequence_sewing(request: Request):
-    filter_conditions = [
-        "gluing_is_done == True",
-        "fabric_is_done == True",
-        "sewing_is_done == False"
-    ]
-
     def transform_task_data(task):
         message = {
             'Артикул': task.article,
@@ -296,7 +282,7 @@ async def log_sequence_sewing(request: Request):
 
         return message
 
-    return await log_sequence(request, 'Шитьё', 'Отметка', filter_conditions, transform_task_data)
+    return await log_sequence(request, 'Шитьё', 'Отметка', transform_task_data)
 
 
 @app.post('/complete_task_sewing')
@@ -380,7 +366,9 @@ async def get_barcode(employee_id: int, request: Request):
         return templates.TemplateResponse('barcode.html', {"request": request, "svg_data": svg_data})
 
 
-async def log_sequence(request: Request, page_name: str, action: str, filter_conditions: List[str],
+async def log_sequence(request: Request,
+                       page_name: str,
+                       action: str,
                        transform_task_data):
     endpoint = request.url.path.replace('/log_sequence_', '')
 
@@ -391,17 +379,18 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
     # Проверяем, что sequence не пустая
     if not sequence:
         return JSONResponse(content={"status": "error",
-                                     "data": {'error': 'Ошибка в штрих-коде. Идентификатор отсутствует.\n\nЖду штрих-код...'}})
+                                     "data": {
+                                         'error': 'Ошибка в штрих-коде. Идентификатор отсутствует.\n\nЖду штрих-код...'}})
 
     try:
         employee_id = int(sequence)
     except ValueError:
         return JSONResponse(content={"status": "error",
-                                     "data": {'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.\n\nЖду штрих-код...'}})
+                                     "data": {
+                                         'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.\n\nЖду штрих-код...'}})
 
     # Получение информации о сотруднике по его идентификатору
     async with async_session() as session:
-
         employee = await session.get(Employee, employee_id)
 
         if not employee:
@@ -422,60 +411,62 @@ async def log_sequence(request: Request, page_name: str, action: str, filter_con
         existing_task = await session.execute(
             select(EmployeeTask).where(
                 EmployeeTask.employee_id == employee_id,
-                EmployeeTask.endpoint == endpoint
-            )
-        )
+                EmployeeTask.endpoint == endpoint))
         existing_task = existing_task.scalar_one_or_none()
 
         if existing_task:
             # У сотрудника уже есть назначенная задача
             task = await session.get(MattressRequest, existing_task.task_id)
-            transformed_task = transform_task_data(task)
             return JSONResponse(content={"status": "success",
                                          "data": {'sequence': employee.name,
-                                                  'task_data': transformed_task}})
-        else:
-            # Получение доступных задач из базы данных
-            tasks_query = select(MattressRequest).where(
-                *[eval(f"MattressRequest.{condition}") for condition in filter_conditions]
-            )
-            tasks_result = await session.execute(tasks_query)
-            tasks = tasks_result.scalars().all()
+                                                  'task_data': transform_task_data(task)}})
+        # Получение доступных задач из базы данных
+        search_field = f'{endpoint}_is_done'
+        result = await session.execute(
+            select(MattressRequest)
+            .where(getattr(MattressRequest, search_field) == False)  # Учитываем только незавершённые задачи
+            .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
+        )
+        tasks = result.scalars().all()
+        print(f"{tasks = }")
 
-            if not tasks:
-                return JSONResponse(content={"status": "error",
-                                             "data": {'sequence': employee.name,
-                                                      'error': 'Сейчас пока нет задач.\n\nЖду штрих-код...'}})
+        if not tasks:
+            return JSONResponse(content={"status": "error",
+                                         "data": {'sequence': employee.name,
+                                                  'error': 'Сейчас пока нет задач.\n\nЖду штрих-код...'}})
 
-            # Поиск новой задачи
-            for task in tasks:
-                # Проверяем, назначена ли задача другим сотрудникам
-                task_assigned = await session.execute(
-                    select(EmployeeTask).where(
-                        EmployeeTask.task_id == task.id,
-                        EmployeeTask.endpoint == endpoint
-                    )
-                )
-                task_assigned = task_assigned.scalar_one_or_none()
+        # Сортируем задачи по приоритетам
+        tasks = sorted(tasks, key=lambda x: (
+            not x.high_priority,  # False означает высокий приоритет
+            x.order.deadline if x.order and x.order.deadline else datetime.max,  # Дедлайн из заказа, если он есть
+            delivery_types.index(x.order.delivery_type) if x.order and x.order.delivery_type in delivery_types else len(
+                delivery_types),  # Тип доставки из заказа
+            not bool(x.comment)))  # True означает отсутствие комментария
 
-                if not task_assigned:
-                    # Назначаем задачу сотруднику
-                    employee_task = EmployeeTask(
-                        employee_id=employee_id,
-                        task_id=task.id,
-                        endpoint=endpoint
-                    )
-                    session.add(employee_task)
-                    await update_task_history(session, task, page_name, employee.name, action)
-                    await session.commit()
+        # Поиск новой задачи
+        for task in tasks:
+            # Проверяем, назначена ли задача другим сотрудникам
+            task_assigned = await session.execute(select(EmployeeTask).where(
+                EmployeeTask.task_id == task.id,
+                EmployeeTask.endpoint == endpoint))
+            task_assigned = task_assigned.scalar_one_or_none()
 
-                    transformed_task = transform_task_data(task)
-                    return JSONResponse(content={"status": "success",
-                                                 "data": {'sequence': employee.name, 'task_data': transformed_task}})
-            else:
+            if task_assigned:
                 return JSONResponse(content={"status": "error",
                                              "data": {'sequence': employee.name,
                                                       'error': 'Задач для тебя пока нет. Приходи позже.\n\nЖду штрих-код...'}})
+            # Назначаем задачу сотруднику
+            employee_task = EmployeeTask(
+                employee_id=employee_id,
+                task_id=task.id,
+                endpoint=endpoint)
+            session.add(employee_task)
+            await update_task_history(session, task, page_name, employee.name, action)
+            await session.commit()
+
+            return JSONResponse(content={"status": "success",
+                                         "data": {'sequence': employee.name,
+                                                  'task_data': transform_task_data(task)}})
 
 
 async def complete_task(request: Request, page_name: str, action: str, done_field: str):
@@ -485,53 +476,63 @@ async def complete_task(request: Request, page_name: str, action: str, done_fiel
 
     logging.debug(f"Получен запрос на завершение задачи. employee_sequence: {employee_sequence}")
 
-    employee_id = int(employee_sequence)
+    try:
+        employee_id = int(employee_sequence)
+    except ValueError:
+        return JSONResponse(content={"status": "error",
+                                     "data": {'sequence': employee_sequence,
+                                              'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.\n\nЖду штрих-код...'}})
+
     async with async_session() as session:
         # Получаем текущую задачу сотрудника
-        employee_task = await session.execute(
-            select(EmployeeTask).where(
-                EmployeeTask.employee_id == employee_id,
-                EmployeeTask.endpoint == endpoint
-            )
-        )
-        employee_task = employee_task.scalar_one_or_none()
-
+        result = await session.execute(select(EmployeeTask).where(
+            EmployeeTask.employee_id == employee_id,
+            EmployeeTask.endpoint == endpoint))
+        employee_task = result.scalar_one_or_none()
         if not employee_task:
-            logging.error(f"Задача не найдена для сотрудника: {employee_sequence}")
-            return JSONResponse(content={"status": "error", "data": "Task not found for this employee"},
+            logging.error(f"EmployeeTask ID doesn't found in database for Employee ID {employee_id}")
+            return JSONResponse(content={"status": "error",
+                                         "data": {'sequence': employee_id,
+                                                  'error': 'Этой брони больше нет'}},
                                 status_code=404)
 
         task = await session.get(MattressRequest, employee_task.task_id)
         if not task:
-            logging.error(f"Task ID not found in database: {employee_task.task_id}")
-            return JSONResponse(content={"status": "error", "data": "Task ID not found"}, status_code=404)
+            logging.error(f"MattressRequest ID doesn't found in database: {employee_task.task_id}")
+            return JSONResponse(content={"status": "error",
+                                         "data": {'sequence': employee_id,
+                                                  'error': f"Этого матраса больше нет"}},
+                                status_code=404)
 
         employee = await session.get(Employee, employee_id)
         if not employee:
-            return JSONResponse(content={"status": "error", "data": "Employee not found"}, status_code=404)
+            logging.error(f"Employee ID doesn't found in database: {employee_id}")
+            return JSONResponse(content={"status": "error",
+                                         "data": {'sequence': employee_id,
+                                                  'error': f"Сотрудник не найден"}},
+                                status_code=404)
 
         # Обновление статуса задачи
         setattr(task, done_field, True)
         await update_task_history(session, task, page_name, employee.name, action)
-
         # Удаление задачи из текущих задач сотрудника
         await session.delete(employee_task)
 
+        # Завершение
         await session.commit()
-
-        logging.debug(f"Задача {task.id} завершена сотрудником {employee_sequence}. Статус обновлен.")
-
+        logging.debug(f"Задача {task.id} завершена сотрудником {employee_id}. Статус обновлен.")
     return JSONResponse(content={"status": "success"})
 
 
-async def update_task_history(session: AsyncSession, task: MattressRequest, page_name: str, employee_name: str,
+async def update_task_history(session: AsyncSession, task: MattressRequest,
+                              page_name: str,
+                              employee_name: str,
                               action: str):
-    history_note = f'({time_now()}) {page_name} [ {employee_name} ] -> {action}; \n'
-    if task.history:
-        task.history += history_note
-    else:
-        task.history = history_note
+    history_note = create_history_note(page_name, employee_name, action)
+    task.history = history_note if not task.history else history_note + task.history
     logging.debug(f"История задачи {task.id} обновлена: {history_note}")
+
+    await session.commit()
 
 
 def start_ngrok():
@@ -559,6 +560,6 @@ def start_ngrok():
 if __name__ == '__main__':
     ngrok_process, ngrok_url = start_ngrok()
     logging.info("Тестовый запуск FastAPI-приложения на Uvicorn")
-    uvicorn.run("web_app:app", host='0.0.0.0', port=int(site_port), reload=True)
+    uvicorn.run("web_app:app", host='0.0.0.0', port=int(site_config.get('site_port')), reload=True)
 
     # ngrok_process.wait()

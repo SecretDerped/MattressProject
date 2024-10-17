@@ -34,7 +34,6 @@ class MattressRequest(Base):
 
     id = Column(Integer, primary_key=True)
     high_priority = Column(Boolean, default=False)
-    deadline = Column(Date)
     article = Column(String)
     size = Column(String)
     base_fabric = Column(String)

@@ -9,7 +9,7 @@ from sqlalchemy.orm import joinedload
 
 from utils.db_connector import session
 from utils.models import MattressRequest, Order, Employee
-from utils.tools import config
+from utils.tools import config, create_history_note
 
 
 class Page:
@@ -203,19 +203,12 @@ class ManufacturePage(Page):
         with col2:
             self.employee_choose()
 
-    def load_tasks(self):
-        return (self.session.query(MattressRequest)
-                .order_by(MattressRequest.id.desc())
-                .limit(300)
-                .all())
-
     @st.fragment(run_every=3)
     def employees_on_shift(self, searching_position: str) -> list:
         """Возвращает список кортежей (имя сотрудника, ID) сотрудников, которые на смене и соответствуют заданной роли."""
         employees = self.session.query(Employee).filter(
             Employee.is_on_shift == True,
-            Employee.position.ilike(f'%{searching_position}%')
-        ).all()
+            Employee.position.ilike(f'%{searching_position}%')).all()
         return [(employee.name, employee.id) for employee in employees]
 
     def employee_choose(self):
@@ -254,12 +247,12 @@ class ManufacturePage(Page):
                 continue
 
             instance = self.session.get(MattressRequest, index)
-            new_history = self.create_history_note() + row['history']
+            new_history = self.pages_history_note() + row['history']
             setattr(instance, 'history', new_history)
             setattr(instance, done_field, True)
 
         self.session.commit()
 
-    def create_history_note(self):
+    def pages_history_note(self):
         employee = st.session_state.get(self.page_name)
-        return f'({datetime.now().strftime("%d.%m.%Y %H:%M:%S")}) {self.page_name} [ {employee} ] -> {self.done_button_text}; \n'
+        return create_history_note(self.page_name, employee, self.done_button_text)
