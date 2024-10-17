@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 
 from utils.app_core import ManufacturePage
-from utils.models import MattressRequest
 
 
 class ComponentsPage(ManufacturePage):
@@ -92,16 +91,13 @@ class ComponentsPage(ManufacturePage):
     def components_table(self):
         submit = st.button(label='Подтвердить')
 
-        original_df = self.components_tasks()
         edited_df = self.components_frame()
 
         if not submit or edited_df is None:
             return
 
-        self.update_tasks(original_df, edited_df, 'components_is_done')
-        self.save_mattress_df_to_db(edited_df, MattressRequest)
+        self.update_tasks(edited_df, 'components_is_done')
         st.rerun()
-# TODO: История не записывается при сохранении
 #  + нужно тянуть записи из базы с помощью SQLAlchemy
 #  + нужно починить экран нарезки
 
@@ -114,7 +110,8 @@ Page = ComponentsPage(page_name='Заготовка',
                                      'size',
                                      'attributes',
                                      'comment',
-                                     'photo'])
+                                     'photo',
+                                     'history'])
 
 col_table, col_info = st.columns([4, 1])
 

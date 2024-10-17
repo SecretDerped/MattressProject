@@ -172,13 +172,17 @@ class ManufacturePage(Page):
         if selected_employee:
             st.session_state[f"{self.page_name}_employee_id"] = selected_employee[1]
 
-    def update_tasks(self, tasks_df, edited_tasks_df, done_field: str):
-        for index, row in edited_tasks_df.iterrows():
+    def update_tasks(self, edited_df, done_field: str):
+        for index, row in edited_df.iterrows():
             if not row[done_field]:
                 continue
 
-            tasks_df.at[index, 'history'] += self.create_history_note()
-            tasks_df.at[index, done_field] = True
+            instance = self.session.get(MattressRequest, index)
+            new_history = row['history'] + self.create_history_note()
+            setattr(instance, 'history', new_history)
+            setattr(instance, done_field, True)
+
+        self.session.commit()
 
     def create_history_note(self):
         employee = st.session_state.get(self.page_name)

@@ -2,7 +2,6 @@ import pandas as pd
 import streamlit as st
 
 from utils.app_core import ManufacturePage
-from utils.models import MattressRequest
 from utils.tools import config, side_eval
 
 
@@ -77,14 +76,12 @@ class CuttingPage(ManufacturePage):
     def cutting_table(self):
         submit = st.button(label='Подтвердить')
 
-        original_df = self.cutting_tasks()
         edited_df = self.cutting_frame()
 
         if not submit or edited_df is None:
             return
 
-        self.update_tasks(original_df, edited_df, 'fabric_is_done')
-        self.save_mattress_df_to_db(original_df, MattressRequest)
+        self.update_tasks(edited_df, 'fabric_is_done')
         st.rerun()
 
 
