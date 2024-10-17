@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 from sqlalchemy.orm import joinedload
@@ -113,6 +114,81 @@ class Page:
                 .order_by(Order.id.desc())
                 .all())
 
+    @staticmethod
+    def get_tasks_as_df(orders):
+        data = []
+        for order in orders:
+            for mattress_request in order.mattress_requests:
+                row = {
+                    'id': mattress_request.id,
+                    'order_id': order.id,
+                    'high_priority': mattress_request.high_priority,
+                    'deadline': order.deadline,
+                    'article': mattress_request.article,
+                    'size': mattress_request.size,
+                    'base_fabric': mattress_request.base_fabric,
+                    'side_fabric': mattress_request.side_fabric,
+                    'photo': mattress_request.photo,
+                    'comment': mattress_request.comment,
+                    'springs': mattress_request.springs,
+                    'attributes': mattress_request.attributes,
+                    'components_is_done': mattress_request.components_is_done,
+                    'fabric_is_done': mattress_request.fabric_is_done,
+                    'gluing_is_done': mattress_request.gluing_is_done,
+                    'sewing_is_done': mattress_request.sewing_is_done,
+                    'packing_is_done': mattress_request.packing_is_done,
+                    'history': mattress_request.history,
+                    'organization': order.organization,
+                    'delivery_type': order.delivery_type,
+                    'address': order.address,
+                    'region': order.region,
+                    'created': mattress_request.created,
+                }
+                data.append(row)
+
+        return pd.DataFrame(data)
+
+    @staticmethod
+    def filter_incomplete_tasks(df, conditions):
+        """
+        Фильтрует DataFrame по условиям, переданным в виде словаря.
+
+        :param df: DataFrame с заявками
+        :param conditions: Словарь условий, где ключ — это название столбца, а значение — значение для фильтрации
+        :return: Отфильтрованный DataFrame
+        """
+        # Создаем фильтр, объединяя все условия через логическое "или"
+        filter_condition = None
+
+        for column, condition_value in conditions.items():
+            # Формируем условие для текущего столбца
+            current_condition = (df[column] == condition_value)
+
+            # Объединяем условия через логическое "или"
+            if filter_condition is None:
+                filter_condition = current_condition
+            else:
+                filter_condition |= current_condition
+
+        # Применяем фильтр к DataFrame и возвращаем результат
+        filtered_df = df[filter_condition]
+        return filtered_df
+
+    def get_sorted_tasks(self):
+        orders = self.get_orders_with_mattress_requests()
+        df = self.get_tasks_as_df(orders)
+        if df.empty:
+            st.write('Активных нарядов нет')
+            return
+
+        df.sort_values(by=['high_priority', 'deadline', 'order_id', 'delivery_type'],
+                       ascending=[False, True, True, True],
+                       inplace=True)
+        if 'id' in df.columns:
+            df.set_index('id', inplace=True)  # Set 'id' as the index
+
+        return df
+
 
 class ManufacturePage(Page):
     def __init__(self, page_name, icon):
@@ -178,7 +254,7 @@ class ManufacturePage(Page):
                 continue
 
             instance = self.session.get(MattressRequest, index)
-            new_history = row['history'] + self.create_history_note()
+            new_history = self.create_history_note() + row['history']
             setattr(instance, 'history', new_history)
             setattr(instance, done_field, True)
 

@@ -21,45 +21,6 @@ class BrigadierPage(Page):
         if self.REDACT_TASKS not in state:
             state[self.REDACT_TASKS] = False
 
-    def get_df_from_orders(self, orders):
-        data = []
-        for order in orders:
-            for mattress_request in order.mattress_requests:
-                if state[self.SHOW_ALL_TASKS] or not (
-                        mattress_request.components_is_done and
-                        mattress_request.fabric_is_done and
-                        mattress_request.gluing_is_done and
-                        mattress_request.sewing_is_done and
-                        mattress_request.packing_is_done):
-                    row = {
-                        'id': mattress_request.id,
-                        'order_id': order.id,
-                        'high_priority': mattress_request.high_priority,
-                        'deadline': order.deadline,
-                        'article': mattress_request.article,
-                        'size': mattress_request.size,
-                        'base_fabric': mattress_request.base_fabric,
-                        'side_fabric': mattress_request.side_fabric,
-                        'photo': mattress_request.photo,
-                        'comment': mattress_request.comment,
-                        'springs': mattress_request.springs,
-                        'attributes': mattress_request.attributes,
-                        'components_is_done': mattress_request.components_is_done,
-                        'fabric_is_done': mattress_request.fabric_is_done,
-                        'gluing_is_done': mattress_request.gluing_is_done,
-                        'sewing_is_done': mattress_request.sewing_is_done,
-                        'packing_is_done': mattress_request.packing_is_done,
-                        'history': mattress_request.history,
-                        'organization': order.organization,
-                        'delivery_type': order.delivery_type,
-                        'address': order.address,
-                        'region': order.region,
-                        'created': mattress_request.created,
-                    }
-                    data.append(row)
-
-        return pd.DataFrame(data)
-
     def mattress_editor(self, dataframe):
         return st.data_editor(data=dataframe,
                               column_config=self.tasks_columns_config,
@@ -89,17 +50,17 @@ class BrigadierPage(Page):
             full_mode_checkbox = st.checkbox('### Показывать завершённые наряды', key=f"{self.SHOW_ALL_TASKS}_checkbox")
             state[self.SHOW_ALL_TASKS] = True if full_mode_checkbox else False
 
-        orders = self.get_orders_with_mattress_requests()
-        df = self.get_df_from_orders(orders)
-        if df.empty:
-            st.write('Активных нарядов нет')
-            return
+        df = self.get_sorted_tasks()
 
-        df.sort_values(by=['high_priority', 'deadline', 'order_id', 'delivery_type'],
-                       ascending=[False, True, True, True],
-                       inplace=True)
-        if 'id' in df.columns:
-            df.set_index('id', inplace=True)  # Set 'id' as the index
+        if not state[self.SHOW_ALL_TASKS]:
+            conditions = {
+                'components_is_done': False,
+                'fabric_is_done': False,
+                'gluing_is_done': False,
+                'sewing_is_done': False,
+                'packing_is_done': False
+            }
+            df = self.filter_incomplete_tasks(df, conditions)
 
         if state.get(self.REDACT_TASKS, False):
             edited_df = self.mattress_editor(df)

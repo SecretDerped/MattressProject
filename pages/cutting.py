@@ -1,4 +1,3 @@
-import pandas as pd
 import streamlit as st
 
 from utils.app_core import ManufacturePage
@@ -10,48 +9,18 @@ class CuttingPage(ManufacturePage):
         super().__init__(page_name, icon)
         self.columns_order = columns_order
         self.cutting_columns_config = {
+            'id': st.column_config.NumberColumn("Матрас", disabled=True),
             'fabric_is_done': st.column_config.CheckboxColumn("Готово", default=False),
+            'deadline': st.column_config.DateColumn("Дата", format="DD.MM", disabled=True),
+            'article': st.column_config.TextColumn("Артикул", disabled=True),
             'base_fabric': st.column_config.TextColumn("Ткань (Верх / Низ)", disabled=True),
             'side_fabric': st.column_config.TextColumn("Ткань (Бочина)", disabled=True),
             'size': st.column_config.TextColumn("Размер", disabled=True),
             'side': st.column_config.TextColumn("Бочина", disabled=True),
-            'article': st.column_config.TextColumn("Артикул", disabled=True),
-            'comment': st.column_config.TextColumn("Комментарий", disabled=True)
+            'comment': st.column_config.TextColumn("Комментарий", disabled=True),
+            'history': st.column_config.TextColumn("История", width='large', disabled=True)
         }
         self.showed_articles = config['components']['showed_articles']
-
-    def cutting_tasks(self):
-        mattress_requests = self.load_tasks()
-        data = []
-        for mattress_request in mattress_requests:
-            if mattress_request.fabric_is_done:
-                continue
-            row = {
-                'id': mattress_request.id,
-                'deadline': mattress_request.deadline,
-                'high_priority': mattress_request.high_priority,
-                'fabric_is_done': mattress_request.fabric_is_done,
-                'base_fabric': mattress_request.base_fabric,
-                'side_fabric': mattress_request.side_fabric,
-                'size': mattress_request.size,
-                'article': mattress_request.article,
-                'comment': mattress_request.comment,
-                'delivery_type': mattress_request.delivery_type,
-                'history': mattress_request.history  # Include history for updates
-            }
-            data.append(row)
-
-        if not data:
-            return None
-
-        df = pd.DataFrame(data)
-        df.sort_values(by=['deadline', 'delivery_type', 'high_priority'],
-                       ascending=[True, True, False],
-                       inplace=True)
-        if 'id' in df.columns:
-            df.set_index('id', inplace=True)  # Set 'id' as the index
-
-        return df
 
     @st.fragment(run_every=2)
     def cutting_frame(self):
@@ -61,16 +30,21 @@ class CuttingPage(ManufacturePage):
             st.warning("Сначала отметьте сотрудника.")
             return
 
-        tasks = self.cutting_tasks()
-        if tasks is None or tasks.empty:
+        all_tasks = self.get_sorted_tasks()
+        if all_tasks is None or all_tasks.empty:
             st.info("Заявки закончились.")
             return
 
-        # Формируем колонку с информацией о длине бочины, вычисляеммой динамически. Её ее требуется сохранять
-        tasks['side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
+        tasks = self.filter_incomplete_tasks(all_tasks, {'fabric_is_done': False})
+
+        # Создаем копию, чтобы избежать предупреждения SettingWithCopyWarning
+        tasks = tasks.copy()
+        # Формируем колонку с информацией о длине бочины, вычисляеммой динамически. Её не требуется сохранять
+        tasks.loc[:, 'side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
+
         return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
                               column_config=self.cutting_columns_config,
-                              hide_index=True,
+                              hide_index=False,
                               height=750)
 
     def cutting_table(self):
@@ -87,7 +61,15 @@ class CuttingPage(ManufacturePage):
 
 Page = CuttingPage(page_name='Нарезка',
                    icon="✂️",
-                   columns_order=['fabric_is_done', 'base_fabric', 'side_fabric', 'size', 'side', 'article', 'comment'])
+                   columns_order=['deadline',
+                                  'fabric_is_done',
+                                  'article',
+                                  'base_fabric',
+                                  'side_fabric',
+                                  'size',
+                                  'side',
+                                  'comment',
+                                  'history'])
 
 col_table, col_info = st.columns([4, 1])
 
@@ -97,3 +79,4 @@ with col_table:
 with col_info:
     st.info('Вы можете сортировать заявки, нажимая на поля таблицы.', icon="ℹ️")
     st.info('Можно отметить много нарезанных заявок за раз и нажать кнопку "Подтвердить"', icon="ℹ️")
+    st.warning("По умолчанию заявки располагаются сверху вниз в порядке приоритета. Самые срочные наверху.", icon="ℹ️")
