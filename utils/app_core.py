@@ -205,7 +205,8 @@ class ManufacturePage(Page):
 
     @st.fragment(run_every=3)
     def employees_on_shift(self, searching_position: str) -> list:
-        """Возвращает список кортежей (имя сотрудника, ID) сотрудников, которые на смене и соответствуют заданной роли."""
+        """Возвращает список кортежей (имя сотрудника, ID) сотрудников,
+        которые на смене и соответствуют заданной роли."""
         employees = self.session.query(Employee).filter(
             Employee.is_on_shift == True,
             Employee.position.ilike(f'%{searching_position}%')).all()

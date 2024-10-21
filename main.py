@@ -9,7 +9,9 @@ import threading
 import uvicorn
 
 from datetime import datetime
-from start_page import spec_dir, clearing_proc, cash_lifetime
+from start_page import spec_dir, clearing_proc
+
+from start_page import cash_lifetime
 
 if datetime.now() >= cash_lifetime:
     try:

@@ -1,23 +1,24 @@
 import streamlit as st
+from sqlalchemy.dialects.mssql.information_schema import columns
 
 from utils.app_core import ManufacturePage
 from utils.tools import config, side_eval
 
 
 class CuttingPage(ManufacturePage):
-    def __init__(self, page_name, icon, columns_order):
+    def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
-        self.columns_order = columns_order
         self.cutting_columns_config = {
             'id': st.column_config.NumberColumn("Матрас", disabled=True),
-            'fabric_is_done': st.column_config.CheckboxColumn("Готово", default=False),
             'deadline': st.column_config.DateColumn("Дата", format="DD.MM", disabled=True),
+            'fabric_is_done': st.column_config.CheckboxColumn("Готово", default=False),
             'article': st.column_config.TextColumn("Артикул", disabled=True),
             'base_fabric': st.column_config.TextColumn("Ткань (Верх / Низ)", disabled=True),
             'side_fabric': st.column_config.TextColumn("Ткань (Бочина)", disabled=True),
             'size': st.column_config.TextColumn("Размер", disabled=True),
             'side': st.column_config.TextColumn("Бочина", disabled=True),
             'comment': st.column_config.TextColumn("Комментарий", disabled=True),
+            'photo': st.column_config.ImageColumn("Фото"),
             'history': st.column_config.TextColumn("История", width='large', disabled=True)
         }
         self.showed_articles = config['components']['showed_articles']
@@ -42,7 +43,8 @@ class CuttingPage(ManufacturePage):
         # Формируем колонку с информацией о длине бочины, вычисляеммой динамически. Её не требуется сохранять
         tasks.loc[:, 'side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
 
-        return st.data_editor(tasks[self.columns_order],  # width=600, height=600,
+        columns_order = list(self.cutting_columns_config)[1:]  # Формируем порядок показа полей от словаря конфигурации
+        return st.data_editor(tasks[columns_order],
                               column_config=self.cutting_columns_config,
                               hide_index=False,
                               height=750)
@@ -60,16 +62,7 @@ class CuttingPage(ManufacturePage):
 
 
 Page = CuttingPage(page_name='Нарезка',
-                   icon="✂️",
-                   columns_order=['deadline',
-                                  'fabric_is_done',
-                                  'article',
-                                  'base_fabric',
-                                  'side_fabric',
-                                  'size',
-                                  'side',
-                                  'comment',
-                                  'history'])
+                   icon="✂️")
 
 col_table, col_info = st.columns([4, 1])
 

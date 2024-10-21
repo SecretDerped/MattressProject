@@ -4,9 +4,8 @@ from utils.app_core import ManufacturePage
 
 
 class ComponentsPage(ManufacturePage):
-    def __init__(self, page_name, icon, columns_order):
+    def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
-        self.columns_order = columns_order
         self.components_columns_config = {
             'id': st.column_config.NumberColumn("Матрас", disabled=True),
             'components_is_done': st.column_config.CheckboxColumn("Готово"),
@@ -33,8 +32,9 @@ class ComponentsPage(ManufacturePage):
             return
 
         tasks = self.filter_incomplete_tasks(all_tasks, {'components_is_done': False})
-
-        return st.data_editor(tasks[self.columns_order],
+        # Формируем порядок показа полей от словаря конфигурации
+        columns_order = list(self.components_columns_config)[1:]
+        return st.data_editor(tasks[columns_order],
                               column_config=self.components_columns_config,
                               hide_index=False,
                               height=750)
@@ -49,20 +49,10 @@ class ComponentsPage(ManufacturePage):
 
         self.update_tasks(edited_df, 'components_is_done')
         st.rerun()
-#  + нужно тянуть записи из базы с помощью SQLAlchemy
-#  + нужно починить экран нарезки
 
 
 Page = ComponentsPage(page_name='Заготовка',
-                      icon="🧱",
-                      columns_order=['deadline',
-                                     'components_is_done',
-                                     'article',
-                                     'attributes',
-                                     'size',
-                                     'comment',
-                                     'photo',
-                                     'history'])
+                      icon="🧱")
 
 col_table, col_info = st.columns([4, 1])
 

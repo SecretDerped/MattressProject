@@ -145,7 +145,9 @@ async def post_index(request: Request):
                         # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
                         # Если артикул в списке components_page_articles, то components_is_done = False,
                         # а значит появится на экране заготовщика
-                        components_is_done_field = item_sbis_data['article'] not in components_page_articles
+                        components_is_done_field = item_sbis_data[
+                                                       'article'] not in components_page_articles or mattress.get(
+                            'comment')
 
                         # Цена записывается в итог
                         mattress['price'] = str_num_to_float(mattress.get('price', 0))
@@ -161,7 +163,7 @@ async def post_index(request: Request):
                                 side_fabric=side_fabric or base_fabric,
                                 photo=mattress.get('photo'),
                                 comment=mattress.get('comment', ''),
-                                springs=mattress["springBlock"] or 'Нет',
+                                springs=mattress["springBlock"] or '',
                                 attributes=item_sbis_data['structure'],
                                 components_is_done=components_is_done_field,
                                 fabric_is_done=False,
@@ -187,7 +189,7 @@ async def post_index(request: Request):
                 order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
                 # Из JSON создаётся документ реализации в СБИС
-                # await sbis.write_implementation(order_data)
+                #await sbis.write_implementation(order_data)
 
                 # Формирование сообщения для telegram
                 order_message = (
@@ -201,10 +203,11 @@ async def post_index(request: Request):
                         + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
                                                                                                           'prepayment'] != 0 else '')
                 )
-
+                # TODO: сделать ассинхронные операции для метода отправки сообщения в тг,
+                #  починить sbis.write_implementation(order_data)
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 send_telegram_message(order_message, request.query_params.get('chat_id'))
-                # await send_telegram_message(order_message, tg_group_chat_id)
+                send_telegram_message(order_message, tg_group_chat_id)
                 await session.commit()
 
                 return {"status": "success",
@@ -424,7 +427,8 @@ async def log_sequence(request: Request,
         search_field = f'{endpoint}_is_done'
         result = await session.execute(
             select(MattressRequest)
-            .where(getattr(MattressRequest, search_field) == False)  # Учитываем только незавершённые задачи
+            .where(MattressRequest.components_is_done == True,  # Учитываем только незавершённые задачи
+            getattr(MattressRequest, search_field) == False) # Для корректной динамической постановки поискового поля нужен такой костыль. Нотация через точку не работает
             .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
         )
         tasks = result.scalars().all()
