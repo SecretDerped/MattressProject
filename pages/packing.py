@@ -82,7 +82,7 @@ class PackingPage(ManufacturePage):
         for task in order.mattress_requests:
 
             if (not task.components_is_done or
-                not task.cutting_is_done or
+                not task.fabric_is_done or
                 not task.gluing_is_done or
                 not task.sewing_is_done or
                     task.packing_is_done):
