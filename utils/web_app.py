@@ -204,7 +204,9 @@ async def post_index(request: Request):
                                                                                                           'prepayment'] != 0 else '')
                 )
                 # TODO: сделать ассинхронные операции для метода отправки сообщения в тг,
-                #  починить sbis.write_implementation(order_data)
+                #  починить sbis.write_implementation(order_data),
+                #  разбить на функции web_app,
+                #  добавить пустое поле на матрасный блок пружин
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 send_telegram_message(order_message, request.query_params.get('chat_id'))
                 send_telegram_message(order_message, tg_group_chat_id)
