@@ -6,7 +6,6 @@ import time
 import logging
 import subprocess
 from io import BytesIO
-from re import search
 
 # Jvybccbz? ghjcnb? xnj z gjd`kcz yf yjdjvjlysq ahtqvdjhr b htibk pfgbkbnm yf y`v ghbkj;tybt? cjdctv yt ghtlyfpyfxtyyjt lkz nfrb[ pflfx
 from barcode import Code128
@@ -51,8 +50,9 @@ sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
 nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
-springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
 mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
+springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
+springs['Нет'] = ''
 
 # Список артикулов, которые показываются на экране заготовщика, если они появляются
 components_page_articles = config.get('components', {}).get('showed_articles', [])
@@ -96,15 +96,8 @@ async def post_index(request: Request):
             logging.info(f"Получен POST-запрос. Данные формы: {order_data}")
 
             try:
-                total_price = 0
-
-                # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
-                # сообщение для telegram после отправки заявки
-                position_str = ''
-
                 # Запоминаем время создания наряда
                 now = dt.now()
-
                 # Сохраняем заказ
                 order = Order(
                     organization=order_data.get('organization'),
@@ -117,19 +110,21 @@ async def post_index(request: Request):
                 )
                 session.add(order)
 
+                total_price = 0
+                # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
+                # сообщение для telegram после отправки заявки
+                position_str = ''
                 # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
                 mattresses_list = order_data.get('mattresses')
                 if mattresses_list:
                     for mattress in mattresses_list:
 
+                        item_sbis_data = nomenclatures[mattress['name']]
+                        quantity = int(mattress.get('quantity', 1))
+                        size = mattress['size'] or item_sbis_data['size']
                         # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
                         base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
                         side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
-
-                        item_sbis_data = nomenclatures[mattress['name']]
-                        size = mattress['size'] or item_sbis_data['size']
-
-                        quantity = int(mattress.get('quantity', 1))
 
                         # Формирование части сообщения с позициями для telegram
                         mattress_str = (
@@ -145,9 +140,7 @@ async def post_index(request: Request):
                         # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
                         # Если артикул в списке components_page_articles, то components_is_done = False,
                         # а значит появится на экране заготовщика
-                        components_is_done_field = item_sbis_data[
-                                                       'article'] not in components_page_articles or mattress.get(
-                            'comment')
+                        components_is_done_field = item_sbis_data['article'] not in components_page_articles or mattress.get('comment') != ''
 
                         # Цена записывается в итог
                         mattress['price'] = str_num_to_float(mattress.get('price', 0))
@@ -189,7 +182,7 @@ async def post_index(request: Request):
                 order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
                 # Из JSON создаётся документ реализации в СБИС
-                #await sbis.write_implementation(order_data)
+                sbis.write_implementation(order_data)
 
                 # Формирование сообщения для telegram
                 order_message = (
@@ -203,10 +196,8 @@ async def post_index(request: Request):
                         + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
                                                                                                           'prepayment'] != 0 else '')
                 )
-                # TODO: сделать ассинхронные операции для метода отправки сообщения в тг,
-                #  починить sbis.write_implementation(order_data),
-                #  разбить на функции web_app,
-                #  добавить пустое поле на матрасный блок пружин
+                # TODO: разбить на функции web_app
+                #  ассинхронить функцию записи накладной и сообщений в tg
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 send_telegram_message(order_message, request.query_params.get('chat_id'))
                 send_telegram_message(order_message, tg_group_chat_id)

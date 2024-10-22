@@ -140,6 +140,7 @@ $(document).ready(function() {
             deliveryDate: $('#delivery_date').val(),
             prepayment: $('input[name="prepayment"]').val(),
             organization: $('input[name="organization"]').val(),
+            organization_data: $('input[name="organization_data"]').val(),
             contact: $('input[name="contact"]').val(),
             deliveryType: $('select[name="delivery_type"]').val(),
             deliveryAddress: $('input[name="delivery_address"]').val(),

@@ -289,22 +289,22 @@ class SBISWebApp(SBISApiManager):
 
         delivery_date = datetime.strptime(data.get('delivery_date', '2000-01-01'), '%Y-%m-%d').strftime('%d.%m.%Y')
         # Заменяем двойные кавычки на &quot;, иначе XML посчитает эти кавычки за конец строки и разметка сломается.
-        customer_name = data.get('party', None).replace('"', '&quot;')
+        customer_name = data.get('organization', None).replace('"', '&quot;')
 
         # Если поле "Компания" оставить пустым при создании заявки, счёт оформится как розница,
         # а если нет, то в счёте будет юрлицо
         customer_inn, customer_kpp, company_address = None, None, None
         wholesale = False
-        if data['party_data']:
+        if data['organization']:
             wholesale = True
 
         if wholesale:
-            customer_info = json.loads(data.get('party_data', {}))
+            customer_info = json.loads(data.get('organization_data', {}))
             customer_inn = customer_info.get('data', {}).get('inn', None)
             customer_kpp = customer_info.get('data', {}).get('kpp', None)
             company_address = customer_info.get('address_data', {}).get('value', None)
 
-        comment = data.get('comment', None).replace('"', '&quot;')
+        comment = data.get('comment', '').replace('"', '&quot;')
 
         xml_content = f'''<?xml version="1.0" encoding="WINDOWS-1251" ?>
 <Файл ВерсФорм="5.02">
@@ -394,15 +394,15 @@ class SBISWebApp(SBISApiManager):
         item_num = 1
         total_quantity = 0
         total_price = 0
-        positions = data.get('positionsData', '[]')
+        positions = data.get('mattresses', '[]')
         for position in positions:
             position_price = position['price']
-            item_name = position['article'].replace('"', '&quot;')
+            item_name = position['name'].replace('"', '&quot;')
             item_quantity = int(position.get('quantity', '1'))
             total_quantity += item_quantity
             item_price = position_price / item_quantity
 
-            info = self.nomenclatures_list[position['article']]
+            info = self.nomenclatures_list[position['name']]
             code = info.get("code")
 
             total_price += position_price
@@ -414,6 +414,28 @@ class SBISWebApp(SBISApiManager):
           <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
           <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
         </СвТов>'''
+            item_num += 1
+
+        positions = data.get('additionalItems', '[]')
+        for position in positions:
+            position_price = float(position['price'])
+            item_name = position['name'].replace('"', '&quot;')
+            item_quantity = int(position.get('quantity', '1'))
+            total_quantity += item_quantity
+            item_price = position_price / item_quantity
+
+            info = self.nomenclatures_list[position['name']]
+            code = info.get("code")
+
+            total_price += position_price
+            #  НаимЕдИзм="шт"
+            xml_content += f'''
+                <СвТов КодТов="{code}" НаимТов="{item_name}" НалСт="без НДС" НеттоПередано="{item_quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{position_price}" СтУчНДС="{position_price}" Цена="{item_price}">
+                  <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
+                  <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
+                  <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
+                  <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
+                </СвТов>'''
             item_num += 1
 
         xml_content += f'''
@@ -437,35 +459,36 @@ class SBISWebApp(SBISApiManager):
         logging.info(f"Order data:\n{order_data}")
 
         # Такая конструкция вернёт пустой словарь, вместо None, если данных нет.
-        customer_info = json.loads(order_data.get('party_data', {}) or '{}')
+        customer_info = json.loads(order_data.get('organization_data', {}) or '{}')
         logging.debug(customer_info)
 
-        order_address = customer_info.get('address_data', {}).get('value', None)
+        total_price = 0
+        mattresses = order_data['mattresses']
+        for position in mattresses:
+            total_price += float(position['price'])
 
-        # customer_name = order_data.get('party', None).replace('"', '&quot;')
-        comment = order_data.get('comment', '').replace('"', '&quot;')
-        order_contact = order_data.get('contact', None)
+        additional_items = order_data['additionalItems']
+        for position in additional_items:
+            total_price += float(position['price'])
 
         prepayment = order_data['prepayment']
-        positions_data = order_data['positionsData']
-        total_price = 0
-        for position in positions_data:
-            total_price += position['price']
         amount_to_receive = total_price - prepayment
+
         self.create_implementation_xml(order_data)
 
         with open(imp_filepath, "rb") as file:
             encoded_string = base64.b64encode(file.read())
             base64_file = encoded_string.decode('ascii')
 
-        if customer_info == {}:
-            regulation = self.reg_id['direct_sell']
-        else:
-            regulation = self.reg_id['wholesale']
-        logging.debug(f'{regulation = }')
+        regulation = self.reg_id['direct_sell'] if customer_info == {} else self.reg_id['wholesale']
+        order_contact = order_data.get('contact', None)
+        comment = order_data.get('comment', '').replace('"', '&quot;')
+        order_address = customer_info.get('address_data', {}).get('value', None)
+
         params = {"Документ": {
             "Тип": "ДокОтгрИсх",
-            "Вложение": [{'Файл': {'Имя': imp_filepath, 'ДвоичныеДанные': base64_file}}],
+            "Вложение": [{'Файл': {'Имя': imp_filepath,
+                                   'ДвоичныеДанные': base64_file}}],
             "Регламент": {"Идентификатор": regulation},
             "Контакт": order_contact,
             "Примечание": comment,
