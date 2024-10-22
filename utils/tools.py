@@ -13,19 +13,13 @@ import win32print
 import win32api
 
 import pandas as pd
-import streamlit as st
 import aspose.pdf as ap
 
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, DEBUG
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timedelta
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from utils.models import Employee
+from datetime import datetime
 
 # Создание директории cash, если она не существует
 if not os.path.exists('cash'):
@@ -45,8 +39,6 @@ def load_conf():
         base_path = os.path.abspath(".")
 
     config_path = os.path.join(base_path, "utils/app_config.toml")
-
-    # Загрузка конфигурации
     with open(config_path, 'rb') as f:
         conf = tomli.load(f)
 
@@ -79,96 +71,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 logging.getLogger('websockets.client').setLevel(logging.INFO)
 
 
-def save_to_file(data: pd.DataFrame, filepath):
-    data.to_pickle(filepath)
-
-
-def read_file(filepath) -> pd.DataFrame:
-    try:
-        data = pd.read_pickle(filepath)
-        return data
-    # Иногда ввод пользователей не успевает за обновлениями базы,
-    # особенно на локальном переходе со страницы на страницу,
-    # поэтому тихо ловим ошибки и страницу обновляем, тогда все данные занесутся корректно.
-    except (RuntimeError, EOFError):
-        st.rerun()
-
-
 def create_backup():
-    # Создание папки для бэкапов и excel, если она не существует
-    os.makedirs(backup_folder, exist_ok=True)
-
-    # Текущая дата в формате DD / MM / YYYY
-    current_date = datetime.now().strftime('%d_%m_%Y')
-
-    # Создание путей для бэкап файла и excel файла
-    backup_file_path = os.path.join(backup_folder, f'{current_date}.pkl')
-
-    # Копирование файла в папку для бэкапов
-    shutil.copy2(tasks_cash, backup_file_path)
-    logging.debug(f'Бэкап создан: {backup_file_path}')
-
-    # Удаление записей старше 31 дня
-    data = read_file(tasks_cash)
-    cutoff_date = datetime.now() - timedelta(days=90)
-    data['created'] = pd.to_datetime(data['created'])
-    filtered_data = data[data['created'] > cutoff_date]
-
-    # Сохранение обновленного DataFrame
-    save_to_file(filtered_data, tasks_cash)
-    logging.debug(f'Удалены старые записи, сохранено в {tasks_cash}')
-
-
-def get_filtered_tasks(tasks, conditions):
-    """Фильтрует задачи на основе переданных условий."""
-    for condition in conditions:
-        tasks = tasks.query(condition)
-    return tasks
-
-
-def append_to_dataframe(data: dict, filepath: str):
-    """
-    Принимает словарь для датафрейма, где ключи совпадают с названиями колонок.
-    Берёт оттуда значения без ключей и формирует запись в конце указанного датафрейма.
-    """
-    df = read_file(filepath)
-    new_row = pd.DataFrame([data])
-    df = pd.concat([df, new_row], ignore_index=True)
-    save_to_file(df, filepath)
-
-
-def cashing(data, state):
-    st.session_state[state] = data
-
-
-def get_cash(state):
-    return st.session_state[state]
-
-
-def clear_cash(state):
-    if state in st.session_state:
-        del st.session_state[state]
-
-
-def create_dataframe(data: dict, filepath: str):
-    """
-    Принимает словарь для датафрейма, где ключи совпадают с названиями колонок.
-    Берёт оттуда значения без ключей и формирует датафрейм.
-    """
-    base_dict = {key: pd.Series(dtype='object') for key in data.keys()}
-    empty_dataframe = pd.DataFrame(base_dict)
-    save_to_file(empty_dataframe, filepath)
-
-
-async def get_employee_column_data(session: AsyncSession, employee_id: int, column_name: str):
-    try:
-        employee = await session.execute(select(Employee).where(Employee.id is employee_id))
-        employee = employee.scalar_one_or_none()
-        if employee:
-            return getattr(employee, column_name, None)
-        return None
-    except Exception as e:
-        return f"Системная ошибка: {str(e)}"
+    pass
 
 
 def get_size_int(size: str):
@@ -192,27 +96,6 @@ def get_size_int(size: str):
     width = int(match.group(2)) if match.group(2) else 0
     height = int(match.group(3)) if match.group(3) else 0
     return {'length': length, 'width': width, 'height': height}
-
-
-def get_size_str(size: str):
-    """
-    Принимает строку и ищет в ней подстроку размера матраса типа "180х200" или 70*190.
-    Ищет первые два или три числа, разделенных любым символом.
-    Если не находит никаких размеров, возвращает False.
-    Если не находит число, ставит '/0'.
-    :return: Строка с размерами:
-    'Длина/Ширина/Высота'
-    """
-
-    pattern = r'(\d+)\D(\d+)(?:\D(\d+))?'
-
-    match = re.search(pattern, size)
-    if not match:
-        return False
-
-    size_str = f'{match.group(1)}/{match.group(2)}'
-    size_str += f'/{match.group(3)}' if match.group(3) else '/0'
-    return size_str
 
 
 def side_eval(size: str, fabric: str = None) -> str:
@@ -246,45 +129,45 @@ def fabric_type(fabric: str = None):
         return "Новый тип ткани"
 
     fabrics = config.get('fabric_corrections', {'Текстиль': 0})
-    # Если ни один ткань не найдётся, next вернет второе значение
-    value = next((key for key in fabrics.keys() if re.search(key, fabric, re.IGNORECASE)), fabric)
-    return value
+    # Если ни одна ткань не найдётся, next вернет второе значение
+    return next((key for key in fabrics.keys() if re.search(key, fabric, re.IGNORECASE)), fabric)
 
 
 def get_date_str(dt_obj) -> str:
-    """
-    Принимает дату и преобразует в строку: 08 мая, среда
-    """
+    """Принимает дату и преобразует в строку: 08 мая, среда"""
     try:
         if type(dt_obj) is pd._libs.tslibs.timestamps.Timestamp:
             date = pd.to_datetime(dt_obj).strftime('%d.%m.%A')
         else:
             date = datetime.strftime(dt_obj, '%d.%m.%A')
+
         months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
                   'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
         day, month, weekday = date.split('.')
+
         return f'{day} {months[int(month) - 1]}, {weekday}'
+
     except Exception as e:
         logging.error(f'{e} -- Неизвестный тип даты: {type(dt_obj)}')
         return str(dt_obj)
 
 
-def barcode_link(id: str) -> str:
+def barcode_link(employee_id: str) -> str:
     """Возвращает ссылку со сгенерированным штрих-кодом."""
-    return f'http://{local_ip}:{site_port}/api/barcode/{id}'
-
-
-def time_now():
-    return datetime.now().strftime("%H:%M")
+    return f'http://{local_ip}:{site_port}/api/barcode/{employee_id}'
 
 
 def create_history_note(page_name: str,
                         employee_name: str,
                         action: str):
+    """Формирует строку истории для записи в БД. Содержит текущее время, название страницы (процесса),
+    имя работника и действие (завершение или бронирование).
+    Пример: (21.09.2024 19:12:08) Сборка [ Иван ] -> Отметка;"""
+
     return f'({datetime.now().strftime("%d.%m.%Y %H:%M:%S")}) {page_name} [ {employee_name} ] -> {action}; \n'
 
 
-def send_telegram_message(text, chat_id: str):
+async def send_telegram_message(text: str, chat_id: str):
     """Отправляет текстовое сообщение ботом в telegram в указанный chat_id.
     Id группы по заявкам прописывается в app_config"""
 

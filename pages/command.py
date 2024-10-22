@@ -4,7 +4,7 @@ from streamlit import session_state as state
 
 from utils.models import MattressRequest, Employee
 from utils.app_core import Page
-from utils.tools import clear_cash, barcode_link
+from utils.tools import barcode_link
 
 
 class BrigadierPage(Page):
@@ -71,18 +71,23 @@ class BrigadierPage(Page):
 
     def edit_mode_button(self, model, edited_dataframe=None):
         redact_mode = self.REDACT_TASKS
-        button_text = ":red[**Сохранить и вернуть режим просмотра**]" if state.get(redact_mode,
-                                                                                   False) else '**Перейти в режим редактирования**'
+        if state.get(redact_mode, False):
+            button_text = ":red[**Сохранить и вернуть режим просмотра**]"
+        else:
+            button_text = '**Перейти в режим редактирования**'
 
         if not st.button(button_text, key=f'{model}_mode_button'):
             return
 
         if state.get(redact_mode, False) and edited_dataframe is not None:
             self.save_mattress_df_to_db(edited_dataframe, model)
-
         state[redact_mode] = not state[redact_mode]
+
         # Очистить данные, если таблица скрывается
-        clear_cash(self.TASK_STATE)
+        task_state = self.TASK_STATE
+        if task_state in st.session_state:
+            del st.session_state[task_state]
+
         st.rerun()
 
     @staticmethod

@@ -28,13 +28,8 @@ from utils.tools import load_conf, fabric_type, send_telegram_message, create_hi
 config = load_conf()
 
 site_config = config.get('site')
-regions = site_config.get('regions')
 delivery_types = site_config.get('delivery_types')
 
-hardware = site_config.get('hardware')
-tasks_cash = hardware.get('tasks_cash_filepath')
-employees_cash = hardware.get('employees_cash_filepath')
-current_tasks_cash = hardware.get('current_tasks_cash_filepath')
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
 app = FastAPI()
@@ -52,12 +47,7 @@ nomenclatures = sbis.get_nomenclatures()
 fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
 mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
 springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
-springs['Нет'] = ''
-
-# Список артикулов, которые показываются на экране заготовщика, если они появляются
-components_page_articles = config.get('components', {}).get('showed_articles', [])
-
-sequence_buffer = {}
+springs['Нет'] = ''  # Добавляем пустую позицию на ПБ
 
 
 def str_num_to_float(string):
@@ -78,137 +68,147 @@ def remove_text_in_parentheses(text):
         return 'ОШИБКА'
 
 
+def create_order_row(order):
+    return Order(
+        organization=order.get('organization'),
+        contact=order.get('contact'),
+        delivery_type=order['deliveryType'],
+        address=order.get("deliveryAddress", 'г. Краснодар, ул. Демуса, д. 6а'),
+        region=order.get('regionSelect'),
+        deadline=dt.strptime(order.get('deliveryDate'), '%Y-%m-%d'),
+        created=dt.now()
+    )
+
+
+def get_mattress_str(mattress, sbis_data):
+    """Формирование части сообщения с позициями для telegram"""
+
+    spring_block = mattress['springs']
+    comment = mattress['comment']
+    base_fabric = mattress['topFabric']
+    side_fabric = mattress['sideFabric']
+
+    return (
+            f"Арт. {sbis_data['article']}, {mattress['quantity']} шт. {mattress['size']} \n"
+            + (f"Топ: {base_fabric}\n" if base_fabric else '')
+            + (f"Бок: {side_fabric}\n" if side_fabric else '')
+            + (f"ПБ: {spring_block}\n" if spring_block else '')
+            + (f"{comment}\n" if comment != '' else '')
+            + f"\n"
+    )
+
+
+def create_mattress_row(mattress, sbis_data):
+
+    # Артикулы, которые должны отображаться на экране заготовщика
+    showed_articles = config.get('components', {}).get('showed_articles', [])
+
+    return MattressRequest(
+        high_priority=False,
+        article=sbis_data['article'],
+        size=mattress['size'],
+        base_fabric=mattress['topFabric'],
+        side_fabric=mattress['sideFabric'] or mattress['topFabric'],
+        photo=mattress.get('photo'),
+        comment=mattress.get('comment', ''),
+        springs=mattress["springBlock"] or '',
+        attributes=sbis_data['structure'],
+
+        # По умолчанию матрас не отображается заготовщику если components_is_done = True.
+        # Если артикул в списке showed_articles, либо что-то прописали в комментарий, то components_is_done = False,
+        components_is_done=sbis_data['article'] not in showed_articles or mattress.get('comment') != '',
+        fabric_is_done=False,
+        gluing_is_done=False,
+        sewing_is_done=False,
+        packing_is_done=False,
+
+        history='',
+        created=dt.now()
+    )
+
+
+def get_order_str(order, positions, price):
+    return (
+            f"{order['organization']}\n"
+            f"{dt.strptime(order['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
+            f"{positions}\n"
+            + (f"{order['contact']}\n" if order['contact'] else '')
+            + (f"{order['deliveryAddress']}\n" if order['deliveryAddress'] != '' else '')
+            + f"\nИтого {price} р.\n"
+            + (f"Предоплата {order['prepayment']} р.\n" if order['prepayment'] != 0 else '')
+            + (f"Остаток к оплате: {price - int(order['prepayment'])} р.\n" if order['prepayment'] != 0 else '')
+    )
+
+
 @app.get('/', response_class=HTMLResponse)
 async def get_index(request: Request):
     logging.debug("Рендеринг шаблона index.html")
     # Здесь вы можете использовать шаблонизатор Jinja2 для рендеринга HTML
     return templates.TemplateResponse("index.html", {"request": request,
                                                      "nomenclatures": nomenclatures,
-                                                     "regions": regions,
+                                                     "regions": site_config.get('regions'),
                                                      "delivery_types": delivery_types})
 
 
 @app.post('/')
 async def post_index(request: Request):
-    order_data = await request.json()
-    async with async_session() as session:
-        async with session.begin():
-            logging.info(f"Получен POST-запрос. Данные формы: {order_data}")
+    try:
+        order_data = await request.json()
+        # Заранее превращаем значение предоплаты во float, записываем в JSON
+        order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
-            try:
-                # Запоминаем время создания наряда
-                now = dt.now()
-                # Сохраняем заказ
-                order = Order(
-                    organization=order_data.get('organization'),
-                    contact=order_data.get('contact'),
-                    delivery_type=order_data['deliveryType'],
-                    address=order_data.get("deliveryAddress", 'г. Краснодар, ул. Демуса, д. 6а'),
-                    region=order_data.get('regionSelect'),
-                    deadline=dt.strptime(order_data.get('deliveryDate'), '%Y-%m-%d'),
-                    created=now
-                )
-                session.add(order)
-
+        async with async_session() as session:
+            async with session.begin():
                 total_price = 0
-                # В этой строке будут записаны выбранные позиции в заявке. Потом эти позиции добавятся в итоговое
-                # сообщение для telegram после отправки заявки
-                position_str = ''
+                position_message = ''
                 # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
                 mattresses_list = order_data.get('mattresses')
                 if mattresses_list:
                     for mattress in mattresses_list:
-
                         item_sbis_data = nomenclatures[mattress['name']]
-                        quantity = int(mattress.get('quantity', 1))
-                        size = mattress['size'] or item_sbis_data['size']
-                        # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
-                        base_fabric = remove_text_in_parentheses(mattress.get("topFabric"))
-                        side_fabric = remove_text_in_parentheses(mattress.get("sideFabric"))
 
-                        # Формирование части сообщения с позициями для telegram
-                        mattress_str = (
-                                f"Арт. {item_sbis_data['article']}, {quantity} шт. {size} \n"
-                                + (f"Топ: {base_fabric}\n" if base_fabric else '')
-                                + (f"Бок: {side_fabric}\n" if side_fabric else '')
-                                + (f"ПБ: {mattress['springBlock']}\n" if mattress['springBlock'] else '')
-                                + (f"{mattress['comment']}\n" if mattress['comment'] != '' else '')
-                                + f"\n"
-                        )
-                        position_str += mattress_str
-
-                        # По умолчанию матрас не отображается заготовщику, то есть components_is_done = True.
-                        # Если артикул в списке components_page_articles, то components_is_done = False,
-                        # а значит появится на экране заготовщика
-                        components_is_done_field = item_sbis_data['article'] not in components_page_articles or mattress.get('comment') != ''
-
-                        # Цена записывается в итог
+                        # Преобразовываем данные для удобства
+                        if not mattress['size']:
+                            mattress['size'] = item_sbis_data['size']
                         mattress['price'] = str_num_to_float(mattress.get('price', 0))
                         total_price += mattress['price']
+                        # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
+                        mattress["topFabric"] = remove_text_in_parentheses(mattress.get("topFabric"))
+                        mattress["sideFabric"] = remove_text_in_parentheses(mattress.get("sideFabric"))
+                        mattress['quantity'] = int(mattress.get('quantity', 1))
 
-                        # Формируем список матрасов для записи в датафрейм
-                        for _ in range(quantity):
-                            mattress_request = MattressRequest(
-                                high_priority=False,
-                                article=item_sbis_data['article'],
-                                size=size,
-                                base_fabric=base_fabric,
-                                side_fabric=side_fabric or base_fabric,
-                                photo=mattress.get('photo'),
-                                comment=mattress.get('comment', ''),
-                                springs=mattress["springBlock"] or '',
-                                attributes=item_sbis_data['structure'],
-                                components_is_done=components_is_done_field,
-                                fabric_is_done=False,
-                                gluing_is_done=False,
-                                sewing_is_done=False,
-                                packing_is_done=False,
-                                history='',
-                                created=now
-                            )
-                            # Привязываем матрасы к заказу
-                            mattress_request.order = order  # Устанавливаем связь
+                        # Добавим позицию в сообщение для tg, запишем заказ и метрасы в БД
+                        position_message += get_mattress_str(mattress, item_sbis_data)
+                        order = create_order_row(order_data)
+                        session.add(order)
+                        for _ in range(mattress['quantity']):
+                            mattress_request = create_mattress_row(mattress, item_sbis_data)
+                            mattress_request.order = order  # Привязываем матрасы к заказу. Установка связи
                             session.add(mattress_request)
 
                 # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
                 additional_items_list = order_data.get('additionalItems')
                 if additional_items_list:
                     for item in additional_items_list:
-                        total_price += str_num_to_float(item['price'])
+                        item['price'] = str_num_to_float(item.get('price', 0))
+                        total_price += item['price']
                         # Формирование части сообщения с позициями для telegram
-                        position_str += f"{item['name']}, {item['quantity']} шт. \n"
+                        position_message += f"{item['name']}, {item['quantity']} шт. \n"
 
-                # Заранее превращаем значение предоплаты во float, записываем в JSON
-                order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
+                # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
+                order_message = get_order_str(order_data, position_message, total_price)
+                await send_telegram_message(order_message, request.query_params.get('chat_id'))
+                await send_telegram_message(order_message, tg_group_chat_id)
 
                 # Из JSON создаётся документ реализации в СБИС
                 sbis.write_implementation(order_data)
-
-                # Формирование сообщения для telegram
-                order_message = (
-                        f"{order_data['organization']}\n"
-                        f"{dt.strptime(order_data['deliveryDate'], '%Y-%m-%d').strftime('%d.%m')}\n"
-                        f"{position_str}\n"
-                        + (f"{order_data['contact']}\n" if order_data['contact'] else '')
-                        + (f"{order_data['deliveryAddress']}\n" if order_data['deliveryAddress'] != '' else '')
-                        + f"\nИтого {total_price} р.\n"
-                        + (f"Предоплата {order_data['prepayment']} р.\n" if order_data['prepayment'] != 0 else '')
-                        + (f"Остаток к оплате: {total_price - int(order_data['prepayment'])} р.\n" if order_data[
-                                                                                                          'prepayment'] != 0 else '')
-                )
-                # TODO: разбить на функции web_app
-                #  ассинхронить функцию записи накладной и сообщений в tg
-                # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
-                send_telegram_message(order_message, request.query_params.get('chat_id'))
-                send_telegram_message(order_message, tg_group_chat_id)
                 await session.commit()
-
                 return {"status": "success",
                         "data": "   Заявка принята.\nРеализация записана.\nНаряды созданы."}
 
-            except Exception as e:
-                logging.error(f"Необработанная ошибка: - {str(e)}", exc_info=True)
-                raise HTTPException(status_code=400, detail=f"Сообщите администратору: {str(e)}.")
+    except Exception as e:
+        logging.error(f"Необработанная ошибка: - {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Сообщите администратору: {str(e)}.")
 
 
 @app.get('/command')
