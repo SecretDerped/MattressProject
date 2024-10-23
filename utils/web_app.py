@@ -425,6 +425,7 @@ async def log_sequence(request: Request,
             .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
         )
         tasks = result.scalars().all()
+
         print(f"{tasks = }")
 
         if not tasks:
