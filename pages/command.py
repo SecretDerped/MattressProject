@@ -1,8 +1,9 @@
 import pandas as pd
 import streamlit as st
+from sqlalchemy import select
 from streamlit import session_state as state
 
-from utils.models import MattressRequest, Employee
+from utils.models import MattressRequest, Employee, EmployeeTask
 from utils.app_core import Page
 from utils.tools import barcode_link
 
@@ -134,6 +135,9 @@ class BrigadierPage(Page):
             employee = self.session.get(Employee, index)
             if employee:
                 if row['Удалить']:
+                    result = self.session.execute(select(EmployeeTask).where(EmployeeTask.employee_id == index))
+                    employee_task = result.scalar_one_or_none()
+                    self.session.delete(employee_task)
                     self.session.delete(employee)
                 else:
                     employee.is_on_shift = row['is_on_shift']

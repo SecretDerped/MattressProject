@@ -383,7 +383,7 @@ async def log_sequence(request: Request,
     except ValueError:
         return JSONResponse(content={"status": "error",
                                      "data": {
-                                         'error': 'Некорректный ID сотрудника. Назначьте число в качестве идетификатора и замените штрих-код.\n\nЖду штрих-код...'}})
+                                         'error': 'Ошибка при чтении штрих-кода. Он не перевёрнут?.\n\nЖду штрих-код...'}})
 
     # Получение информации о сотруднике по его идентификатору
     async with async_session() as session:
@@ -396,12 +396,12 @@ async def log_sequence(request: Request,
         if not employee.is_on_shift:
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Сначала нужно открыть смену. Сообщите бригадиру.\n\nЖду штрих-код...'}})
+                                                  'error': 'Откройте смену у бригадира.\n\nЖду штрих-код...'}})
 
         if page_name.lower() not in employee.position.lower():
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Нет доступа. Уточните свою должность у бригадира.\n\nЖду штрих-код...'}})
+                                                  'error': 'Нет доступа. Уточните должность у бригадира.\n\nЖду штрих-код...'}})
 
         # Проверяем, есть ли у сотрудника текущая задача в таблице EmployeeTask
         existing_task = await session.execute(
@@ -416,16 +416,27 @@ async def log_sequence(request: Request,
             return JSONResponse(content={"status": "success",
                                          "data": {'sequence': employee.name,
                                                   'task_data': transform_task_data(task)}})
-        # Получение доступных задач из базы данных
-        search_field = f'{endpoint}_is_done'
-        result = await session.execute(
-            select(MattressRequest)
-            .where(MattressRequest.components_is_done == True,  # Учитываем только незавершённые задачи
-            getattr(MattressRequest, search_field) == False) # Для корректной динамической постановки поискового поля нужен такой костыль. Нотация через точку не работает
-            .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
-        )
-        tasks = result.scalars().all()
 
+        search_field = f'{endpoint}_is_done'
+        # Получение доступных задач из базы данных
+        match endpoint:
+            case 'gluing':
+                result = await session.execute(
+                    select(MattressRequest)
+                    .where(MattressRequest.components_is_done == True,  # Учитываем только незавершённые задачи
+                    getattr(MattressRequest, search_field) == False) # Для корректной динамической постановки поискового поля нужен такой костыль. Нотация через точку не работает
+                    .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
+                )
+            case 'sewing':
+                result = await session.execute(
+                    select(MattressRequest)
+                    .where(MattressRequest.components_is_done == True,  # Учитываем только незавершённые задачи
+                           MattressRequest.fabric_is_done == True,
+                           MattressRequest.gluing_is_done == True,
+                           getattr(MattressRequest, search_field) == False)  # Для корректной динамической постановки поискового поля нужен такой костыль. Нотация через точку не работает
+                    .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
+                )
+        tasks = result.scalars().all()
         print(f"{tasks = }")
 
         if not tasks:
