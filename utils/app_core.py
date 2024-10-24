@@ -182,7 +182,7 @@ class Page:
             return
 
         df.sort_values(by=['high_priority', 'deadline', 'order_id', 'delivery_type'],
-                       ascending=[False, True, True, True],
+                       ascending=[False, True, True, False],
                        inplace=True)
         if 'id' in df.columns:
             df.set_index('id', inplace=True)  # Set 'id' as the index
