@@ -83,10 +83,10 @@ def create_order_row(order):
 def get_mattress_str(mattress, sbis_data):
     """Формирование части сообщения с позициями для telegram"""
 
-    spring_block = mattress['springs']
-    comment = mattress['comment']
-    base_fabric = mattress['topFabric']
-    side_fabric = mattress['sideFabric']
+    spring_block = mattress.get('springs')
+    comment = mattress.get('comment')
+    base_fabric = mattress.get('topFabric')
+    side_fabric = mattress.get('sideFabric')
 
     return (
             f"Арт. {sbis_data['article']}, {mattress['quantity']} шт. {mattress['size']} \n"
