@@ -116,7 +116,7 @@ def create_mattress_row(mattress, sbis_data):
 
         # По умолчанию матрас не отображается заготовщику если components_is_done = True.
         # Если артикул в списке showed_articles, либо что-то прописали в комментарий, то components_is_done = False,
-        components_is_done=sbis_data['article'] not in showed_articles or mattress.get('comment') != '',
+        components_is_done=sbis_data['article'] not in showed_articles or mattress.get('comment') != '' or mattress['size'] != sbis_data['size'],
         fabric_is_done=False,
         gluing_is_done=False,
         sewing_is_done=False,
