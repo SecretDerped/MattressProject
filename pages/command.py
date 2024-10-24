@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from streamlit import session_state as state
 
 from utils.models import MattressRequest, Employee, EmployeeTask
@@ -135,10 +135,15 @@ class BrigadierPage(Page):
             employee = self.session.get(Employee, index)
             if employee:
                 if row['Удалить']:
-                    employee_tasks = self.session.execute(select(EmployeeTask).where(EmployeeTask.employee_id == index)).all()
-                    self.session.delete(employee_tasks)
+                    # Удаляем все задачи, связанные с сотрудником за одно действие
+                    self.session.execute(
+                        delete(EmployeeTask).where(EmployeeTask.employee_id == index)
+                    )
+
+                    # Удаляем самого сотрудника
                     self.session.delete(employee)
                 else:
+                    # Обновляем данные сотрудника
                     employee.is_on_shift = row['is_on_shift']
                     employee.name = row['name']
                     employee.position = row['position']
