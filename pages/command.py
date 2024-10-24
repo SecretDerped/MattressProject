@@ -126,7 +126,8 @@ class BrigadierPage(Page):
             key='employee_editor'
         )
         # Кнопка для сохранения изменений
-        if st.button('Сохранить'):
+        st.error('##### Не забывайте сохранять изменения')
+        if st.button('**Сохранить**'):
             self.save_employee_changes(edited_df)
 
     def save_employee_changes(self, edited_df):
@@ -135,11 +136,8 @@ class BrigadierPage(Page):
             employee = self.session.get(Employee, index)
             if employee:
                 if row['Удалить']:
-                    # Удаляем все задачи, связанные с сотрудником за одно действие
-                    self.session.execute(
-                        delete(EmployeeTask).where(EmployeeTask.employee_id == index)
-                    )
-
+                    # Удаляем все задачи, связанные с сотрудником
+                    self.session.execute(delete(EmployeeTask).where(EmployeeTask.employee_id == index))
                     # Удаляем самого сотрудника
                     self.session.delete(employee)
                 else:

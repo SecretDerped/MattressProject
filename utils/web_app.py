@@ -105,7 +105,7 @@ def create_mattress_row(mattress, sbis_data):
 
     return MattressRequest(
         high_priority=False,
-        article=sbis_data['article'],
+        article=sbis_data['article'] or '0',
         size=mattress['size'],
         base_fabric=mattress['topFabric'],
         side_fabric=mattress['sideFabric'] or mattress['topFabric'],
@@ -330,7 +330,6 @@ async def get_barcode(employee_id: int, request: Request):
     При переходе по ссылке на основе ID создаётся линейный штрих-код
     Code128 в формате SVG и выводится на экран.
     """
-
     async with async_session() as session:
         # Получаем данные о сотруднике из базы данных
         result = await session.execute(select(Employee).where(employee_id == Employee.id))
@@ -430,12 +429,13 @@ async def log_sequence(request: Request,
             case 'sewing':
                 result = await session.execute(
                     select(MattressRequest)
-                    .where(MattressRequest.components_is_done == True,  # Учитываем только незавершённые задачи
+                    .where(MattressRequest.components_is_done == True,
                            MattressRequest.fabric_is_done == True,
                            MattressRequest.gluing_is_done == True,
-                           getattr(MattressRequest, search_field) == False)  # Для корректной динамической постановки поискового поля нужен такой костыль. Нотация через точку не работает
-                    .options(joinedload(MattressRequest.order))  # Загрузка связанных заказов
+                           getattr(MattressRequest, search_field) == False)
+                    .options(joinedload(MattressRequest.order))
                 )
+        # Выбираем первый,
         tasks = result.scalars().all()
         print(f"{tasks = }")
 
@@ -459,11 +459,9 @@ async def log_sequence(request: Request,
                 EmployeeTask.task_id == task.id,
                 EmployeeTask.endpoint == endpoint))
             task_assigned = task_assigned.scalar_one_or_none()
-
             if task_assigned:
-                return JSONResponse(content={"status": "error",
-                                             "data": {'sequence': employee.name,
-                                                      'error': 'Задач для тебя пока нет. Приходи позже.\n\nЖду штрих-код...'}})
+                continue
+
             # Назначаем задачу сотруднику
             employee_task = EmployeeTask(
                 employee_id=employee_id,
@@ -476,6 +474,10 @@ async def log_sequence(request: Request,
             return JSONResponse(content={"status": "success",
                                          "data": {'sequence': employee.name,
                                                   'task_data': transform_task_data(task)}})
+
+        return JSONResponse(content={"status": "error",
+                                     "data": {'sequence': employee.name,
+                                              'error': 'Задач для тебя пока нет. Приходи позже.\n\nЖду штрих-код...'}})
 
 
 async def complete_task(request: Request, page_name: str, action: str, done_field: str):
