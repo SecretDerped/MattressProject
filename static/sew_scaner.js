@@ -37,13 +37,13 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(responseData => {
             console.log('Ответ от сервера:', responseData); // Логирование ответа сервера
 
+            if (data.sequence) {
+                console.log(`Считанная последовательность: ${data.sequence}`);
+                document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
+            }
+
             if (responseData.status === 'success') {
                 const data = responseData.data;
-
-                if (data.sequence) {
-                    console.log(`Считанная последовательность: ${data.sequence}`);
-                    document.getElementById('message').innerText = `👷‍♂️ ${data.sequence}`;
-                }
                 if (data.task_data) {
                     if (data.task_data.error) {
                         document.getElementById('task_data').innerText = data.task_data.error;

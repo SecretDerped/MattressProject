@@ -375,14 +375,21 @@ async def log_sequence(request: Request,
     if not sequence:
         return JSONResponse(content={"status": "error",
                                      "data": {
-                                         'error': 'Ошибка в штрих-коде. Идентификатор отсутствует.\n\nЖду штрих-код...'}})
+                                         'error': 'Ошибка в штрих-коде.\n'
+                                                  'Идентификатора нет.\n'
+                                                  '\n'
+                                                  'Жду штрих-код...'}})
 
     try:
         employee_id = int(sequence)
     except ValueError:
         return JSONResponse(content={"status": "error",
                                      "data": {
-                                         'error': 'Ошибка при чтении штрих-кода. Он не перевёрнут?.\n\nЖду штрих-код...'}})
+                                         'error': 'Ошибка при чтении штрих-кода.\n'
+                                                  'Поднесите код так, чтобы имя было внизу.\n'
+                                                  'Проверьте целостность кода и качество печати.\n'
+                                                  '\n'
+                                                  'Жду штрих-код...'}})
 
     # Получение информации о сотруднике по его идентификатору
     async with async_session() as session:
@@ -390,17 +397,23 @@ async def log_sequence(request: Request,
 
         if not employee:
             return JSONResponse(content={"status": "error",
-                                         "data": {'error': 'Сотрудник не найден.\n\nЖду штрих-код...'}})
+                                         "data": {'error': 'Сотрудник не найден.\n'
+                                                           '\n'
+                                                           'Жду штрих-код...'}})
 
         if not employee.is_on_shift:
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Откройте смену у бригадира.\n\nЖду штрих-код...'}})
+                                                  'error': 'Откройте смену у бригадира.\n'
+                                                           '\n'
+                                                           'Жду штрих-код...'}})
 
         if page_name.lower() not in employee.position.lower():
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Нет доступа. Уточните должность у бригадира.\n\nЖду штрих-код...'}})
+                                                  'error': 'Нет доступа. Уточните должность у бригадира.\n'
+                                                           '\n'
+                                                           'Жду штрих-код...'}})
 
         # Проверяем, есть ли у сотрудника текущая задача в таблице EmployeeTask
         existing_task = await session.execute(
@@ -408,7 +421,6 @@ async def log_sequence(request: Request,
                 EmployeeTask.employee_id == employee_id,
                 EmployeeTask.endpoint == endpoint))
         existing_task = existing_task.scalar_one_or_none()
-
         if existing_task:
             # У сотрудника уже есть назначенная задача
             task = await session.get(MattressRequest, existing_task.task_id)
@@ -416,8 +428,8 @@ async def log_sequence(request: Request,
                                          "data": {'sequence': employee.name,
                                                   'task_data': transform_task_data(task)}})
 
-        search_field = f'{endpoint}_is_done'
         # Получение доступных задач из базы данных
+        search_field = f'{endpoint}_is_done'
         match endpoint:
             case 'gluing':
                 result = await session.execute(
@@ -435,14 +447,14 @@ async def log_sequence(request: Request,
                            getattr(MattressRequest, search_field) == False)
                     .options(joinedload(MattressRequest.order))
                 )
-        # Выбираем первый,
         tasks = result.scalars().all()
         print(f"{tasks = }")
-
         if not tasks:
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
-                                                  'error': 'Сейчас пока нет задач.\n\nЖду штрих-код...'}})
+                                                  'error': 'Сейчас пока нет задач.\n'
+                                                           '\n'
+                                                           'Жду штрих-код...'}})
 
         # Сортируем задачи по приоритетам
         tasks = sorted(tasks, key=lambda x: (
@@ -454,6 +466,7 @@ async def log_sequence(request: Request,
 
         # Поиск новой задачи
         for task in tasks:
+
             # Проверяем, назначена ли задача другим сотрудникам
             task_assigned = await session.execute(select(EmployeeTask).where(
                 EmployeeTask.task_id == task.id,
@@ -470,14 +483,15 @@ async def log_sequence(request: Request,
             session.add(employee_task)
             await update_task_history(session, task, page_name, employee.name, action)
             await session.commit()
-
             return JSONResponse(content={"status": "success",
                                          "data": {'sequence': employee.name,
                                                   'task_data': transform_task_data(task)}})
 
         return JSONResponse(content={"status": "error",
                                      "data": {'sequence': employee.name,
-                                              'error': 'Задач для тебя пока нет. Приходи позже.\n\nЖду штрих-код...'}})
+                                              'error': 'Задач для тебя пока нет. Приходи позже.\n'
+                                                       '\n'
+                                                       'Жду штрих-код...'}})
 
 
 async def complete_task(request: Request, page_name: str, action: str, done_field: str):
@@ -561,7 +575,7 @@ def start_ngrok():
             for tunnel in data['tunnels']:
                 urls[tunnel['name']] = tunnel['public_url']
         except Exception:
-            time.sleep(1)
+            time.sleep(0.5)
 
     logging.warning(f'FastAPI доступен через ngrok: {urls["fastapi"]}')
     logging.warning(f'Streamlit доступен через ngrok: {urls["streamlit"]}')
