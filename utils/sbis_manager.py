@@ -299,7 +299,7 @@ class SBISWebApp(SBISApiManager):
             wholesale = True
 
         if wholesale:
-            customer_info = data.get('organization_data', {})
+            customer_info = json.loads(data.get('organization_data', {}) or '{}')
             customer_inn = customer_info.get('data', {}).get('inn', None)
             customer_kpp = customer_info.get('data', {}).get('kpp', None)
             company_address = customer_info.get('address_data', {}).get('value', None)
@@ -460,8 +460,6 @@ class SBISWebApp(SBISApiManager):
 
         # Такая конструкция вернёт пустой словарь, вместо None, если данных нет.
         customer_info = json.loads(order_data.get('organization_data', {}) or '{}')
-        logging.debug(customer_info)
-
         total_price = 0
         mattresses = order_data['mattresses']
         for position in mattresses:
@@ -482,7 +480,7 @@ class SBISWebApp(SBISApiManager):
 
         regulation = self.reg_id['direct_sell'] if customer_info == {} else self.reg_id['wholesale']
         order_contact = order_data.get('contact')
-        comment = order_data.get('comment', '').replace('"', '&quot;')
+        comment = order_data.get('comment', '').replace('"', '&quot;') + f' {order_data.get("organisation")}' + order_contact
         order_address = customer_info.get('address_data', {}).get('value')
 
         params = {"Документ": {
