@@ -299,7 +299,7 @@ class SBISWebApp(SBISApiManager):
             wholesale = True
 
         if wholesale:
-            customer_info = json.loads(data.get('organization_data', {}))
+            customer_info = data.get('organization_data', {})
             customer_inn = customer_info.get('data', {}).get('inn', None)
             customer_kpp = customer_info.get('data', {}).get('kpp', None)
             company_address = customer_info.get('address_data', {}).get('value', None)
@@ -481,9 +481,9 @@ class SBISWebApp(SBISApiManager):
             base64_file = encoded_string.decode('ascii')
 
         regulation = self.reg_id['direct_sell'] if customer_info == {} else self.reg_id['wholesale']
-        order_contact = order_data.get('contact', None)
+        order_contact = order_data.get('contact')
         comment = order_data.get('comment', '').replace('"', '&quot;')
-        order_address = customer_info.get('address_data', {}).get('value', None)
+        order_address = customer_info.get('address_data', {}).get('value')
 
         params = {"Документ": {
             "Тип": "ДокОтгрИсх",
