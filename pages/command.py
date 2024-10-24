@@ -135,9 +135,8 @@ class BrigadierPage(Page):
             employee = self.session.get(Employee, index)
             if employee:
                 if row['Удалить']:
-                    result = self.session.execute(select(EmployeeTask).where(EmployeeTask.employee_id == index))
-                    employee_task = result.scalar_one_or_none()
-                    self.session.delete(employee_task)
+                    employee_tasks = self.session.execute(select(EmployeeTask).where(EmployeeTask.employee_id == index)).all()
+                    self.session.delete(employee_tasks)
                     self.session.delete(employee)
                 else:
                     employee.is_on_shift = row['is_on_shift']
