@@ -60,8 +60,8 @@ backup_folder = hardware.get('backup_path')
 log_path = hardware.get('log_filepath')
 db_path = hardware.get('database_path')
 
-log_format = '[%(asctime)s | %(name)s]: %(message)s'
 log_level = DEBUG
+log_format = '[%(asctime)s | %(name)s]: %(message)s'
 basicConfig(level=log_level,
             format=log_format,
             handlers=(StreamHandler(sys.stdout),

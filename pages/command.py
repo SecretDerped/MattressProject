@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from sqlalchemy import select, delete
+from sqlalchemy import delete
 from streamlit import session_state as state
 
 from utils.models import MattressRequest, Employee, EmployeeTask

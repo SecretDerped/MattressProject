@@ -107,6 +107,9 @@ def create_mattress_row(mattress, sbis_data):
     if sbis_data['article'] in showed_articles or mattress.get('comment') != '' or mattress['size'] != sbis_data['size']:
         components_field = False
 
+    print("\nПОСЛЕ ОБРАБОТКИ: ")
+    print(mattress)
+
     return MattressRequest(
         high_priority=False,
         article=sbis_data['article'] or '0',
@@ -165,9 +168,12 @@ async def post_index(request: Request):
                 mattresses_list = order_data.get('mattresses')
                 if mattresses_list:
                     for mattress in mattresses_list:
+                        print("\nДО ОБРАБОТКИ: ")
+                        print(mattress)
                         item_sbis_data = nomenclatures[mattress['name']]
                         # Размер по умолчанию, если не указан вручную
-                        mattress['size'] = mattress.get('size', item_sbis_data['size'])
+                        if mattress['size'] == '':
+                            mattress['size'] = item_sbis_data['size']
                         # Символ разделителя "/" заменит символы "*", "-" и "_" для одинакового вида,
                         # и чтобы markdown в дальнейшем не ломал строку типа "190*120*20"
                         mattress['size'] = re.sub(r'[*_\-|]', '/', mattress['size'])
@@ -179,7 +185,6 @@ async def post_index(request: Request):
                         mattress["sideFabric"] = remove_text_in_parentheses(mattress.get("sideFabric"))
                         # Количество матрасов по умолчанию
                         mattress['quantity'] = int(mattress.get('quantity', 1))
-
                         # Формируем сообщение для TG и сохраняем заказ и матрасы в БД
                         position_message += get_mattress_str(mattress, item_sbis_data)
                         order = create_order_row(order_data)
