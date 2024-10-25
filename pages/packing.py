@@ -15,7 +15,7 @@ def form_box_text(task):
     # Текст контейнера красится в красный, когда у наряда приоритет
     return ((':red' if task.high_priority else ':gray') +
             f"[**Артикул:** {task.article}  \n" +
-            f"**Размер**: {task.size}  \n" +
+            f"**Размер**: {task.size.replace('*', '/')}  \n" +  # На всякий случай предотвратим форматирование markdown'ом строки типа "180*90*20" в "1809020"
             f"**Топ:** {task.base_fabric}  \n" +
             f"**Бок:** {task.side_fabric}  \n" +
             f"**ПБ:** {task.springs}  \n" +
