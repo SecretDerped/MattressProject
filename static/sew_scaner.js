@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => response.json())
         .then(responseData => {
             console.log('Ответ от сервера:', responseData); // Логирование ответа сервера
+            const data = responseData.data;
 
             if (data.sequence) {
                 console.log(`Считанная последовательность: ${data.sequence}`);
@@ -43,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             if (responseData.status === 'success') {
-                const data = responseData.data;
                 if (data.task_data) {
                     if (data.task_data.error) {
                         document.getElementById('task_data').innerText = data.task_data.error;

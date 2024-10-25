@@ -37,8 +37,8 @@ class PackingPage(ManufacturePage):
             # Заполнение шаблона
             ws['B4'] = "Матрас АРТ.№ " + task.article + '  |  ПБ: ' + task.springs
             ws['B6'] = task.size
-            ws['B8'] = order.deadline.strftime('%d.%m.%A')
-            ws['B16'] = f"{order.organization} - {order.address}"
+            ws['B8'] = order.deadline.strftime('%d.%m.%Y')
+            ws['B16'] = f"{order.address}"
 
             document_path = fr'cash\{self.page_name}_talon_{order.id}.xlsx'
             wb.save(document_path)

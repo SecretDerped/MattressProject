@@ -99,9 +99,13 @@ def get_mattress_str(mattress, sbis_data):
 
 
 def create_mattress_row(mattress, sbis_data):
-
-    # Артикулы, которые должны отображаться на экране заготовщика
+    # По умолчанию матрас не отображается заготовщику если components_is_done = True
+    components_field = True
+    # Если артикул в списке showed_articles, либо что-то прописали в комментарий,
+    # либо размер не стандартный, то components_is_done = False
     showed_articles = config.get('components', {}).get('showed_articles', [])
+    if sbis_data['article'] in showed_articles or mattress.get('comment') != '' or mattress['size'] != sbis_data['size']:
+        components_field = False
 
     return MattressRequest(
         high_priority=False,
@@ -113,15 +117,11 @@ def create_mattress_row(mattress, sbis_data):
         comment=mattress.get('comment', ''),
         springs=mattress["springBlock"] or '',
         attributes=sbis_data['structure'],
-
-        # По умолчанию матрас не отображается заготовщику если components_is_done = True.
-        # Если артикул в списке showed_articles, либо что-то прописали в комментарий, то components_is_done = False,
-        components_is_done=sbis_data['article'] not in showed_articles or mattress.get('comment') != '' or mattress['size'] != sbis_data['size'],
+        components_is_done=components_field,
         fabric_is_done=False,
         gluing_is_done=False,
         sewing_is_done=False,
         packing_is_done=False,
-
         history='',
         created=dt.now()
     )
@@ -166,21 +166,25 @@ async def post_index(request: Request):
                 if mattresses_list:
                     for mattress in mattresses_list:
                         item_sbis_data = nomenclatures[mattress['name']]
-
-                        # Преобразовываем данные для удобства
-                        if not mattress['size']:
-                            mattress['size'] = item_sbis_data['size']
+                        # Размер по умолчанию, если не указан вручную
+                        mattress['size'] = mattress.get('size', item_sbis_data['size'])
+                        # Символ разделителя "/" заменит символы "*", "-" и "_" для одинакового вида,
+                        # и чтобы markdown в дальнейшем не ломал строку типа "190*120*20"
+                        mattress['size'] = re.sub(r'[*_\-|]', '/', mattress['size'])
+                        # Преобразование и расчет цены
                         mattress['price'] = str_num_to_float(mattress.get('price', 0))
                         total_price += mattress['price']
                         # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
                         mattress["topFabric"] = remove_text_in_parentheses(mattress.get("topFabric"))
                         mattress["sideFabric"] = remove_text_in_parentheses(mattress.get("sideFabric"))
+                        # Количество матрасов по умолчанию
                         mattress['quantity'] = int(mattress.get('quantity', 1))
 
-                        # Добавим позицию в сообщение для tg, запишем заказ и метрасы в БД
+                        # Формируем сообщение для TG и сохраняем заказ и матрасы в БД
                         position_message += get_mattress_str(mattress, item_sbis_data)
                         order = create_order_row(order_data)
                         session.add(order)
+                        # Добавляем матрасы, привязанные к заказу
                         for _ in range(mattress['quantity']):
                             mattress_request = create_mattress_row(mattress, item_sbis_data)
                             mattress_request.order = order  # Привязываем матрасы к заказу. Установка связи
@@ -466,7 +470,6 @@ async def log_sequence(request: Request,
 
         # Поиск новой задачи
         for task in tasks:
-
             # Проверяем, назначена ли задача другим сотрудникам
             task_assigned = await session.execute(select(EmployeeTask).where(
                 EmployeeTask.task_id == task.id,
