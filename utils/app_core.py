@@ -10,6 +10,8 @@ from utils.db_connector import session
 from utils.models import MattressRequest, Order, Employee
 from utils.tools import config, create_history_note
 
+site_conf = config.get('site')
+
 
 class Page:
     def __init__(self, page_name, icon):
@@ -66,9 +68,9 @@ class Page:
             "delivery_type": st.column_config.SelectboxColumn("Тип доставки",
                                                               options=config.get('site').get('delivery_types'),
                                                               default=config.get('site').get('delivery_types')[0],
-                                                              required=True),
+                                                              required=True,
+                                                              disabled=True),
             "address": st.column_config.TextColumn("Адрес",
-                                                   default='Наш склад',
                                                    width='large'),
             "region": st.column_config.SelectboxColumn("Регион",
                                                        width='medium',
@@ -180,11 +182,17 @@ class Page:
             st.write('Активных нарядов нет')
             return
 
-        df.sort_values(by=['high_priority', 'deadline', 'order_id', 'delivery_type'],
-                       ascending=[False, True, True, False],
+        # Преобразуем поле delivery_type в категорию с определенным порядком
+        df['delivery_type'] = pd.Categorical(df['delivery_type'],
+                                             categories=site_conf.get('delivery_types'),
+                                             ordered=True)
+
+        df.sort_values(by=['high_priority', 'deadline', 'delivery_type'],
+                       ascending=[False, True, True],
+                       ignore_index=True,
                        inplace=True)
         if 'id' in df.columns:
-            df.set_index('id', inplace=True)  # Set 'id' as the index
+            df.set_index('id', inplace=True)
 
         return df
 

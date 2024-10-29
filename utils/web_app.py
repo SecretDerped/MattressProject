@@ -107,9 +107,6 @@ def create_mattress_row(mattress, sbis_data):
     if sbis_data['article'] in showed_articles or mattress.get('comment') != '' or mattress['size'] != sbis_data['size']:
         components_field = False
 
-    print("\nПОСЛЕ ОБРАБОТКИ: ")
-    print(mattress)
-
     return MattressRequest(
         high_priority=False,
         article=sbis_data['article'] or '0',
@@ -168,8 +165,6 @@ async def post_index(request: Request):
                 mattresses_list = order_data.get('mattresses')
                 if mattresses_list:
                     for mattress in mattresses_list:
-                        print("\nДО ОБРАБОТКИ: ")
-                        print(mattress)
                         item_sbis_data = nomenclatures[mattress['name']]
                         # Размер по умолчанию, если не указан вручную
                         if mattress['size'] == '':
@@ -207,10 +202,10 @@ async def post_index(request: Request):
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 order_message = get_order_str(order_data, position_message, total_price)
                 await send_telegram_message(order_message, request.query_params.get('chat_id'))
-                await send_telegram_message(order_message, tg_group_chat_id)
+                # await send_telegram_message(order_message, tg_group_chat_id)
 
                 # Из JSON создаётся документ реализации в СБИС
-                sbis.write_implementation(order_data)
+                # sbis.write_implementation(order_data)
                 await session.commit()
                 return {"status": "success",
                         "data": "   Заявка принята.\nРеализация записана.\nНаряды созданы."}
@@ -457,7 +452,6 @@ async def log_sequence(request: Request,
                     .options(joinedload(MattressRequest.order))
                 )
         tasks = result.scalars().all()
-        print(f"{tasks = }")
         if not tasks:
             return JSONResponse(content={"status": "error",
                                          "data": {'sequence': employee.name,
