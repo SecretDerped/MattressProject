@@ -480,7 +480,8 @@ class SBISWebApp(SBISApiManager):
 
         regulation = self.reg_id['direct_sell'] if customer_info == {} else self.reg_id['wholesale']
         order_contact = order_data.get('contact')
-        comment = order_data.get('comment', '').replace('"', '&quot;') + f' {order_data.get("organisation")}' + order_contact
+        order_organisation = order_data.get("organisation")
+        comment = f'{order_organisation} {order_contact}'.replace('"', '&quot;')
         order_address = customer_info.get('address_data', {}).get('value')
 
         params = {"Документ": {

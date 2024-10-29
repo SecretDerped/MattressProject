@@ -24,11 +24,11 @@ class Tg:
             query_button = InlineKeyboardButton(text="Создание заявки",
                                                 web_app=WebAppInfo(url=query_button_url))
 
-            foreman_button_url = f"{self.foreman_screen_url}?chat_id={user_chat_id}"
+            """foreman_button_url = f"{self.foreman_screen_url}?chat_id={user_chat_id}"
             foreman_button = InlineKeyboardButton(text="Показать экран бригадира",
-                                                  web_app=WebAppInfo(url=foreman_button_url))
+                                                  web_app=WebAppInfo(url=foreman_button_url))"""
 
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[[query_button], [foreman_button]])
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[query_button]])
 
             await message.answer(
                 text="Соединение с сервером установлено.\nВыберите действие:",
