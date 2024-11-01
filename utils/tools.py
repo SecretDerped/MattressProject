@@ -152,6 +152,24 @@ def get_date_str(dt_obj) -> str:
         return str(dt_obj)
 
 
+def str_num_to_float(string):
+    """Превращает число из строки в дробное с двумя знаками после запятой. Если не получается, возвращает 0."""
+    try:
+        return round(float(string), 2)
+    except (ValueError, TypeError):
+        return 0
+
+
+def remove_text_in_parentheses(text):
+    """Удаляет из строки все подстроки в скобках."""
+    try:
+        return re.sub(r'\(.*?\)\s*', '', text)
+    except TypeError:
+        return 'Нет'
+    except ValueError:
+        return 'ОШИБКА'
+
+
 def barcode_link(employee_id: str) -> str:
     """Возвращает ссылку со сгенерированным штрих-кодом."""
     return f'http://{local_ip}:{site_port}/api/barcode/{employee_id}'

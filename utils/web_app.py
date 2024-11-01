@@ -23,12 +23,15 @@ from starlette.responses import RedirectResponse
 from utils.models import Order, MattressRequest, Employee, EmployeeTask
 from utils.db_connector import async_session
 from utils.sbis_manager import SBISWebApp
-from utils.tools import load_conf, fabric_type, send_telegram_message, create_history_note
+from utils.tools import load_conf, fabric_type, send_telegram_message, create_history_note, remove_text_in_parentheses, \
+    str_num_to_float
 
 config = load_conf()
 
 site_config = config.get('site')
+regions = site_config.get('regions')
 delivery_types = site_config.get('delivery_types')
+fastapi_port = site_config.get('site_port')
 
 tg_group_chat_id = config.get('telegram', {}).get('group_chat_id')
 
@@ -37,35 +40,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 sbis_config = config.get('sbis')
-password = sbis_config.get('password')
 login = sbis_config.get('login')
+password = sbis_config.get('password')
 sale_point_name = sbis_config.get('sale_point_name')
 price_list_name = sbis_config.get('price_list_name')
 sbis = SBISWebApp(login, password, sale_point_name, price_list_name)
 
-nomenclatures = sbis.get_nomenclatures()
-fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
-mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
-springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
-springs['Нет'] = ''  # Добавляем пустую позицию на ПБ
-
-
-def str_num_to_float(string):
-    """Превращает число из строки в дробное с двумя знаками после запятой. Если не получается, возвращает 0."""
-    try:
-        return round(float(string), 2)
-    except (ValueError, TypeError):
-        return 0
-
-
-def remove_text_in_parentheses(text):
-    """Удаляет из строки все подстроки в скобках."""
-    try:
-        return re.sub(r'\(.*?\)\s*', '', text)
-    except TypeError:
-        return 'Нет'
-    except ValueError:
-        return 'ОШИБКА'
+nomenclatures = {}
 
 
 def create_order_row(order):
@@ -83,10 +64,10 @@ def create_order_row(order):
 def get_mattress_str(mattress, sbis_data):
     """Формирование части сообщения с позициями для telegram"""
 
-    spring_block = mattress.get('springs')
-    comment = mattress.get('comment')
     base_fabric = mattress.get('topFabric')
     side_fabric = mattress.get('sideFabric')
+    spring_block = mattress.get('springBlock')
+    comment = mattress.get('comment')
 
     return (
             f"Арт. {sbis_data['article']}, {mattress['quantity']} шт. {mattress['size']} \n"
@@ -96,6 +77,25 @@ def get_mattress_str(mattress, sbis_data):
             + (f"{comment}\n" if comment != '' else '')
             + f"\n"
     )
+
+
+def form_mattress_row(mattress, sbis_data):
+    # Размер по умолчанию, если не указан вручную
+    if mattress['size'] == '':
+        mattress['size'] = sbis_data['size']
+    # Символ разделителя "/" заменит символы "*", "-" и "_" для одинакового вида,
+    # и чтобы markdown в дальнейшем не ломал строку типа "190*120*20"
+    mattress['size'] = re.sub(r'[*_\-|]', '/', mattress['size'])
+    # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
+    mattress["topFabric"] = remove_text_in_parentheses(mattress.get("topFabric"))
+    mattress["sideFabric"] = remove_text_in_parentheses(mattress.get("sideFabric"))
+    mattress["springBlock"] = remove_text_in_parentheses(mattress.get("springBlock"))
+    # Преобразование и расчет цены
+    mattress['price'] = str_num_to_float(mattress.get('price', 0))
+    # Количество матрасов по умолчанию
+    mattress['quantity'] = int(mattress.get('quantity', 1))
+
+    return mattress
 
 
 def create_mattress_row(mattress, sbis_data):
@@ -110,18 +110,18 @@ def create_mattress_row(mattress, sbis_data):
     return MattressRequest(
         high_priority=False,
         article=sbis_data['article'] or '0',
-        size=mattress['size'],
-        base_fabric=mattress['topFabric'],
-        side_fabric=mattress['sideFabric'] or mattress['topFabric'],
-        photo=mattress.get('photo'),
-        comment=mattress.get('comment', ''),
-        springs=mattress["springBlock"] or '',
-        attributes=sbis_data['structure'],
         components_is_done=components_field,
         fabric_is_done=False,
         gluing_is_done=False,
         sewing_is_done=False,
         packing_is_done=False,
+        base_fabric=mattress['topFabric'],
+        side_fabric=mattress['sideFabric'] or mattress['topFabric'],
+        springs=mattress["springBlock"] or '',
+        size=mattress['size'],
+        photo=mattress.get('photo'),
+        comment=mattress.get('comment', ''),
+        attributes=sbis_data['structure'],
         history='',
         created=dt.now()
     )
@@ -142,11 +142,12 @@ def get_order_str(order, positions, price):
 
 @app.get('/', response_class=HTMLResponse)
 async def get_index(request: Request):
+    global nomenclatures
     logging.debug("Рендеринг шаблона index.html")
-    # Здесь вы можете использовать шаблонизатор Jinja2 для рендеринга HTML
+    nomenclatures = sbis.get_nomenclatures()
     return templates.TemplateResponse("index.html", {"request": request,
                                                      "nomenclatures": nomenclatures,
-                                                     "regions": site_config.get('regions'),
+                                                     "regions": regions,
                                                      "delivery_types": delivery_types})
 
 
@@ -166,20 +167,8 @@ async def post_index(request: Request):
                 if mattresses_list:
                     for mattress in mattresses_list:
                         item_sbis_data = nomenclatures[mattress['name']]
-                        # Размер по умолчанию, если не указан вручную
-                        if mattress['size'] == '':
-                            mattress['size'] = item_sbis_data['size']
-                        # Символ разделителя "/" заменит символы "*", "-" и "_" для одинакового вида,
-                        # и чтобы markdown в дальнейшем не ломал строку типа "190*120*20"
-                        mattress['size'] = re.sub(r'[*_\-|]', '/', mattress['size'])
-                        # Преобразование и расчет цены
-                        mattress['price'] = str_num_to_float(mattress.get('price', 0))
+                        mattress = form_mattress_row(mattress, item_sbis_data)
                         total_price += mattress['price']
-                        # Убираем текст в скобках из названий тканей в СБИС, так как работягам эта информация не нужна
-                        mattress["topFabric"] = remove_text_in_parentheses(mattress.get("topFabric"))
-                        mattress["sideFabric"] = remove_text_in_parentheses(mattress.get("sideFabric"))
-                        # Количество матрасов по умолчанию
-                        mattress['quantity'] = int(mattress.get('quantity', 1))
                         # Формируем сообщение для TG и сохраняем заказ и матрасы в БД
                         position_message += get_mattress_str(mattress, item_sbis_data)
                         order = create_order_row(order_data)
@@ -201,6 +190,7 @@ async def post_index(request: Request):
 
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 order_message = get_order_str(order_data, position_message, total_price)
+                print(order_message)
                 await send_telegram_message(order_message, request.query_params.get('chat_id'))
                 # await send_telegram_message(order_message, tg_group_chat_id)
 
@@ -301,18 +291,22 @@ async def get_articles():
 @app.get('/api/additions')
 async def get_additions():
     logging.debug("Получен GET-запрос к /api/additions")
+    mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
     return JSONResponse(content={"status": "success", "data": list(set(list(nomenclatures)) - set(list(mattresses)))})
 
 
 @app.get('/api/fabrics')
 async def get_fabrics():
     logging.debug("Получен GET-запрос к /api/fabrics")
+    fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
     return JSONResponse(content={"status": "success", "data": list(fabrics)})
 
 
 @app.get('/api/springs')
 async def get_springs():
     logging.debug("Получен GET-запрос к /api/springs")
+    springs = {key: value for key, value in nomenclatures.items() if value['is_springs']}
+    springs['Нет'] = ''  # Добавляем пустую позицию на ПБ
     return JSONResponse(content={"status": "success", "data": list(springs)})
 
 
@@ -322,6 +316,7 @@ async def get_mattresses():
     не все товары, а список строк с названиями матрасов.
     Символы строк в формате Unicode escape-последовательности"""
     logging.debug("Получен GET-запрос к /api/mattresses")
+    mattresses = {key: value for key, value in nomenclatures.items() if value['is_mattress']}
     return JSONResponse(content={"status": "success", "data": list(mattresses)})
 
 
@@ -587,6 +582,6 @@ def start_ngrok():
 if __name__ == '__main__':
     ngrok_process, ngrok_url = start_ngrok()
     logging.info("Тестовый запуск FastAPI-приложения на Uvicorn")
-    uvicorn.run("web_app:app", host='0.0.0.0', port=int(site_config.get('site_port')), reload=True)
+    uvicorn.run("web_app:app", host='0.0.0.0', port=int(fastapi_port), reload=True)
 
     # ngrok_process.wait()
