@@ -79,7 +79,7 @@ def get_mattress_str(mattress, sbis_data):
     )
 
 
-def form_mattress_row(mattress, sbis_data):
+def enhance_mattress_info(mattress, sbis_data):
     # Размер по умолчанию, если не указан вручную
     if mattress['size'] == '':
         mattress['size'] = sbis_data['size']
@@ -155,47 +155,66 @@ async def get_index(request: Request):
 async def post_index(request: Request):
     try:
         order_data = await request.json()
+        print('')
+        print(order_data)
+        print('')
         # Заранее превращаем значение предоплаты во float, записываем в JSON
         order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
         async with async_session() as session:
             async with session.begin():
+
+                # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
+                additional_items_list = order_data.get('additionalItems')
                 total_price = 0
+                extra_positions_message = ''
+
+                if additional_items_list:
+                    for item in additional_items_list:
+                        item['price'] = str_num_to_float(item.get('price', 0))
+                        total_price += item['price']
+                        # Формирование части сообщения с позициями для telegram
+                        extra_positions_message += f"{item['name']}, {item['quantity']} шт. \n"
+
                 position_message = ''
                 # Тут формируются и добавляются матрасы в базу нарядов для работяг, если в заявке есть матрасы
                 mattresses_list = order_data.get('mattresses')
                 if mattresses_list:
                     for mattress in mattresses_list:
                         item_sbis_data = nomenclatures[mattress['name']]
-                        mattress = form_mattress_row(mattress, item_sbis_data)
+
+                        # Добавляем компоненты матраса в реализацию
+                        additional_items_list.append({'name': mattress['topFabric'],
+                                                      'quantity': mattress['quantity'],
+                                                      'price': 0})
+                        additional_items_list.append({'name': mattress['sideFabric'],
+                                                      'quantity': mattress['quantity'],
+                                                      'price': 0})
+                        additional_items_list.append({'name': mattress['springBlock'],
+                                                      'quantity': mattress['quantity'],
+                                                      'price': 0})
+                        mattress_message = enhance_mattress_info(mattress, item_sbis_data)
                         total_price += mattress['price']
+
                         # Формируем сообщение для TG и сохраняем заказ и матрасы в БД
-                        position_message += get_mattress_str(mattress, item_sbis_data)
+                        position_message += get_mattress_str(mattress_message, item_sbis_data)
                         order = create_order_row(order_data)
                         session.add(order)
                         # Добавляем матрасы, привязанные к заказу
                         for _ in range(mattress['quantity']):
-                            mattress_request = create_mattress_row(mattress, item_sbis_data)
+                            mattress_request = create_mattress_row(mattress_message, item_sbis_data)
                             mattress_request.order = order  # Привязываем матрасы к заказу. Установка связи
                             session.add(mattress_request)
 
-                # Тут формируются и добавляются допники в сообщение телеги, если в заявке есть допники
-                additional_items_list = order_data.get('additionalItems')
-                if additional_items_list:
-                    for item in additional_items_list:
-                        item['price'] = str_num_to_float(item.get('price', 0))
-                        total_price += item['price']
-                        # Формирование части сообщения с позициями для telegram
-                        position_message += f"{item['name']}, {item['quantity']} шт. \n"
+                position_message += extra_positions_message
 
                 # Отправляем сформированное сообщение в группу telegram, где все заявки, и пользователю бота в ЛС
                 order_message = get_order_str(order_data, position_message, total_price)
-                print(order_message)
                 await send_telegram_message(order_message, request.query_params.get('chat_id'))
                 # await send_telegram_message(order_message, tg_group_chat_id)
 
                 # Из JSON создаётся документ реализации в СБИС
-                # sbis.write_implementation(order_data)
+                sbis.write_implementation(order_data)
                 await session.commit()
                 return {"status": "success",
                         "data": "   Заявка принята.\nРеализация записана.\nНаряды созданы."}
@@ -297,9 +316,10 @@ async def get_additions():
 
 @app.get('/api/fabrics')
 async def get_fabrics():
+    """Возвращает список названий тканей, отсортированный по алфавиту"""
     logging.debug("Получен GET-запрос к /api/fabrics")
     fabrics = {key: value for key, value in nomenclatures.items() if value['is_fabric']}
-    return JSONResponse(content={"status": "success", "data": list(fabrics)})
+    return JSONResponse(content={"status": "success", "data": sorted(list(fabrics), reverse=True)})
 
 
 @app.get('/api/springs')

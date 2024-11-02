@@ -287,26 +287,22 @@ class SBISWebApp(SBISApiManager):
     def create_implementation_xml(self, data):
         today = datetime.today().strftime('%d.%m.%Y')
 
-        delivery_date = datetime.strptime(data.get('delivery_date', '2000-01-01'), '%Y-%m-%d').strftime('%d.%m.%Y')
-        # Заменяем двойные кавычки на &quot;, иначе XML посчитает эти кавычки за конец строки и разметка сломается.
-        customer_name = data.get('organization', None).replace('"', '&quot;')
-
         # Если поле "Компания" оставить пустым при создании заявки, счёт оформится как розница,
         # а если нет, то в счёте будет юрлицо
         customer_inn, customer_kpp, company_address = None, None, None
-        wholesale = False
-        if data['organization']:
-            wholesale = True
-
+        wholesale = True if data.get('organization') else False
         if wholesale:
             customer_info = json.loads(data.get('organization_data', {}) or '{}')
             customer_inn = customer_info.get('data', {}).get('inn', None)
             customer_kpp = customer_info.get('data', {}).get('kpp', None)
             company_address = customer_info.get('address_data', {}).get('value', None)
 
-        comment = data.get('comment', '').replace('"', '&quot;')
-
-        xml_content = f'''<?xml version="1.0" encoding="WINDOWS-1251" ?>
+        # Заменяем двойные кавычки на &quot;
+        # иначе программа посчитает эти кавычки за конец строки в файле и разметка сломается
+        customer_name = data.get("organization", '').replace('"', '&quot;')
+        #comment = f"{data.get('contact')} {data.get('organization')}".replace('"', '&quot;')
+        delivery_date = datetime.strptime(data.get('deliveryDate', '2000-01-01'), '%Y-%m-%d').strftime('%d.%m.%Y')
+        xml_content = f'''<?xml version="1.0" encoding="WINDOWS-1251"?>
 <Файл ВерсФорм="5.02">
 
   <СвУчДокОбор>
@@ -379,8 +375,6 @@ class SBISWebApp(SBISApiManager):
         xml_content += f'''
           <Основание НаимОсн="-"/>
           <ИнфПолФХЖ1>
-            <ТекстИнф Значен="{comment}" Идентиф="Примечание"/>
-            <ТекстИнф Значен="{comment}" Идентиф="ИнфПередТабл"/>
             <ТекстИнф Значен="{delivery_date}" Идентиф="Срок"/>
             <ТекстИнф Значен="23:59:59" Идентиф="СрокВремя"/>
             <ТекстИнф Значен="Основной склад" Идентиф="СкладНаименование"/>
@@ -430,12 +424,12 @@ class SBISWebApp(SBISApiManager):
             total_price += position_price
             #  НаимЕдИзм="шт"
             xml_content += f'''
-                <СвТов КодТов="{code}" НаимТов="{item_name}" НалСт="без НДС" НеттоПередано="{item_quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{position_price}" СтУчНДС="{position_price}" Цена="{item_price}">
-                  <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
-                  <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
-                  <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
-                  <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
-                </СвТов>'''
+        <СвТов КодТов="{code}" НаимТов="{item_name}" НалСт="без НДС" НеттоПередано="{item_quantity}" НомТов="{item_num}" ОКЕИ_Тов="796" СтБезНДС="{position_price}" СтУчНДС="{position_price}" Цена="{item_price}">
+          <ИнфПолФХЖ2 Значен="{code}" Идентиф="КодПоставщика"/>
+          <ИнфПолФХЖ2 Значен="{item_name}" Идентиф="НазваниеПоставщика"/>
+          <ИнфПолФХЖ2 Значен="&quot;Type&quot;:&quot;Товар&quot;" Идентиф="ПоляНоменклатуры"/>
+          <ИнфПолФХЖ2 Значен="41-01" Идентиф="СчетУчета"/>
+        </СвТов>'''
             item_num += 1
 
         xml_content += f'''
@@ -463,6 +457,7 @@ class SBISWebApp(SBISApiManager):
         total_price = 0
         mattresses = order_data['mattresses']
         for position in mattresses:
+
             total_price += float(position['price'])
 
         additional_items = order_data['additionalItems']
@@ -479,9 +474,9 @@ class SBISWebApp(SBISApiManager):
             base64_file = encoded_string.decode('ascii')
 
         regulation = self.reg_id['direct_sell'] if customer_info == {} else self.reg_id['wholesale']
-        order_contact = order_data.get('contact')
-        order_organisation = order_data.get("organisation")
-        comment = f'{order_organisation} {order_contact}'.replace('"', '&quot;')
+        order_contact = order_data.get('contact', '')
+        order_organization = order_data.get("organization", '')
+        comment = f'{order_organization} {order_contact}'
         order_address = customer_info.get('address_data', {}).get('value')
 
         params = {"Документ": {
