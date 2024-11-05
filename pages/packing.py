@@ -108,7 +108,7 @@ class PackingPage(ManufacturePage):
                 with button_row_1:
                     if st.button(f":green[**{self.done_button_text}**]", key=f'button_packing_done_{task.id}'):
                         history_note = f'{self.pages_history_note()} \n'
-                        db_task = self.session.query(MattressRequest).get(task.id)
+                        db_task = self.session.get(MattressRequest, task.id)
 
                         if db_task:
                             db_task.packing_is_done = True
@@ -141,7 +141,10 @@ class PackingPage(ManufacturePage):
 
         for order in orders:
             # Проверяем, есть ли активные заявки на матрасы
-            has_active_requests = any((request.sewing_is_done and
+            has_active_requests = any((request.components_is_done and
+                                       request.fabric_is_done and
+                                       request.gluing_is_done and
+                                       request.sewing_is_done and
                                        not request.packing_is_done) for request in order.mattress_requests)
 
             if not has_active_requests:

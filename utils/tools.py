@@ -16,7 +16,10 @@ import pandas as pd
 import aspose.pdf as ap
 
 import logging
-from logging import basicConfig, StreamHandler, FileHandler, DEBUG
+from logging import basicConfig, StreamHandler, FileHandler, INFO
+
+import streamlit as st
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from datetime import datetime
@@ -60,7 +63,7 @@ backup_folder = hardware.get('backup_path')
 log_path = hardware.get('log_filepath')
 db_path = hardware.get('database_path')
 
-log_level = DEBUG
+log_level = INFO
 log_format = '[%(asctime)s | %(name)s]: %(message)s'
 basicConfig(level=log_level,
             format=log_format,
