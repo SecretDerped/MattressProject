@@ -166,6 +166,12 @@ class BrigadierPage(Page):
                     self.session.commit()
                     st.rerun()
 
+    def reset_task_reservation_button(self):
+        if st.button('Сбросить бронирование задач'):
+            self.session.query(EmployeeTask).delete()
+            self.session.commit()
+            st.toast('Бронирование сброшено')
+
 
 Page = BrigadierPage('Производственный терминал', '🛠️')
 tasks_tab, employee_tab = st.tabs(['Матрасы', 'Сотрудники'])
@@ -192,9 +198,11 @@ with employee_tab:
 
     st.warning('##### Доступно: заготовка, сборка, нарезка, шитьё, упаковка')
 
-    sub_col_1, sub_col_2 = st.columns([2, 1])
+    sub_col_1, sub_col_2, sub_col_3 = st.columns([3, 1, 2])
     with sub_col_1:
         Page.employees_editor()
     with sub_col_2:
+        Page.reset_task_reservation_button()
+    with sub_col_3:
         with st.expander("Добавить нового сотрудника"):
             Page.add_employee()

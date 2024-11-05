@@ -1,5 +1,4 @@
 import streamlit as st
-from sqlalchemy.dialects.mssql.information_schema import columns
 
 from utils.app_core import ManufacturePage
 from utils.tools import config, side_eval
@@ -9,7 +8,6 @@ class CuttingPage(ManufacturePage):
     def __init__(self, page_name, icon):
         super().__init__(page_name, icon)
         self.cutting_columns_config = {
-            'id': st.column_config.NumberColumn("Матрас", disabled=True),
             'deadline': st.column_config.DateColumn("Дата", format="DD.MM", disabled=True),
             'fabric_is_done': st.column_config.CheckboxColumn("Готово", default=False),
             'article': st.column_config.TextColumn("Артикул", disabled=True),
@@ -18,8 +16,7 @@ class CuttingPage(ManufacturePage):
             'size': st.column_config.TextColumn("Размер", disabled=True),
             'side': st.column_config.TextColumn("Бочина", disabled=True),
             'comment': st.column_config.TextColumn("Комментарий", disabled=True),
-            'photo': st.column_config.ImageColumn("Фото"),
-            'history': st.column_config.TextColumn("История", width='large', disabled=True)
+            'photo': st.column_config.ImageColumn("Фото")
         }
         self.showed_articles = config['components']['showed_articles']
 
@@ -38,12 +35,13 @@ class CuttingPage(ManufacturePage):
 
         tasks = self.filter_incomplete_tasks(all_tasks, {'fabric_is_done': False})
 
-        # Создаем копию, чтобы избежать предупреждения SettingWithCopyWarning
+        # Создаем копию, чтобы избежать цепных изменений одной и той же таблицы
         tasks = tasks.copy()
         # Формируем колонку с информацией о длине бочины, вычисляеммой динамически. Её не требуется сохранять
         tasks.loc[:, 'side'] = tasks['size'].apply(side_eval, args=(str(tasks['side_fabric']),))
 
-        columns_order = list(self.cutting_columns_config)[1:]  # Формируем порядок показа полей от словаря конфигурации
+        # Формируем порядок показа полей от словаря конфигурации
+        columns_order = list(self.cutting_columns_config)
         return st.data_editor(tasks[columns_order],
                               column_config=self.cutting_columns_config,
                               hide_index=False,

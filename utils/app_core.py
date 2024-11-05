@@ -77,7 +77,7 @@ class Page:
                                                        default=config.get('site').get('regions')[0],
                                                        required=True),
             "created": st.column_config.DatetimeColumn("Создано",
-                                                       format="D.MM.YYYY | HH:MM",
+                                                       format="D.MM.YYYY",
                                                        disabled=True),
         }
 
@@ -254,7 +254,7 @@ class ManufacturePage(Page):
                 continue
 
             instance = self.session.get(MattressRequest, index)
-            new_history = self.pages_history_note() + row['history']
+            new_history = self.pages_history_note() + getattr(instance, 'history')
             setattr(instance, 'history', new_history)
             setattr(instance, done_field, True)
 

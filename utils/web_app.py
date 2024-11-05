@@ -155,9 +155,6 @@ async def get_index(request: Request):
 async def post_index(request: Request):
     try:
         order_data = await request.json()
-        print('')
-        print(order_data)
-        print('')
         # Заранее превращаем значение предоплаты во float, записываем в JSON
         order_data['prepayment'] = str_num_to_float(order_data.get('prepayment', 0))
 
