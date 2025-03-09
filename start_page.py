@@ -18,9 +18,9 @@ class StartPage(Page):
         site_port = self.site_port
 
         # От выбранного порта зависит выбор приложения
-       # st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/command', type="primary")
+        st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/command', type="primary")
 
-       # st.link_button('**Заявки**', f'http://{local_ip}:{site_port}', type="primary")
+        st.link_button('**Заявки**', f'http://{local_ip}:{site_port}', type="primary")
 
         st.link_button('**Заготовка**', f'http://{local_ip}:{st_port}/components')
 
