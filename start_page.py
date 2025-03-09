@@ -3,7 +3,7 @@ import streamlit as st
 from utils.app_core import Page
 from utils.tools import local_ip, config
 spec_dir = "utils"
-cash_lifetime = datetime(2024, 11, 30)
+cash_lifetime = datetime(2025, 11, 30)
 
 
 class StartPage(Page):
