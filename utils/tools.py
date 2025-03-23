@@ -3,16 +3,16 @@ import re
 import sys
 from pathlib import Path
 
-import httpx
+import niquests
 import tomli
 import socket
 import locale
 
-import win32print
-import win32api
+import win32print  # из pywin32
+import win32api  # из pywin32
 
 import pandas as pd
-import aspose.pdf as ap
+import aspose.pdf as ap  # из aspose-pdf
 
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
@@ -194,7 +194,7 @@ async def send_telegram_message(text: str, chat_id: str):
     data = {"chat_id": chat_id, "text": text}
     logging.info(f"Отправка сообщения в Telegram. URL: {url}, данные: {data}")
 
-    response = httpx.post(url, data=data)
+    response = niquests.post(url, data=data)
     logging.debug(f"Получен ответ от Telegram API: {response.json()}")
     return response.json()
 

@@ -32,9 +32,9 @@ if sys.platform.startswith('win'):
 def run_fastapi_app():
     logging.info("Запуск FastAPI-приложения на Uvicorn")
     site_port = config['site']['site_port']
-    # В консольной команде должен быть прописан путь к web_app,
+    # В консольной команде должен быть прописан путь к раннеру fastapi,
     # либо перейти в нужную папку с помощью cd, иначе uvicorn не найдёт, что загружать
-    uvicorn.run("utils.web_app:app", host='0.0.0.0', port=int(site_port), reload=False)
+    uvicorn.run("utils.fastapi_app_core:app", host='0.0.0.0', port=int(site_port), reload=False)
 
 
 def run_streamlit_app():
@@ -44,6 +44,12 @@ def run_streamlit_app():
     subprocess.run(["streamlit", "run", script_path, f"--server.port={streamlit_port}", "--server.headless=true"], check=True)
 
 
+def run_bot():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(bot.main())
+
+    
 if __name__ == '__main__':
     #start_scheduler(17, 35)  # Запуск планировщика задач
     streamlit_thread = threading.Thread(target=run_streamlit_app)
@@ -56,7 +62,7 @@ if __name__ == '__main__':
     print(f"Пароль туннеля: {get_tunnel_password()}")
 
     bot = Tg(public_urls['fastapi'], public_urls['streamlit'])
-    bot_thread = threading.Thread(target=lambda: asyncio.run(bot.main()))
+    bot_thread = threading.Thread(target=run_bot)
     bot_thread.start()
 
     streamlit_thread.join()  # Дожидаемся потока Streamlit-приложения

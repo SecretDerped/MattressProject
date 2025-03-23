@@ -3,7 +3,6 @@ import subprocess
 import threading
 import time
 
-import httpx
 import niquests
 
 
@@ -14,7 +13,7 @@ def start_localtunnel(port, subdomain):
     """
     # Формируем команду. Если указать поддомен, то попытка использовать его будет,
     # но если он занят, localtunnel выдаст случайный URL.
-    cmd = [r"C:\Users\User\AppData\Roaming\npm\lt.cmd", "--port", str(port), "--subdomain", subdomain]
+    cmd = [r"C:\Users\Celes\AppData\Roaming\npm\lt.cmd", "--port", str(port), "--subdomain", subdomain]
     logging.info(f"Запуск localtunnel для порта {port} с поддоменом {subdomain}: {' '.join(cmd)}")
 
     # Запускаем процесс localtunnel
@@ -71,7 +70,7 @@ def start_localtunnels():
 
 def get_tunnel_password():
     url = 'https://loca.lt/mytunnelpassword'
-    page = httpx.get(url)
+    page = niquests.get(url)
     if page is None:
         raise Exception("Не удалось получить пароль туннеля.")
     return page.text

@@ -3,7 +3,7 @@ import os
 import time
 
 from openpyxl.reader.excel import load_workbook
-from win32ctypes.pywin32 import pywintypes
+from win32ctypes.pywin32 import pywintypes  # из пакета pyinstaller
 
 from utils.streamlit_app_core import ManufacturePage
 from utils.models import MattressRequest

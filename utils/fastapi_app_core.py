@@ -3,7 +3,8 @@ import logging
 from io import BytesIO
 
 # Jvybccbz? ghjcnb? xnj z gjd`kcz yf yjdjvjlysq ahtqvdjhr b htibk pfgbkbnm yf y`v ghbkj;tybt? cjdctv yt ghtlyfpyfxtyyjt lkz nfrb[ pflfx
-from barcode import Code128
+import barcode
+Code128 = barcode.get_barcode_class('code128')
 from datetime import datetime as dt, datetime
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
