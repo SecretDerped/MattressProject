@@ -4,7 +4,8 @@ from sqlalchemy import delete
 from streamlit import session_state as state
 
 from utils.models import MattressRequest, Employee, EmployeeTask
-from utils.app_core import Page
+from utils.public_tunnel import get_tunnel_password
+from utils.streamlit_app_core import Page
 from utils.tools import barcode_link
 
 
@@ -195,6 +196,8 @@ with employee_tab:
         # Должность аналогична свойству page_name на файлах страниц
         st.info('Выставляйте рабочих на смену. Они будут активны при выборе ответственного на нужном экране.  \n'
                 'В поле "Роли" пропишите рабочее место сотруднику. Можно вписать несколько.', icon="ℹ️")
+        if st.button("Показать пароль туннеля"):
+            st.toast(get_tunnel_password())
 
     st.warning('##### Доступно: заготовка, сборка, нарезка, шитьё, упаковка')
 

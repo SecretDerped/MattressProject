@@ -1,6 +1,6 @@
 import streamlit as st
 
-from utils.app_core import ManufacturePage
+from utils.streamlit_app_core import ManufacturePage
 from utils.tools import fabric_type
 
 

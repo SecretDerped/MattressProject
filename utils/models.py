@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
 
+
 class Employee(Base):
     __tablename__ = "employees"
 

@@ -5,7 +5,7 @@ import time
 from openpyxl.reader.excel import load_workbook
 from win32ctypes.pywin32 import pywintypes
 
-from utils.app_core import ManufacturePage
+from utils.streamlit_app_core import ManufacturePage
 from utils.models import MattressRequest
 from utils.tools import config, print_file, get_date_str
 import streamlit as st

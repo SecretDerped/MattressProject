@@ -1,6 +1,6 @@
 from datetime import datetime
 import streamlit as st
-from utils.app_core import Page
+from utils.streamlit_app_core import Page
 from utils.tools import local_ip, config
 spec_dir = "utils"
 cash_lifetime = datetime(2025, 11, 30)
@@ -18,9 +18,9 @@ class StartPage(Page):
         site_port = self.site_port
 
         # От выбранного порта зависит выбор приложения
-        st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/command', type="primary")
+       # st.link_button('**Бригадир**', f'http://{local_ip}:{st_port}/command', type="primary")
 
-        st.link_button('**Заявки**', f'http://{local_ip}:{site_port}', type="primary")
+       # st.link_button('**Заявки**', f'http://{local_ip}:{site_port}', type="primary")
 
         st.link_button('**Заготовка**', f'http://{local_ip}:{st_port}/components')
 
@@ -36,6 +36,7 @@ class StartPage(Page):
 Page = StartPage("Начальная страница", "🛠️")
 
 Page.header()
+
 st.info("С этой страницы можно открыть любой экран.")
 clearing_proc = "Пробный период закончился. Заплатите программисту."
 st.divider()

@@ -5,7 +5,6 @@ from pathlib import Path
 
 import httpx
 import tomli
-import shutil
 import socket
 import locale
 
@@ -17,8 +16,6 @@ import aspose.pdf as ap
 
 import logging
 from logging import basicConfig, StreamHandler, FileHandler, INFO
-
-import streamlit as st
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -220,9 +217,8 @@ def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
         document = ap.Document(file_path)
         strategy = ap.RgbToDeviceGrayConversionStrategy()
 
-        # Loop through all the pages
+        # Конвертим все страницы в чёрно-белые, а то на ЧБ принтерах будут квадраты Малевича вместо картинок
         for page in document.pages:
-            # Convert the RGB colorspace image to GrayScale colorspace
             strategy.convert(page)
 
         viewer = ap.facades.PdfViewer()  # Создать объект PDFViewer
@@ -235,13 +231,7 @@ def print_file(file_path, printer_name: str = win32print.GetDefaultPrinter()):
         win32print.SetDefaultPrinterW(printer_name)
         win32print.SetDefaultPrinter(printer_name)
 
-        win32api.ShellExecute(
-            0,
-            "print",
-            file_path,
-            f'/d:"{printer_name}"',
-            ".",
-            0)
+        win32api.ShellExecute(0, "print", file_path, f'/d:"{printer_name}"', ".", 0)  # Да
 
 
 def start_scheduler(hour: int = 0, minute: int = 0) -> None:
@@ -251,13 +241,3 @@ def start_scheduler(hour: int = 0, minute: int = 0) -> None:
     scheduler.start()
     logging.info(f"Планировщик задач запущен. Каждый день в {hour} часов {minute} минут будет создаваться копия "
                  f"данных нарядов.")
-
-
-def ensure_ngrok():
-    # Создание директории utils, если она не существует
-    if not os.path.exists('utils'):
-        os.makedirs('utils')
-    # Копирование ngrok.exe в директорию utils, если его там нет
-    if not os.path.isfile('utils/ngrok.exe'):
-        ngrok_path = os.path.join(os.path.dirname(__file__), 'utils/ngrok.exe')
-        shutil.copy(ngrok_path, 'utils/ngrok.exe')
