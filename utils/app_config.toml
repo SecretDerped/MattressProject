@@ -62,18 +62,16 @@ database_path = 'mattress_orders.db'
 
 [sbis]
 # Данные от аккаунта СБИС. От его имени будут формироваться заявки
-#login = "leartest"
-login = "Харьковский_Гас_РС"
-#password = "Leartest2007!"
-password = "Харьковский_Гас_РС4342"
+login = "account"
+password = "password"
 
 # Эти данные можно получить из раздела СБИС - Настройки - Безопасность - Подключения СБИС
 #app_client_id = "1431941504152192"
 app_client_id = "6545046667107472"
 #app_secret = "TTLJISTWTTJKIMTITQMTM2TP"
-app_secret = "JYXNGTMT8QU5SQTJDEMLXGGX"
+app_secret = "app"
 #secret_key = "qwTLov0WOF8mgL3h8zRpcbITQxGBdY763n2tTrPYhRLviLy12agCCbyxPuuBak3IDfScRd1yX4IJJphJy1eO56L0vmCz5MIVQEMQEJXpS1QlpqlMI15Gbx"
-secret_key = "VcRzvQs9JRWTXCHzeP8jFRquZqeOVL4y6o0L9zvNZJqn8ptQwuRot3skjUmItb8uSkglbWBDln0e7tJvRIze3vLo6I0bxk62T6RTdYKWA4MHatsLMaKMZm"
+secret_key = "key"
 
 # Данные для корректной загрузки списка товаров
 sale_point_name = "Гаспарян Роман Славикович, ИП"  # Полное название торговой точки
@@ -95,5 +93,5 @@ direct_sell = "f67256dd-8674-4a75-91d0-22d3494e4c13" # Розница
 
 
 [telegram]
-token = "6945801898:AAF6H5if3-fLvRDm9W2CzUaGCQTVxU2iK68"
-group_chat_id = '-1002167954426'
+token = "token"
+group_chat_id = 'chat_id'
